@@ -5,6 +5,7 @@ version <next>:
 - libx265 encoder
 - shuffleplanes filter
 - OpenEXR image decoder
+- support decoding 4-channel SGI images
 
 
 version 10:
