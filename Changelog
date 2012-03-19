@@ -6,6 +6,7 @@ version <next>:
 - shuffleplanes filter
 - replaygain data export
 - LucasArts SMUSH SANM video decoder
+- LucasArts SMUSH VIMA audio decoder (ADPCM)
 
 
 version 10:
