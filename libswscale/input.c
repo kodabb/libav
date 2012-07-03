@@ -774,6 +774,7 @@ av_cold void ff_sws_init_input_funcs(SwsContext *c)
     case AV_PIX_FMT_GBRP10LE:
         c->readChrPlanar = planar_rgb10le_to_uv;
         break;
+    case AV_PIX_FMT_GBRAP12LE:
     case AV_PIX_FMT_GBRP12LE:
         c->readChrPlanar = planar_rgb12le_to_uv;
         break;
@@ -787,6 +788,7 @@ av_cold void ff_sws_init_input_funcs(SwsContext *c)
     case AV_PIX_FMT_GBRP10BE:
         c->readChrPlanar = planar_rgb10be_to_uv;
         break;
+    case AV_PIX_FMT_GBRAP12BE:
     case AV_PIX_FMT_GBRP12BE:
         c->readChrPlanar = planar_rgb12be_to_uv;
         break;
@@ -991,6 +993,7 @@ av_cold void ff_sws_init_input_funcs(SwsContext *c)
     case AV_PIX_FMT_GBRP10LE:
         c->readLumPlanar = planar_rgb10le_to_y;
         break;
+    case AV_PIX_FMT_GBRAP12LE:
     case AV_PIX_FMT_GBRP12LE:
         c->readLumPlanar = planar_rgb12le_to_y;
         break;
@@ -1004,6 +1007,7 @@ av_cold void ff_sws_init_input_funcs(SwsContext *c)
     case AV_PIX_FMT_GBRP10BE:
         c->readLumPlanar = planar_rgb10be_to_y;
         break;
+    case AV_PIX_FMT_GBRAP12BE:
     case AV_PIX_FMT_GBRP12BE:
         c->readLumPlanar = planar_rgb12be_to_y;
         break;
