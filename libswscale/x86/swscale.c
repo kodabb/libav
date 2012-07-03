@@ -325,7 +325,7 @@ av_cold void ff_sws_init_swscale_x86(SwsContext *c)
     } else if (c->srcBpc == 10) { \
         hscalefn = c->dstBpc <= 10 ? ff_hscale10to15_ ## filtersize ## _ ## opt2 : \
                                      ff_hscale10to19_ ## filtersize ## _ ## opt1; \
-    } else /* c->srcBpc == 16 */ { \
+    } else if (c->srcBpc == 16) { \
         hscalefn = c->dstBpc <= 10 ? ff_hscale16to15_ ## filtersize ## _ ## opt2 : \
                                      ff_hscale16to19_ ## filtersize ## _ ## opt1; \
     } \
