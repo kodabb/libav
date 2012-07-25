@@ -1092,6 +1092,13 @@ static const AVCodecDescriptor codec_descriptors[] = {
         .long_name = NULL_IF_CONFIG_SMALL("Mirillis FIC"),
         .props     = AV_CODEC_PROP_LOSSY,
     },
+    {
+        .id        = AV_CODEC_ID_XFACE,
+        .type      = AVMEDIA_TYPE_VIDEO,
+        .name      = "xface",
+        .long_name = NULL_IF_CONFIG_SMALL("X-Face image"),
+        .props     = AV_CODEC_PROP_INTRA_ONLY | AV_CODEC_PROP_LOSSY,
+    },
 
     /* image codecs */
     {
