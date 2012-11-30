@@ -25,11 +25,13 @@
 #include "bytestream.h"
 #include "internal.h"
 #include "lzw.h"
+#include "gif.h"
 
-#define GCE_DISPOSAL_NONE       0
-#define GCE_DISPOSAL_INPLACE    1
-#define GCE_DISPOSAL_BACKGROUND 2
-#define GCE_DISPOSAL_RESTORE    3
+/* This value is intentionally set to "transparent white" color.
+ * It is much better to have white background instead of black
+ * when gif image converted to format which not support transparency.
+ */
+#define GIF_TRANSPARENT_COLOR    0x00ffffff
 
 typedef struct GifState {
     int screen_width;
@@ -55,9 +57,6 @@ typedef struct GifState {
 
   AVCodecContext* avctx;
 } GifState;
-
-static const uint8_t gif87a_sig[6] = "GIF87a";
-static const uint8_t gif89a_sig[6] = "GIF89a";
 
 static int gif_read_image(GifState *s, AVFrame *frame)
 {
