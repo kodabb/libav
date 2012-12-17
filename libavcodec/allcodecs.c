@@ -223,6 +223,7 @@ void avcodec_register_all(void)
     REGISTER_DECODER(RV40,              rv40);
     REGISTER_DECODER(S302M,             s302m);
     REGISTER_ENCDEC (SGI,               sgi);
+    REGISTER_DECODER(SGIRLE,            sgirle);
     REGISTER_DECODER(SMACKER,           smacker);
     REGISTER_DECODER(SMC,               smc);
     REGISTER_DECODER(SP5X,              sp5x);
