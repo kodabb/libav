@@ -123,7 +123,8 @@ typedef enum {
     SEI_BUFFERING_PERIOD            = 0,   ///< buffering period (H.264, D.1.1)
     SEI_TYPE_PIC_TIMING             = 1,   ///< picture timing
     SEI_TYPE_USER_DATA_UNREGISTERED = 5,   ///< unregistered user data
-    SEI_TYPE_RECOVERY_POINT         = 6    ///< recovery point (frame # to decoder sync)
+    SEI_TYPE_RECOVERY_POINT         = 6,   ///< recovery point (frame # to decoder sync)
+    SEI_TYPE_FRAME_PACKING          = 45,  ///< frame packing arrangement
 } SEI_Type;
 
 /**
@@ -140,6 +141,20 @@ typedef enum {
     SEI_PIC_STRUCT_FRAME_DOUBLING    = 7, ///<  7: %frame doubling
     SEI_PIC_STRUCT_FRAME_TRIPLING    = 8  ///<  8: %frame tripling
 } SEI_PicStructType;
+
+/**
+ * type in frame packing arrangement SEI message
+ */
+typedef enum {
+    SEI_FPA_CHECKERBOARD             = 0,  ///<  0: quincunx
+    SEI_FPA_LINE_INTERLEAVED         = 1,  ///<  1: line interleaving
+    SEI_FPA_COLUMN_INTERLEAVED       = 2,  ///<  2: column interleaving
+    SEI_FPA_SIDE_BY_SIDE             = 3,  ///<  3: side by side
+    SEI_FPA_TOP_AND_BOTTOM           = 4,  ///<  4: top and bottom
+    SEI_FPA_FRAME_ALTERNATE          = 5,  ///<  5: frame alternate
+    SEI_FPA_2D                       = 6,  ///<  6: not stereo
+    SEI_FPA_RECTS                    = 7,  ///<  7: tiles
+} SEI_FramePackingType;
 
 /**
  * Sequence parameter set
@@ -584,6 +599,14 @@ typedef struct H264Context {
      * This is used in an attempt to flag soft telecine progressive.
      */
     int prev_interlaced_frame;
+
+    /**
+     * frame_packing_arrangment SEI message
+     */
+    int sei_frame_packing_present;
+    SEI_FramePackingType frame_packing_arrangement_type;
+    int content_interpretation_type;
+    int quincunx_subsampling;
 
     /**
      * Bit set of clock types for fields/frames in picture timing SEI message.

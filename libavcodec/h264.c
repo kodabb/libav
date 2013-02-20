@@ -27,6 +27,7 @@
 
 #include "libavutil/avassert.h"
 #include "libavutil/imgutils.h"
+#include "libavutil/stereo3d.h"
 #include "internal.h"
 #include "cabac.h"
 #include "cabac_functions.h"
@@ -2024,6 +2025,67 @@ static void decode_postinit(H264Context *h, int setup_finished)
         } else {
             /* Most likely progressive */
             cur->f.top_field_first = 0;
+        }
+    }
+
+    if (h->sei_frame_packing_present) {
+        AVFrameSideData *side_data;
+        AVStereo3D *stereo = av_stereo3d_alloc();
+        if (!stereo)
+            return;
+
+        switch (h->frame_packing_arrangement_type) {
+        case SEI_FPA_CHECKERBOARD:
+            stereo->type = AV_STEREO3D_CHECKERS;
+            stereo->info = AV_STEREO3D_SAMPLE_QUINCUNX;
+            break;
+        case SEI_FPA_LINE_INTERLEAVED:
+            stereo->type = AV_STEREO3D_LINES;
+            break;
+        case SEI_FPA_COLUMN_INTERLEAVED:
+            stereo->type = AV_STEREO3D_COLUMNS;
+            break;
+        case SEI_FPA_SIDE_BY_SIDE:
+            stereo->type = AV_STEREO3D_SIDEBYSIDE;
+            break;
+        case SEI_FPA_TOP_AND_BOTTOM:
+            stereo->type = AV_STEREO3D_TOPBOTTOM;
+            break;
+        case SEI_FPA_FRAME_ALTERNATE:
+            stereo->type = AV_STEREO3D_FRAMESEQUENCE;
+            stereo->info = AV_STEREO3D_SIZE_FULL;
+            break;
+        case SEI_FPA_2D:
+            stereo->type = AV_STEREO3D_2D;
+            stereo->info = AV_STEREO3D_SIZE_FULL;
+            break;
+        case SEI_FPA_RECTS:
+            stereo->type = AV_STEREO3D_TILES;
+            break;
+        default:
+            stereo->type = AV_STEREO3D_UNKNOWN;
+            break;
+        }
+
+        /* skip allocation if an unknown type was parsed or
+           if there is no information about views interpretation */
+        if (stereo->type != AV_STEREO3D_UNKNOWN &&
+            h->content_interpretation_type > 0 &&
+            h->content_interpretation_type < 3) {
+            if (h->content_interpretation_type == 2)
+                stereo->info |= AV_STEREO3D_ORDER_INVERT;
+
+            if (h->quincunx_subsampling)
+                stereo->info |= AV_STEREO3D_SAMPLE_QUINCUNX;
+
+            side_data = av_frame_new_side_data(&cur->f,
+                                               AV_FRAME_DATA_STEREO3D,
+                                               sizeof(AVStereo3D));
+            if (!side_data)
+                return;
+
+            memcpy(side_data->data, &stereo, sizeof(AVStereo3D));
+            av_stereo3d_free(&stereo);
         }
     }
 
