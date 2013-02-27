@@ -146,8 +146,29 @@ static int hls_slice_header(HEVCContext *s)
             return -1;
         }
 
-        s->avctx->width = s->sps->pic_width_in_luma_samples;
-        s->avctx->height = s->sps->pic_height_in_luma_samples;
+        s->avctx->coded_width = s->sps->pic_width_in_luma_samples;
+        s->avctx->coded_height = s->sps->pic_height_in_luma_samples;
+        //Note: 2 is only valid for 420
+        s->avctx->width = s->sps->pic_width_in_luma_samples - 2 *
+           (s->sps->pic_conf_win.left_offset + s->sps->pic_conf_win.right_offset);
+        s->avctx->height = s->sps->pic_height_in_luma_samples - 2 *
+           (s->sps->pic_conf_win.top_offset + s->sps->pic_conf_win.bottom_offset);
+
+        if (s->avctx->width <= 0 || s->avctx->height <= 0) {
+            av_log(s->avctx, AV_LOG_ERROR, "Invalid conformance window dimensions: %dx%d.\n",
+                   s->avctx->width, s->avctx->height);
+            if (s->avctx->err_recognition & AV_EF_EXPLODE)
+                return AVERROR_INVALIDDATA;
+
+            av_log(s->avctx, AV_LOG_WARNING, "Ignoring conformance window information.\n");
+            s->sps->pic_conf_win.left_offset =
+            s->sps->pic_conf_win.top_offset =
+            s->sps->pic_conf_win.right_offset =
+            s->sps->pic_conf_win.bottom_offset = 0;
+            s->avctx->width = s->sps->pic_width_in_luma_samples;
+            s->avctx->height = s->sps->pic_height_in_luma_samples;
+        }
+
         if (s->sps->chroma_format_idc == 0 || s->sps->separate_colour_plane_flag) {
             av_log(s->avctx, AV_LOG_ERROR,
                    "TODO: s->sps->chroma_format_idc == 0 || "
@@ -3042,6 +3063,24 @@ static int hls_nal_unit(HEVCContext *s)
     return ret;
 }
 
+static int output_frame(HEVCContext *s, AVFrame *dst, AVFrame *src)
+{
+    int i;
+    int step_x, step_y;
+    int ret = av_frame_ref(dst, src);
+    if (ret < 0)
+        return ret;
+
+    //Note: this step value is only valid for 420
+    step_x = step_y = 2;
+    for (i = 0; i < 3; i++) {
+        int off = (((step_x * s->sps->pic_conf_win.left_offset) >> s->sps->hshift[i]) << s->sps->pixel_shift) +
+                  (((step_y * s->sps->pic_conf_win.top_offset) >> s->sps->vshift[i]) * dst->linesize[i]);
+        dst->data[i] += off;
+    }
+    return 0;
+}
+
 /**
  * Note: avpkt->data must contain exactly one NAL unit
  */
@@ -3122,15 +3161,15 @@ static int hevc_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
             if ((ret = ff_reget_buffer(s->avctx, s->sao_frame)) < 0)
                 return ret;
             av_picture_copy((AVPicture*)s->sao_frame, (AVPicture*)s->frame,
-                            s->avctx->pix_fmt, s->avctx->width, s->avctx->height);
+                            s->avctx->pix_fmt, s->avctx->coded_width, s->avctx->coded_height);
             sao_filter(s);
-            if ((ret = av_frame_ref(data, s->sao_frame)) < 0)
+            if ((ret = output_frame(s, data, s->sao_frame)) < 0)
                 return ret;
             ff_hevc_add_ref(s, s->sao_frame, s->poc);
             av_frame_unref(s->sao_frame);
         } else {
             ff_hevc_add_ref(s, s->frame, s->poc);
-            if ((ret = av_frame_ref(data, s->frame)) < 0)
+            if ((ret = output_frame(s, data, s->frame)) < 0)
                 return ret;
         }
 
