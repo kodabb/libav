@@ -710,6 +710,7 @@ typedef struct HEVCContext {
 
     HEVCFrame short_refs[16];
     int decode_checksum_sei;
+    int strict_def_disp_win;
 } HEVCContext;
 
 enum ScanType {

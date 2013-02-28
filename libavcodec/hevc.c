@@ -169,6 +169,27 @@ static int hls_slice_header(HEVCContext *s)
             s->avctx->height = s->sps->pic_height_in_luma_samples;
         }
 
+        if (s->strict_def_disp_win) {
+            s->avctx->width -= (s->sps->vui.def_disp_win.left_offset + s->sps->vui.def_disp_win.right_offset);
+            s->avctx->height -= (s->sps->vui.def_disp_win.top_offset + s->sps->vui.def_disp_win.bottom_offset);
+
+            if (s->avctx->width <= 0 || s->avctx->height <= 0) {
+                av_log(s->avctx, AV_LOG_ERROR, "Invalid default display window dimensions: %dx%d.\n",
+                       s->avctx->width, s->avctx->height);
+
+                if (s->avctx->err_recognition & AV_EF_EXPLODE)
+                    return AVERROR_INVALIDDATA;
+
+                av_log(s->avctx, AV_LOG_WARNING, "Ignoring default display window information.\n");
+                s->avctx->width += (s->sps->vui.def_disp_win.left_offset + s->sps->vui.def_disp_win.right_offset);
+                s->avctx->height += (s->sps->vui.def_disp_win.top_offset + s->sps->vui.def_disp_win.bottom_offset);
+                s->sps->vui.def_disp_win.left_offset =
+                s->sps->vui.def_disp_win.top_offset =
+                s->sps->vui.def_disp_win.right_offset =
+                s->sps->vui.def_disp_win.bottom_offset = 0;
+            }
+        }
+
         if (s->sps->chroma_format_idc == 0 || s->sps->separate_colour_plane_flag) {
             av_log(s->avctx, AV_LOG_ERROR,
                    "TODO: s->sps->chroma_format_idc == 0 || "
@@ -3076,6 +3097,10 @@ static int output_frame(HEVCContext *s, AVFrame *dst, AVFrame *src)
     for (i = 0; i < 3; i++) {
         int off = (((step_x * s->sps->pic_conf_win.left_offset) >> s->sps->hshift[i]) << s->sps->pixel_shift) +
                   (((step_y * s->sps->pic_conf_win.top_offset) >> s->sps->vshift[i]) * dst->linesize[i]);
+        if (s->strict_def_disp_win)
+            off += ((s->sps->vui.def_disp_win.left_offset >> s->sps->hshift[i]) << s->sps->pixel_shift) +
+                   ((s->sps->vui.def_disp_win.top_offset >> s->sps->vshift[i]) * dst->linesize[i]);
+
         dst->data[i] += off;
     }
     return 0;
@@ -3261,6 +3286,8 @@ static void hevc_decode_flush(AVCodecContext *avctx)
 #define PAR (AV_OPT_FLAG_DECODING_PARAM | AV_OPT_FLAG_VIDEO_PARAM)
 static const AVOption options[] = {
     { "decode-checksum", "decode picture checksum SEI message", OFFSET(decode_checksum_sei),
+      AV_OPT_TYPE_INT, {.i64 = 0}, 0, 1, PAR },
+    { "strict-displaywin", "output default display window frame size", OFFSET(strict_def_disp_win),
       AV_OPT_TYPE_INT, {.i64 = 0}, 0, 1, PAR },
     { NULL },
 };
