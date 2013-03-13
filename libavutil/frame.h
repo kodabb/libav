@@ -35,6 +35,10 @@ enum AVFrameSideDataType {
      * The data is the AVPanScan struct defined in libavcodec.
      */
     AV_FRAME_DATA_PANSCAN,
+    /**
+     * The data is the AVStereo3D struct defined in libavutil.
+     */
+    AV_FRAME_DATA_STEREO3D,
 };
 
 typedef struct AVFrameSideData {
