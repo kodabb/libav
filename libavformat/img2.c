@@ -50,7 +50,6 @@ static const IdStrMap img_tags[] = {
     { AV_CODEC_ID_FFV1,       "ffv1-img" },
     { AV_CODEC_ID_RAWVIDEO,   "y"        },
     { AV_CODEC_ID_BMP,        "bmp"      },
-    { AV_CODEC_ID_GIF,        "gif"      },
     { AV_CODEC_ID_TARGA,      "tga"      },
     { AV_CODEC_ID_TIFF,       "tiff"     },
     { AV_CODEC_ID_TIFF,       "tif"      },
