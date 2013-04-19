@@ -67,7 +67,9 @@ static int gif_image_write_header(AVIOContext *pb, int width, int height,
 typedef struct {
     AVClass *class;         /** Class for private options. */
     int loop;
-    int64_t prev_pts;
+    AVPacket prev_pkt;
+    int got_first_packet;
+    int duration;
 } GIFContext;
 
 static int gif_write_header(AVFormatContext *s)
@@ -104,13 +106,17 @@ static int gif_write_header(AVFormatContext *s)
     return 0;
 }
 
-static int gif_write_packet(AVFormatContext *s, AVPacket *pkt)
+static int flush_packet(AVFormatContext *s, AVPacket *new)
 {
     GIFContext *gif = s->priv_data;
-    int size, duration;
+    int size;
     AVIOContext *pb = s->pb;
     uint8_t flags = 0x4, transparent_color_index = 0x1f;
     const uint32_t *palette;
+    AVPacket *pkt = &gif->prev_pkt;
+
+    if (!pkt->size)
+        return 0;
 
     /* Mark one colour as transparent if the input palette contains at least
      * one colour that is more than 50% transparent. */
@@ -133,27 +139,49 @@ static int gif_write_packet(AVFormatContext *s, AVPacket *pkt)
             flags |= 0x1; /* Transparent Color Flag */
     }
 
-    duration = pkt->pts == AV_NOPTS_VALUE ? 0 : av_clip_uint16(pkt->pts - gif->prev_pts);
-    gif->prev_pts = pkt->pts;
+    if (new && new->pts != AV_NOPTS_VALUE)
+        gif->duration = av_clip_uint16(new->pts - gif->prev_pkt.pts);
 
     /* graphic control extension block */
     avio_w8(pb, 0x21);
     avio_w8(pb, 0xf9);
     avio_w8(pb, 0x04); /* block size */
     avio_w8(pb, flags);
-    avio_wl16(pb, duration);
+    avio_wl16(pb, gif->duration);
     avio_w8(pb, transparent_color_index);
     avio_w8(pb, 0x00);
 
     avio_write(pb, pkt->data, pkt->size);
 
+    av_packet_unref(&gif->prev_pkt);
+    if (new)
+        av_packet_ref(&gif->prev_pkt, new);
+
     return 0;
+}
+
+static int gif_write_packet(AVFormatContext *s, AVPacket *pkt)
+{
+    GIFContext *gif = s->priv_data;
+
+    if (!gif->got_first_packet) {
+        int ret = av_packet_ref(&gif->prev_pkt, pkt);
+        if (ret < 0)
+            return ret;
+
+        gif->got_first_packet = 1;
+        return 0;
+    }
+    return flush_packet(s, pkt);
 }
 
 static int gif_write_trailer(AVFormatContext *s)
 {
+    GIFContext *gif = s->priv_data;
     AVIOContext *pb = s->pb;
 
+    flush_packet(s, NULL);
+    av_packet_unref(&gif->prev_pkt);
     avio_w8(pb, 0x3b);
 
     return 0;
