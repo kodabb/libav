@@ -44,6 +44,7 @@ const uint8_t ff_vorbis_encoding_channel_layout_offsets[8][8] = {
     { 0, 2, 1, 6, 7, 4, 5, 3 },
 };
 
+#if FF_API_OLD_CHANNEL_LAYOUT
 const uint64_t ff_vorbis_channel_layouts[9] = {
     AV_CH_LAYOUT_MONO,
     AV_CH_LAYOUT_STEREO,
@@ -55,6 +56,7 @@ const uint64_t ff_vorbis_channel_layouts[9] = {
     AV_CH_LAYOUT_7POINT1,
     0
 };
+#endif
 
 const AVChannelLayout ff_vorbis_ch_layouts[9] = {
     AV_CHANNEL_LAYOUT_MONO,
