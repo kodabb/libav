@@ -82,7 +82,7 @@ static void libopus_write_header(AVCodecContext *avctx, int stream_count,
                                  const uint8_t *channel_mapping)
 {
     uint8_t *p   = avctx->extradata;
-    int channels = avctx->channels;
+    int channels = avctx->ch_layout.nb_channels;
 
     bytestream_put_buffer(&p, "OpusHead", 8);
     bytestream_put_byte(&p, 1); /* Version */
@@ -152,21 +152,22 @@ static int libopus_configure_encoder(AVCodecContext *avctx, OpusMSEncoder *enc,
 static int av_cold libopus_encode_init(AVCodecContext *avctx)
 {
     LibopusEncContext *opus = avctx->priv_data;
+    int channels = avctx->ch_layout.nb_channels;
     const uint8_t *channel_mapping;
     OpusMSEncoder *enc;
     int ret = OPUS_OK;
     int coupled_stream_count, header_size, frame_size;
 
-    coupled_stream_count = opus_coupled_streams[avctx->channels - 1];
-    opus->stream_count   = avctx->channels - coupled_stream_count;
-    channel_mapping      = libav_libopus_channel_map[avctx->channels - 1];
+    coupled_stream_count = opus_coupled_streams[channels - 1];
+    opus->stream_count   = channels - coupled_stream_count;
+    channel_mapping      = libav_libopus_channel_map[channels - 1];
 
     /* FIXME: Opus can handle up to 255 channels. However, the mapping for
      * anything greater than 8 is undefined. */
-    if (avctx->channels > 8) {
+    if (channels > 8) {
         avpriv_report_missing_feature(avctx,
                                       "Undefined channel layout for %d channels",
-                                      avctx->channels);
+                                      channels);
         return AVERROR_PATCHWELCOME;
     }
     if (!avctx->bit_rate) {
@@ -177,10 +178,10 @@ static int av_cold libopus_encode_init(AVCodecContext *avctx)
                "No bit rate set. Defaulting to %d bps.\n", avctx->bit_rate);
     }
 
-    if (avctx->bit_rate < 500 || avctx->bit_rate > 256000 * avctx->channels) {
+    if (avctx->bit_rate < 500 || avctx->bit_rate > 256000 * channels) {
         av_log(avctx, AV_LOG_ERROR, "The bit rate %d bps is unsupported. "
                "Please choose a value between 500 and %d.\n", avctx->bit_rate,
-               256000 * avctx->channels);
+               256000 * channels);
         return AVERROR(EINVAL);
     }
 
@@ -245,7 +246,7 @@ static int av_cold libopus_encode_init(AVCodecContext *avctx)
         }
     }
 
-    enc = opus_multistream_encoder_create(avctx->sample_rate, avctx->channels,
+    enc = opus_multistream_encoder_create(avctx->sample_rate, channels,
                                           opus->stream_count,
                                           coupled_stream_count,
                                           channel_mapping,
@@ -262,7 +263,7 @@ static int av_cold libopus_encode_init(AVCodecContext *avctx)
         goto fail;
     }
 
-    header_size = 19 + (avctx->channels > 2 ? 2 + avctx->channels : 0);
+    header_size = 19 + (channels > 2 ? 2 + channels : 0);
     avctx->extradata = av_malloc(header_size + AV_INPUT_BUFFER_PADDING_SIZE);
     if (!avctx->extradata) {
         av_log(avctx, AV_LOG_ERROR, "Failed to allocate extradata.\n");
@@ -271,7 +272,7 @@ static int av_cold libopus_encode_init(AVCodecContext *avctx)
     }
     avctx->extradata_size = header_size;
 
-    opus->samples = av_mallocz(frame_size * avctx->channels *
+    opus->samples = av_mallocz(frame_size * channels *
                                av_get_bytes_per_sample(avctx->sample_fmt));
     if (!opus->samples) {
         av_log(avctx, AV_LOG_ERROR, "Failed to allocate samples buffer.\n");
@@ -286,7 +287,7 @@ static int av_cold libopus_encode_init(AVCodecContext *avctx)
                opus_strerror(ret));
 
     libopus_write_header(avctx, opus->stream_count, coupled_stream_count,
-                         opus_vorbis_channel_map[avctx->channels - 1]);
+                         opus_vorbis_channel_map[channels - 1]);
 
     ff_af_queue_init(avctx, &opus->afq);
 
@@ -304,7 +305,7 @@ static int libopus_encode(AVCodecContext *avctx, AVPacket *avpkt,
                           const AVFrame *frame, int *got_packet_ptr)
 {
     LibopusEncContext *opus = avctx->priv_data;
-    const int sample_size   = avctx->channels *
+    const int sample_size   = avctx->ch_layout.nb_channels *
                               av_get_bytes_per_sample(avctx->sample_fmt);
     uint8_t *audio;
     int ret;
@@ -418,7 +419,12 @@ AVCodec ff_libopus_encoder = {
     .sample_fmts     = (const enum AVSampleFormat[]){ AV_SAMPLE_FMT_S16,
                                                       AV_SAMPLE_FMT_FLT,
                                                       AV_SAMPLE_FMT_NONE },
+#if FF_API_OLD_CHANNEL_LAYOUT
+FF_DISABLE_DEPRECATION_WARNINGS
     .channel_layouts = ff_vorbis_channel_layouts,
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
+    .ch_layouts      = ff_vorbis_ch_layouts,
     .supported_samplerates = libopus_sample_rates,
     .priv_class      = &libopus_class,
     .defaults        = libopus_defaults,
