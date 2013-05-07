@@ -46,7 +46,7 @@ static av_cold int pcm_encode_init(AVCodecContext *avctx)
     }
 
     avctx->bits_per_coded_sample = av_get_bits_per_sample(avctx->codec->id);
-    avctx->block_align           = avctx->channels * avctx->bits_per_coded_sample / 8;
+    avctx->block_align           = avctx->ch_layout.nb_channels * avctx->bits_per_coded_sample / 8;
     avctx->bit_rate              = avctx->block_align * avctx->sample_rate * 8;
     avctx->coded_frame           = av_frame_alloc();
     if (!avctx->coded_frame)
@@ -93,7 +93,7 @@ static int pcm_encode_frame(AVCodecContext *avctx, AVPacket *avpkt,
     const uint32_t *samples_uint32_t;
 
     sample_size = av_get_bits_per_sample(avctx->codec->id) / 8;
-    n           = frame->nb_samples * avctx->channels;
+    n           = frame->nb_samples * avctx->ch_layout.nb_channels;
     samples     = (const short *)frame->data[0];
 
     if ((ret = ff_alloc_packet(avpkt, n * sample_size))) {
@@ -207,7 +207,7 @@ static av_cold int pcm_decode_init(AVCodecContext *avctx)
     PCMDecode *s = avctx->priv_data;
     int i;
 
-    if (avctx->channels <= 0) {
+    if (avctx->ch_layout.nb_channels <= 0) {
         av_log(avctx, AV_LOG_ERROR, "PCM channels out of bounds\n");
         return AVERROR(EINVAL);
     }
@@ -254,8 +254,8 @@ static av_cold int pcm_decode_init(AVCodecContext *avctx)
 #define DECODE_PLANAR(size, endian, src, dst, n, shift, offset)         \
     {                                                                   \
         int av_unused n2;                                               \
-        n /= avctx->channels;                                           \
-        for (c = 0; c < avctx->channels; c++) {                         \
+        n /= channels;                                                  \
+        for (c = 0; c < channels; c++) {                                \
             samples = frame->extended_data[c];                          \
             n2 = n;                                                     \
             DECODE(size, endian, src, samples, n2, 0, 0)                \
@@ -265,8 +265,8 @@ static av_cold int pcm_decode_init(AVCodecContext *avctx)
 #define DECODE_PLANAR(size, endian, src, dst, n, shift, offset)         \
     {                                                                   \
         int av_unused n2;                                               \
-        n /= avctx->channels;                                           \
-        for (c = 0; c < avctx->channels; c++) {                         \
+        n /= channels;                                                  \
+        for (c = 0; c < channels; c++) {                                \
             samples = frame->extended_data[c];                          \
             memcpy(samples, src, n * size / 8);                         \
             src += n * size / 8;                                        \
@@ -281,6 +281,7 @@ static int pcm_decode_frame(AVCodecContext *avctx, void *data,
     int buf_size       = avpkt->size;
     PCMDecode *s       = avctx->priv_data;
     AVFrame *frame     = data;
+    int channels       = avctx->ch_layout.nb_channels;
     int sample_size, c, n, ret, samples_per_block;
     uint8_t *samples;
     int32_t *dst_int32_t;
@@ -300,7 +301,7 @@ static int pcm_decode_frame(AVCodecContext *avctx, void *data,
         return AVERROR(EINVAL);
     }
 
-    n = avctx->channels * sample_size;
+    n = channels * sample_size;
 
     if (n && buf_size % n) {
         if (buf_size < n) {
@@ -313,7 +314,7 @@ static int pcm_decode_frame(AVCodecContext *avctx, void *data,
     n = buf_size / sample_size;
 
     /* get output buffer */
-    frame->nb_samples = n * samples_per_block / avctx->channels;
+    frame->nb_samples = n * samples_per_block / channels;
     if ((ret = ff_get_buffer(avctx, frame, 0)) < 0) {
         av_log(avctx, AV_LOG_ERROR, "get_buffer() failed\n");
         return ret;
@@ -419,8 +420,8 @@ static int pcm_decode_frame(AVCodecContext *avctx, void *data,
     case AV_CODEC_ID_PCM_LXF:
     {
         int i;
-        n /= avctx->channels;
-        for (c = 0; c < avctx->channels; c++) {
+        n /= channels;
+        for (c = 0; c < channels; c++) {
             dst_int32_t = (int32_t *)frame->extended_data[c];
             for (i = 0; i < n; i++) {
                 // extract low 20 bits and expand to 32 bits
