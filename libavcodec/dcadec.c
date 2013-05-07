@@ -1272,7 +1272,7 @@ static int dca_subsubframe(DCAContext *s, int base_channel, int block_index)
     return 0;
 }
 
-static int dca_filter_channels(DCAContext *s, int block_index)
+static int dca_filter_channels(DCAContext *s, int block_index, int downmix)
 {
     float (*subband_samples)[DCA_SUBBANDS][8] = s->subband_samples[block_index];
     int k;
@@ -1288,7 +1288,7 @@ static int dca_filter_channels(DCAContext *s, int block_index)
     }
 
     /* Down mixing */
-    if (s->avctx->request_channels == 2 && s->prim_channels > 2) {
+    if (downmix) {
         dca_downmix(s->samples_chanptr, s->amode, s->downmix_coef, s->channel_order_tab);
     }
 
@@ -1665,7 +1665,7 @@ static int dca_decode_frame(AVCodecContext *avctx, void *data,
     DCAContext *s = avctx->priv_data;
     int channels, full_channels;
     int core_ss_end;
-
+    int downmix;
 
     s->xch_present = 0;
 
@@ -1797,13 +1797,18 @@ static int dca_decode_frame(AVCodecContext *avctx, void *data,
     full_channels = channels = s->prim_channels + !!s->lfe;
 
     if (s->amode < 16) {
-        avctx->channel_layout = dca_core_channel_layout[s->amode];
+        uint64_t mask = dca_core_channel_layout[s->amode];
 
-        if (s->xch_present && (!avctx->request_channels ||
-                               avctx->request_channels > s->prim_channels + !!s->lfe)) {
-            avctx->channel_layout |= AV_CH_BACK_CENTER;
+        static const AVChannelLayout stereo = AV_CHANNEL_LAYOUT_STEREO;
+
+        downmix = s->prim_channels > 2 &&
+                  !av_channel_layout_compare(&avctx->request_ch_layout,
+                                             &stereo);
+
+        if (s->xch_present && !downmix) {
+            mask |= AV_CH_BACK_CENTER;
             if (s->lfe) {
-                avctx->channel_layout |= AV_CH_LOW_FREQUENCY;
+                mask |= AV_CH_LOW_FREQUENCY;
                 s->channel_order_tab = dca_channel_reorder_lfe_xch[s->amode];
             } else {
                 s->channel_order_tab = dca_channel_reorder_nolfe_xch[s->amode];
@@ -1812,7 +1817,7 @@ static int dca_decode_frame(AVCodecContext *avctx, void *data,
             channels = s->prim_channels + !!s->lfe;
             s->xch_present = 0; /* disable further xch processing */
             if (s->lfe) {
-                avctx->channel_layout |= AV_CH_LOW_FREQUENCY;
+                mask |= AV_CH_LOW_FREQUENCY;
                 s->channel_order_tab = dca_channel_reorder_lfe[s->amode];
             } else
                 s->channel_order_tab = dca_channel_reorder_nolfe[s->amode];
@@ -1822,19 +1827,21 @@ static int dca_decode_frame(AVCodecContext *avctx, void *data,
             s->channel_order_tab[channels - 1 - !!s->lfe] < 0)
             return AVERROR_INVALIDDATA;
 
-        if (avctx->request_channels == 2 && s->prim_channels > 2) {
+        if (downmix) {
             channels = 2;
             s->output = DCA_STEREO;
-            avctx->channel_layout = AV_CH_LAYOUT_STEREO;
         }
+        av_channel_layout_uninit(&avctx->ch_layout);
+        av_channel_layout_from_mask(&avctx->ch_layout, mask);
     } else {
         av_log(avctx, AV_LOG_ERROR, "Non standard configuration %d !\n", s->amode);
         return AVERROR_INVALIDDATA;
     }
-    avctx->channels = channels;
 
     /* get output buffer */
     frame->nb_samples = 256 * (s->sample_blocks / 8);
+    if (downmix)
+        frame->ch_layout = (AVChannelLayout)AV_CHANNEL_LAYOUT_STEREO;
     if ((ret = ff_get_buffer(avctx, frame, 0)) < 0) {
         av_log(avctx, AV_LOG_ERROR, "get_buffer() failed\n");
         return ret;
@@ -1842,7 +1849,7 @@ static int dca_decode_frame(AVCodecContext *avctx, void *data,
     samples_flt = (float **)frame->extended_data;
 
     /* allocate buffer for extra channels if downmixing */
-    if (avctx->channels < full_channels) {
+    if (downmix) {
         ret = av_samples_get_buffer_size(NULL, full_channels - channels,
                                          frame->nb_samples,
                                          avctx->sample_fmt, 0);
@@ -1871,7 +1878,7 @@ static int dca_decode_frame(AVCodecContext *avctx, void *data,
         for (; ch < full_channels; ch++)
             s->samples_chanptr[ch] = s->extra_channels[ch - channels] + i * 256;
 
-        dca_filter_channels(s, i);
+        dca_filter_channels(s, i, downmix);
 
         /* If this was marked as a DTS-ES stream we need to subtract back- */
         /* channel from SL & SR to remove matrixed back-channel signal */
@@ -1917,11 +1924,15 @@ static av_cold int dca_decode_init(AVCodecContext *avctx)
 
     avctx->sample_fmt = AV_SAMPLE_FMT_FLTP;
 
+#if FF_API_OLD_CHANNEL_LAYOUT
+    FF_DISABLE_DEPRECATION_WARNINGS
     /* allow downmixing to stereo */
     if (avctx->channels > 0 && avctx->request_channels < avctx->channels &&
         avctx->request_channels == 2) {
         avctx->channels = avctx->request_channels;
     }
+    FF_ENABLE_DEPRECATION_WARNINGS
+#endif
 
     return 0;
 }
