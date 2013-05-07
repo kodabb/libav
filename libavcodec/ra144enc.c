@@ -49,11 +49,6 @@ static av_cold int ra144_encode_init(AVCodecContext * avctx)
     RA144Context *ractx;
     int ret;
 
-    if (avctx->channels != 1) {
-        av_log(avctx, AV_LOG_ERROR, "invalid number of channels: %d\n",
-               avctx->channels);
-        return -1;
-    }
     avctx->frame_size = NBLOCKS * BLOCKSIZE;
     avctx->delay      = avctx->frame_size;
     avctx->bit_rate = 8000;
@@ -555,4 +550,5 @@ AVCodec ff_ra_144_encoder = {
     .capabilities   = CODEC_CAP_DELAY | CODEC_CAP_SMALL_LAST_FRAME,
     .sample_fmts    = (const enum AVSampleFormat[]){ AV_SAMPLE_FMT_S16,
                                                      AV_SAMPLE_FMT_NONE },
+    .ch_layouts     = (const AVChannelLayout[]){ AV_CHANNEL_LAYOUT_MONO, { 0 } },
 };
