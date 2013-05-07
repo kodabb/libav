@@ -587,11 +587,14 @@ static av_cold int decode_init(AVCodecContext *avctx)
 
 static av_cold int smka_decode_init(AVCodecContext *avctx)
 {
-    if (avctx->channels < 1 || avctx->channels > 2) {
+    int channels = avctx->ch_layout.nb_channels;
+    if (channels < 1 || channels > 2) {
         av_log(avctx, AV_LOG_ERROR, "invalid number of channels\n");
         return AVERROR(EINVAL);
     }
-    avctx->channel_layout = (avctx->channels==2) ? AV_CH_LAYOUT_STEREO : AV_CH_LAYOUT_MONO;
+    av_channel_layout_uninit(&avctx->ch_layout);
+    avctx->ch_layout = (channels == 2) ? (AVChannelLayout)AV_CHANNEL_LAYOUT_STEREO :
+                                         (AVChannelLayout)AV_CHANNEL_LAYOUT_MONO;
     avctx->sample_fmt = avctx->bits_per_coded_sample == 8 ? AV_SAMPLE_FMT_U8 : AV_SAMPLE_FMT_S16;
 
     return 0;
@@ -633,7 +636,7 @@ static int smka_decode_frame(AVCodecContext *avctx, void *data,
     }
     stereo = get_bits1(&gb);
     bits = get_bits1(&gb);
-    if (stereo ^ (avctx->channels != 1)) {
+    if (stereo ^ (avctx->ch_layout.nb_channels != 1)) {
         av_log(avctx, AV_LOG_ERROR, "channels mismatch\n");
         return AVERROR(EINVAL);
     }
@@ -643,7 +646,7 @@ static int smka_decode_frame(AVCodecContext *avctx, void *data,
     }
 
     /* get output buffer */
-    frame->nb_samples = unp_size / (avctx->channels * (bits + 1));
+    frame->nb_samples = unp_size / (avctx->ch_layout.nb_channels * (bits + 1));
     if ((ret = ff_get_buffer(avctx, frame, 0)) < 0) {
         av_log(avctx, AV_LOG_ERROR, "get_buffer() failed\n");
         return ret;
