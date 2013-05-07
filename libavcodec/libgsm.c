@@ -41,9 +41,9 @@
 #include "gsm.h"
 
 static av_cold int libgsm_encode_init(AVCodecContext *avctx) {
-    if (avctx->channels > 1) {
+    if (avctx->ch_layout.nb_channels > 1) {
         av_log(avctx, AV_LOG_ERROR, "Mono required for GSM, got %d channels\n",
-               avctx->channels);
+               avctx->ch_layout.nb_channels);
         return -1;
     }
 
@@ -143,8 +143,8 @@ typedef struct LibGSMDecodeContext {
 static av_cold int libgsm_decode_init(AVCodecContext *avctx) {
     LibGSMDecodeContext *s = avctx->priv_data;
 
-    avctx->channels       = 1;
-    avctx->channel_layout = AV_CH_LAYOUT_MONO;
+    av_channel_layout_uninit(&avctx->ch_layout);
+    avctx->ch_layout      = (AVChannelLayout)AV_CHANNEL_LAYOUT_MONO;
     avctx->sample_rate    = 8000;
     avctx->sample_fmt     = AV_SAMPLE_FMT_S16;
 
