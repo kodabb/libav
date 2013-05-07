@@ -537,8 +537,8 @@ FF_ENABLE_DEPRECATION_WARNINGS
     }
 
     if (substr == m->max_decoded_substream) {
-        m->avctx->channels       = s->max_matrix_channel + 1;
-        m->avctx->channel_layout = s->ch_layout;
+        av_channel_layout_uninit(&m->avctx->ch_layout);
+        av_channel_layout_from_mask(&m->avctx->ch_layout, s->ch_layout);
     }
 
     return 0;
@@ -989,7 +989,7 @@ static int output_data(MLPDecodeContext *m, unsigned int substr,
     int ret;
     int is32 = (m->avctx->sample_fmt == AV_SAMPLE_FMT_S32);
 
-    if (m->avctx->channels != s->max_matrix_channel + 1) {
+    if (m->avctx->ch_layout.nb_channels != s->max_matrix_channel + 1) {
         av_log(m->avctx, AV_LOG_ERROR, "channel count mismatch\n");
         return AVERROR_INVALIDDATA;
     }
