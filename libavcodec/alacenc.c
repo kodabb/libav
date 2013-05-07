@@ -447,14 +447,15 @@ static int write_frame(AlacEncodeContext *s, AVPacket *avpkt,
                        uint8_t * const *samples)
 {
     PutBitContext *pb = &s->pbctx;
-    const enum AlacRawDataBlockType *ch_elements = ff_alac_channel_elements[s->avctx->channels - 1];
-    const uint8_t *ch_map = ff_alac_channel_layout_offsets[s->avctx->channels - 1];
+    int channels = s->avctx->ch_layout.nb_channels;
+    const enum AlacRawDataBlockType *ch_elements = ff_alac_channel_elements[channels - 1];
+    const uint8_t *ch_map = ff_alac_channel_layout_offsets[channels - 1];
     int ch, element, sce, cpe;
 
     init_put_bits(pb, avpkt->data, avpkt->size);
 
     ch = element = sce = cpe = 0;
-    while (ch < s->avctx->channels) {
+    while (ch < channels) {
         if (ch_elements[element] == TYPE_CPE) {
             write_element(s, TYPE_CPE, cpe, samples[ch_map[ch]],
                           samples[ch_map[ch + 1]]);
@@ -519,7 +520,7 @@ static av_cold int alac_encode_init(AVCodecContext *avctx)
     s->rc.rice_modifier   = 4;
 
     s->max_coded_frame_size = get_max_frame_size(avctx->frame_size,
-                                                 avctx->channels,
+                                                 avctx->ch_layout.nb_channels,
                                                  avctx->bits_per_raw_sample);
 
     avctx->extradata = av_mallocz(ALAC_EXTRADATA_SIZE + AV_INPUT_BUFFER_PADDING_SIZE);
@@ -534,10 +535,10 @@ static av_cold int alac_encode_init(AVCodecContext *avctx)
     AV_WB32(alac_extradata+4,  MKBETAG('a','l','a','c'));
     AV_WB32(alac_extradata+12, avctx->frame_size);
     AV_WB8 (alac_extradata+17, avctx->bits_per_raw_sample);
-    AV_WB8 (alac_extradata+21, avctx->channels);
+    AV_WB8 (alac_extradata+21, avctx->ch_layout.nb_channels);
     AV_WB32(alac_extradata+24, s->max_coded_frame_size);
     AV_WB32(alac_extradata+28,
-            avctx->sample_rate * avctx->channels * avctx->bits_per_raw_sample); // average bitrate
+            avctx->sample_rate * avctx->ch_layout.nb_channels * avctx->bits_per_raw_sample); // average bitrate
     AV_WB32(alac_extradata+32, avctx->sample_rate);
 
     // Set relevant extradata fields
@@ -606,7 +607,7 @@ static int alac_encode_frame(AVCodecContext *avctx, AVPacket *avpkt,
     s->frame_size = frame->nb_samples;
 
     if (frame->nb_samples < DEFAULT_FRAME_SIZE)
-        max_frame_size = get_max_frame_size(s->frame_size, avctx->channels,
+        max_frame_size = get_max_frame_size(s->frame_size, avctx->ch_layout.nb_channels,
                                             avctx->bits_per_raw_sample);
     else
         max_frame_size = s->max_coded_frame_size;
@@ -666,7 +667,12 @@ AVCodec ff_alac_encoder = {
     .encode2        = alac_encode_frame,
     .close          = alac_encode_close,
     .capabilities   = AV_CODEC_CAP_SMALL_LAST_FRAME,
+#if FF_API_OLD_CHANNEL_LAYOUT
+FF_DISABLE_DEPRECATION_WARNINGS
     .channel_layouts = ff_alac_channel_layouts,
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
+    .ch_layouts     = ff_alac_ch_layouts,
     .sample_fmts    = (const enum AVSampleFormat[]){ AV_SAMPLE_FMT_S32P,
                                                      AV_SAMPLE_FMT_S16P,
                                                      AV_SAMPLE_FMT_NONE },
