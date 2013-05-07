@@ -213,13 +213,14 @@ static av_cold int ape_decode_close(AVCodecContext *avctx)
 static av_cold int ape_decode_init(AVCodecContext *avctx)
 {
     APEContext *s = avctx->priv_data;
+    int channels = avctx->ch_layout.nb_channels;
     int i;
 
     if (avctx->extradata_size != 6) {
         av_log(avctx, AV_LOG_ERROR, "Incorrect extradata\n");
         return AVERROR(EINVAL);
     }
-    if (avctx->channels > 2) {
+    if (channels > 2) {
         av_log(avctx, AV_LOG_ERROR, "Only mono and stereo is supported\n");
         return AVERROR(EINVAL);
     }
@@ -240,7 +241,7 @@ static av_cold int ape_decode_init(AVCodecContext *avctx)
         return AVERROR_PATCHWELCOME;
     }
     s->avctx             = avctx;
-    s->channels          = avctx->channels;
+    s->channels          = channels;
     s->fileversion       = AV_RL16(avctx->extradata);
     s->compression_level = AV_RL16(avctx->extradata + 2);
     s->flags             = AV_RL16(avctx->extradata + 4);
@@ -291,7 +292,9 @@ static av_cold int ape_decode_init(AVCodecContext *avctx)
     }
 
     ff_dsputil_init(&s->dsp, avctx);
-    avctx->channel_layout = (avctx->channels==2) ? AV_CH_LAYOUT_STEREO : AV_CH_LAYOUT_MONO;
+    av_channel_layout_uninit(&avctx->ch_layout);
+    avctx->ch_layout = (channels == 2) ? (AVChannelLayout)AV_CHANNEL_LAYOUT_STEREO :
+                                         (AVChannelLayout)AV_CHANNEL_LAYOUT_MONO;
 
     return 0;
 filter_alloc_fail:
