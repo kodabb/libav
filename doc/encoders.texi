@@ -441,6 +441,50 @@ Same as 3, but with extra processing enabled - corresponding to the wavpack
 
 @end table
 
+@section libmp3lame
+
+LAME (Lame Ain't an MP3 Encoder) MP3 encoder wrapper
+
+Requires the presence of the libmp3lame headers and library during
+configuration. You need to explicitly configure the build with
+@code{--enable-libmp3lame}.
+
+@subsection Options
+
+The following options are supported by the libmp3lame wrapper. The
+@command{lame}-equivalent of the options are listed in parentheses.
+
+@table @option
+@item b (@emph{-b})
+Set bitrate expressed in bits/s for CBR. LAME @code{bitrate} is
+expressed in kilobits/s.
+
+@item q (@emph{-V})
+Set constant quality setting for VBR. This option is valid only
+using the @command{avconv} command-line tool. For library interface
+users, use @option{global_quality}.
+
+@item compression_level (@emph{-q})
+Set algorithm quality. Valid arguments are integers in the 0-9 range,
+with 0 meaning highest quality but slowest, and 9 meaning fastest
+while producing the worst quality.
+
+@item reservoir
+Enable use of bit reservoir when set to 1. Default value is 1. LAME
+has this enabled by default, but can be overriden by use
+@option{--nores} option.
+
+@item joint_stereo (@emph{-m j})
+Enable the encoder to use (on a frame by frame basis) either L/R
+stereo or mid/side stereo. Default value is 1.
+
+@item abr (@emph{--abr})
+Enable the encoder to use ABR when set to 1. The @command{lame}
+@option{--abr} sets the target bitrate, while this options only
+tells Libav to use ABR, relying on @option{b} to set bitrate.
+
+@end table
+
 @c man end AUDIO ENCODERS
 
 @chapter Video Encoders
