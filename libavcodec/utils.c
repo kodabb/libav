@@ -1400,18 +1400,6 @@ static int apply_param_change(AVCodecContext *avctx, AVPacket *avpkt)
     flags = bytestream_get_le32(&data);
     size -= 4;
 
-    if (flags & AV_SIDE_DATA_PARAM_CHANGE_CHANNEL_COUNT) {
-        if (size < 4)
-            goto fail;
-        avctx->channels = bytestream_get_le32(&data);
-        size -= 4;
-    }
-    if (flags & AV_SIDE_DATA_PARAM_CHANGE_CHANNEL_LAYOUT) {
-        if (size < 8)
-            goto fail;
-        avctx->channel_layout = bytestream_get_le64(&data);
-        size -= 8;
-    }
     if (flags & AV_SIDE_DATA_PARAM_CHANGE_SAMPLE_RATE) {
         if (size < 4)
             goto fail;
