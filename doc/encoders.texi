@@ -552,6 +552,30 @@ maximum value is 10.
 
 @end table
 
+@section libvo-aacenc
+
+VisualOn AAC encoder
+
+Requires the presence of the libvo-aacenc headers and library during
+configuration. You need to explicitly configure the build with
+@code{--enable-libvo-aacenc --enable-version3}.
+
+This encoder is considered to be worse than the
+@ref{aacenc,,native experimental Libav AAC encoder}, according to
+multiple sources.
+
+@subsection Options
+
+The VisualOn AAC encoder only support encoding AAC-LC and up to 2
+channels. It is also CBR-only.
+
+@table @option
+
+@item b
+Set bit rate in bits/s.
+
+@end table
+
 @c man end AUDIO ENCODERS
 
 @chapter Video Encoders
