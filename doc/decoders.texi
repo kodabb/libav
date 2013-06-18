@@ -53,4 +53,14 @@ Loud sounds are fully compressed.  Soft sounds are enhanced.
 
 @end table
 
+@section libgsm
+
+libgsm decoder wrapper
+
+libgsm allows libavcodec to decode the GSM full rate audio codec. Requires
+the presence of the libgsm headers and library during configuration. You need
+to explicitly configure the build with @code{--enable-libgsm}.
+
+This decoder supports both the ordinary GSM and the Microsoft variant.
+
 @c man end AUDIO DECODERS
