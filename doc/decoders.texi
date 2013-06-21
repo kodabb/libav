@@ -63,4 +63,16 @@ to explicitly configure the build with @code{--enable-libgsm}.
 
 This decoder supports both the ordinary GSM and the Microsoft variant.
 
+@section libopencore-amrnb
+
+libopencore-amrnb decoder wrapper
+
+libopencore-amrnb allows libavcodec to decode the Adaptive Multi-Rate
+Narrowband audio codec. Using it requires the presence of the
+libopencore-amrnb headers and library during configuration. You need to
+explicitly configure the build with @code{--enable-libopencore-amrnb}.
+
+A Libav native decoder for AMR-NB exists, so users can decode AMR-NB
+without this library.
+
 @c man end AUDIO DECODERS
