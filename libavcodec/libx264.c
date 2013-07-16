@@ -289,7 +289,9 @@ static av_cold int X264_init(AVCodecContext *avctx)
     if (avctx->thread_type)
         x4->params.b_sliced_threads = avctx->thread_type == FF_THREAD_SLICE;
 
-    x4->params.b_interlaced   = avctx->flags & CODEC_FLAG_INTERLACED_DCT;
+    x4->params.b_interlaced   = avctx->flags & CODEC_FLAG_INTERLACED_DCT ||
+                                (avctx->field_order != AV_FIELD_UNKNOWN &&
+                                 avctx->field_order != AV_FIELD_PROGRESSIVE);
 
     x4->params.b_open_gop     = !(avctx->flags & CODEC_FLAG_CLOSED_GOP);
 
@@ -409,6 +411,13 @@ static int X264_frame(AVCodecContext *ctx, AVPacket *pkt, const AVFrame *frame,
     x264_nal_t *nal;
     int nnal, i, ret;
     x264_picture_t pic_out;
+
+    /* encoder does not pick b_interlaced changes from x264_encoder_reconfig() */
+    if (frame && frame->interlaced_frame && !x4->params.b_interlaced) {
+        X264_close(ctx);
+        ctx->field_order = frame->top_field_first ? AV_FIELD_TB : AV_FIELD_BT;
+        X264_init(ctx);
+    }
 
     x4->pic.img.i_csp   = x4->params.i_csp;
     if (x264_bit_depth > 8)
