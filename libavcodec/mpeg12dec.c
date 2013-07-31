@@ -27,6 +27,7 @@
 
 #include "libavutil/attributes.h"
 #include "libavutil/internal.h"
+#include "libavutil/stereo3d.h"
 #include "internal.h"
 #include "avcodec.h"
 #include "dsputil.h"
@@ -2030,18 +2031,69 @@ static void mpeg_decode_user_data(AVCodecContext *avctx,
     const uint8_t *buf_end = p + buf_size;
 
     /* we parse the DTG active format information */
-    if (buf_end - p >= 5 &&
-        p[0] == 'D' && p[1] == 'T' && p[2] == 'G' && p[3] == '1') {
-        int flags = p[4];
-        p += 5;
-        if (flags & 0x80) {
-            /* skip event id */
-            p += 2;
-        }
-        if (flags & 0x40) {
-            if (buf_end - p < 1)
+    if (buf_end - p >= 5) {
+        if (p[0] == 'D' &&
+            p[1] == 'T' &&
+            p[2] == 'G' &&
+            p[3] == '1') {
+            int flags = p[4];
+            p += 5;
+            if (flags & 0x80) {
+                /* skip event id */
+                p += 2;
+            }
+            if (flags & 0x40) {
+                if (buf_end - p < 1)
+                    return;
+                avctx->dtg_active_format = p[0] & 0x0f;
+            }
+        } else if (p[0] == 'J' &&
+                   p[1] == 'P' &&
+                   p[2] == '3' &&
+                   p[3] == 'D') {
+            AVFrameSideData *side_data;
+            Mpeg1Context *s1   = avctx->priv_data;
+            MpegEncContext *s  = &s1->mpeg_enc_ctx;
+            AVStereo3D *stereo = av_stereo3d_alloc();
+            if (!stereo)
                 return;
-            avctx->dtg_active_format = p[0] & 0x0f;
+
+            if (p[4] == 0x03) { // S3D_video_format_length
+                // the mask ignores reserved_bit
+                const uint8_t S3D_video_format_type = p[5] & 0x7F;
+
+                switch (S3D_video_format_type) {
+                case 0x03:
+                    stereo->type = AV_STEREO3D_SIDEBYSIDE;
+                    break;
+                case 0x04:
+                    stereo->type = AV_STEREO3D_TOPBOTTOM;
+                    break;
+                case 0x08:
+                    stereo->type = AV_STEREO3D_2D;
+                    stereo->info = AV_STEREO3D_SIZE_FULL;
+                    break;
+                case 0x23:
+                    stereo->type = AV_STEREO3D_SIDEBYSIDE;
+                    stereo->info = AV_STEREO3D_SAMPLE_QUINCUNX;
+                    break;
+                default:
+                    stereo->type = AV_STEREO3D_UNKNOWN;
+                    break;
+                }
+
+                if (s->current_picture_ptr &&
+                    stereo->type != AV_STEREO3D_UNKNOWN) {
+                    side_data = av_frame_new_side_data(&s->current_picture_ptr->f,
+                                                       AV_FRAME_DATA_STEREO3D,
+                                                       sizeof(AVStereo3D));
+                    if (!side_data)
+                        return;
+
+                    memcpy(side_data->data, &stereo, sizeof(AVStereo3D));
+                    av_stereo3d_free(&stereo);
+                }
+            }
         }
     }
 }
