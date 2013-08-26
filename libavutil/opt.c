@@ -207,6 +207,14 @@ static int set_string_number(void *obj, void *target_obj, const AVOption *o, con
     return 0;
 }
 
+static int set_string_channel_layout(void *obj, const AVOption *o,
+                                     const char *val, void *dst)
+{
+    AVChannelLayout *channel_layout = dst;
+    av_channel_layout_uninit(channel_layout);
+    return av_channel_layout_from_string(channel_layout, val);
+}
+
 int av_opt_set(void *obj, const char *name, const char *val, int search_flags)
 {
     void *dst, *target_obj;
@@ -226,6 +234,7 @@ int av_opt_set(void *obj, const char *name, const char *val, int search_flags)
     case AV_OPT_TYPE_FLOAT:
     case AV_OPT_TYPE_DOUBLE:
     case AV_OPT_TYPE_RATIONAL: return set_string_number(obj, target_obj, o, val, dst);
+    case AV_OPT_TYPE_CHANNEL_LAYOUT: return set_string_channel_layout(obj, o, val, dst);
     }
 
     av_log(obj, AV_LOG_ERROR, "Invalid option type.\n");
@@ -304,6 +313,23 @@ int av_opt_set_bin(void *obj, const char *name, const uint8_t *val, int len, int
     return 0;
 }
 
+int av_opt_set_channel_layout(void *obj, const char *name,
+                              const AVChannelLayout *channel_layout,
+                              int search_flags)
+{
+    void *target_obj;
+    const AVOption *o = av_opt_find2(obj, name, NULL, 0, search_flags, &target_obj);
+    AVChannelLayout *dst;
+
+    if (!o || !target_obj)
+        return AVERROR_OPTION_NOT_FOUND;
+
+    dst = (AVChannelLayout*)((uint8_t*)target_obj + o->offset);
+
+    av_channel_layout_uninit(dst);
+    return av_channel_layout_copy(dst, channel_layout);
+}
+
 int av_opt_get(void *obj, const char *name, int search_flags, uint8_t **out_val)
 {
     void *dst, *target_obj;
@@ -340,6 +366,9 @@ int av_opt_get(void *obj, const char *name, int search_flags, uint8_t **out_val)
         for (i = 0; i < len; i++)
             snprintf(*out_val + i*2, 3, "%02X", bin[i]);
         return 0;
+    case AV_OPT_TYPE_CHANNEL_LAYOUT:
+        *out_val = av_channel_layout_describe(dst);
+        return *out_val ? 0 : AVERROR(EINVAL);
     default:
         return AVERROR(EINVAL);
     }
@@ -407,6 +436,20 @@ int av_opt_get_q(void *obj, const char *name, int search_flags, AVRational *out_
     return 0;
 }
 
+int av_opt_get_channel_layout(void *obj, const char *name, int search_flags,
+                              AVChannelLayout *channel_layout)
+{
+    void *dst, *target_obj;
+    const AVOption *o = av_opt_find2(obj, name, NULL, 0, search_flags, &target_obj);
+
+    if (!o || !target_obj)
+        return AVERROR_OPTION_NOT_FOUND;
+
+    dst = ((uint8_t*)target_obj) + o->offset;
+
+    return av_channel_layout_copy(channel_layout, dst);
+}
+
 int av_opt_flag_is_set(void *obj, const char *field_name, const char *flag_name)
 {
     const AVOption *field = av_opt_find(obj, field_name, NULL, 0, 0);
@@ -469,6 +512,9 @@ static void opt_list(void *obj, void *av_log_obj, const char *unit,
             case AV_OPT_TYPE_BINARY:
                 av_log(av_log_obj, AV_LOG_INFO, "%-7s ", "<binary>");
                 break;
+            case AV_OPT_TYPE_CHANNEL_LAYOUT:
+                av_log(av_log_obj, AV_LOG_INFO, "%-7s", "<channel layout>");
+                break;
             case AV_OPT_TYPE_CONST:
             default:
                 av_log(av_log_obj, AV_LOG_INFO, "%-7s ", "");
@@ -528,6 +574,7 @@ void av_opt_set_defaults(void *s)
             }
             break;
             case AV_OPT_TYPE_STRING:
+            case AV_OPT_TYPE_CHANNEL_LAYOUT:
                 av_opt_set(s, opt->name, opt->default_val.str, 0);
                 break;
             case AV_OPT_TYPE_BINARY:

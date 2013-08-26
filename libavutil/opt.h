@@ -29,6 +29,7 @@
 
 #include "rational.h"
 #include "avutil.h"
+#include "channel_layout.h"
 #include "dict.h"
 #include "log.h"
 
@@ -224,6 +225,11 @@ enum AVOptionType{
     AV_OPT_TYPE_STRING,
     AV_OPT_TYPE_RATIONAL,
     AV_OPT_TYPE_BINARY,  ///< offset must point to a pointer immediately followed by an int for the length
+    /**
+     * The offset point to an AVChannelLayout, the default is .str, which gets
+     * passed to av_channel_layout_from_string().
+     */
+    AV_OPT_TYPE_CHANNEL_LAYOUT,
     AV_OPT_TYPE_CONST = 128,
 };
 
@@ -485,6 +491,8 @@ int av_opt_set_int   (void *obj, const char *name, int64_t     val, int search_f
 int av_opt_set_double(void *obj, const char *name, double      val, int search_flags);
 int av_opt_set_q     (void *obj, const char *name, AVRational  val, int search_flags);
 int av_opt_set_bin   (void *obj, const char *name, const uint8_t *val, int size, int search_flags);
+int av_opt_set_channel_layout(void *obj, const char *name,
+                              const AVChannelLayout *channel_layout, int search_flags);
 /**
  * @}
  */
@@ -508,6 +516,8 @@ int av_opt_get       (void *obj, const char *name, int search_flags, uint8_t   *
 int av_opt_get_int   (void *obj, const char *name, int search_flags, int64_t    *out_val);
 int av_opt_get_double(void *obj, const char *name, int search_flags, double     *out_val);
 int av_opt_get_q     (void *obj, const char *name, int search_flags, AVRational *out_val);
+int av_opt_get_channel_layout(void *obj, const char *name, int search_flags,
+                              AVChannelLayout *channel_layout);
 /**
  * @}
  * @}
