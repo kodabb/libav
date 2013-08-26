@@ -18,6 +18,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
+#include "libavutil/channel_layout.h"
 #include "libavutil/common.h"
 #include "libavutil/dict.h"
 #include "libavutil/error.h"
@@ -34,26 +35,44 @@
 
 int avresample_open(AVAudioResampleContext *avr)
 {
+    int in_ch, out_ch;
     int ret;
 
     /* set channel mixing parameters */
-    avr->in_channels = av_get_channel_layout_nb_channels(avr->in_channel_layout);
-    if (avr->in_channels <= 0 || avr->in_channels > AVRESAMPLE_MAX_CHANNELS) {
-        av_log(avr, AV_LOG_ERROR, "Invalid input channel layout: %"PRIu64"\n",
-               avr->in_channel_layout);
+#if FF_API_OLD_CHANNEL_LAYOUT
+    if (avr->in_channel_layout) {
+        av_log(avr, AV_LOG_WARNING, "Setting the input channel layout with the "
+               "'in_channel_layout' option is deprecated, use the "
+               "'in_ch_layout' option instead].\n");
+        av_channel_layout_uninit(&avr->in_ch_layout);
+        av_channel_layout_from_mask(&avr->in_ch_layout, avr->in_channel_layout);
+    }
+    if (avr->out_channel_layout) {
+        av_log(avr, AV_LOG_WARNING, "Setting the output channel layout with the "
+               "'out_channel_layout' option is deprecated, use the "
+               "'out_ch_layout' option instead].\n");
+        av_channel_layout_uninit(&avr->out_ch_layout);
+        av_channel_layout_from_mask(&avr->out_ch_layout, avr->out_channel_layout);
+    }
+#endif
+    in_ch  = avr->in_ch_layout.nb_channels;
+    out_ch = avr->out_ch_layout.nb_channels;
+    if (!av_channel_layout_check(&avr->in_ch_layout) ||
+        in_ch > AVRESAMPLE_MAX_CHANNELS) {
+        av_log(avr, AV_LOG_ERROR, "Invalid input channel layout.\n");
         return AVERROR(EINVAL);
     }
-    avr->out_channels = av_get_channel_layout_nb_channels(avr->out_channel_layout);
-    if (avr->out_channels <= 0 || avr->out_channels > AVRESAMPLE_MAX_CHANNELS) {
-        av_log(avr, AV_LOG_ERROR, "Invalid output channel layout: %"PRIu64"\n",
-               avr->out_channel_layout);
+    if (!av_channel_layout_check(&avr->out_ch_layout) ||
+        out_ch > AVRESAMPLE_MAX_CHANNELS) {
+        av_log(avr, AV_LOG_ERROR, "Invalid output channel layout.\n");
         return AVERROR(EINVAL);
     }
-    avr->resample_channels = FFMIN(avr->in_channels, avr->out_channels);
-    avr->downmix_needed    = avr->in_channels  > avr->out_channels;
-    avr->upmix_needed      = avr->out_channels > avr->in_channels ||
+    avr->resample_channels = FFMIN(in_ch, out_ch);
+    avr->downmix_needed    = in_ch > out_ch;
+    avr->upmix_needed      = out_ch > in_ch ||
                              (!avr->downmix_needed && (avr->mix_matrix ||
-                              avr->in_channel_layout != avr->out_channel_layout));
+                              av_channel_layout_compare(&avr->in_ch_layout,
+                                                        &avr->out_ch_layout)));
     avr->mixing_needed     = avr->downmix_needed || avr->upmix_needed;
 
     /* set resampling parameters */
@@ -97,9 +116,9 @@ int avresample_open(AVAudioResampleContext *avr)
     }
 
     /* treat all mono as planar for easier comparison */
-    if (avr->in_channels == 1)
+    if (in_ch == 1)
         avr->in_sample_fmt = av_get_planar_sample_fmt(avr->in_sample_fmt);
-    if (avr->out_channels == 1)
+    if (out_ch == 1)
         avr->out_sample_fmt = av_get_planar_sample_fmt(avr->out_sample_fmt);
 
     /* we may need to add an extra conversion in order to remap channels if
@@ -144,27 +163,27 @@ int avresample_open(AVAudioResampleContext *avr)
             int ch;
             av_dlog(avr, "output map: ");
             if (avr->ch_map_info.do_remap)
-                for (ch = 0; ch < avr->in_channels; ch++)
+                for (ch = 0; ch < in_ch; ch++)
                     av_dlog(avr, " % 2d", avr->ch_map_info.channel_map[ch]);
             else
                 av_dlog(avr, "n/a");
             av_dlog(avr, "\n");
             av_dlog(avr, "copy map:   ");
             if (avr->ch_map_info.do_copy)
-                for (ch = 0; ch < avr->in_channels; ch++)
+                for (ch = 0; ch < in_ch; ch++)
                     av_dlog(avr, " % 2d", avr->ch_map_info.channel_copy[ch]);
             else
                 av_dlog(avr, "n/a");
             av_dlog(avr, "\n");
             av_dlog(avr, "zero map:   ");
             if (avr->ch_map_info.do_zero)
-                for (ch = 0; ch < avr->in_channels; ch++)
+                for (ch = 0; ch < in_ch; ch++)
                     av_dlog(avr, " % 2d", avr->ch_map_info.channel_zero[ch]);
             else
                 av_dlog(avr, "n/a");
             av_dlog(avr, "\n");
             av_dlog(avr, "input map:  ");
-            for (ch = 0; ch < avr->in_channels; ch++)
+            for (ch = 0; ch < in_ch; ch++)
                 av_dlog(avr, " % 2d", avr->ch_map_info.input_map[ch]);
             av_dlog(avr, "\n");
         }
@@ -174,7 +193,7 @@ int avresample_open(AVAudioResampleContext *avr)
 
     /* allocate buffers */
     if (avr->in_copy_needed || avr->in_convert_needed) {
-        avr->in_buffer = ff_audio_data_alloc(FFMAX(avr->in_channels, avr->out_channels),
+        avr->in_buffer = ff_audio_data_alloc(FFMAX(in_ch, out_ch),
                                              0, avr->internal_sample_fmt,
                                              "in_buffer");
         if (!avr->in_buffer) {
@@ -183,7 +202,7 @@ int avresample_open(AVAudioResampleContext *avr)
         }
     }
     if (avr->resample_needed) {
-        avr->resample_out_buffer = ff_audio_data_alloc(avr->out_channels,
+        avr->resample_out_buffer = ff_audio_data_alloc(out_ch,
                                                        0, avr->internal_sample_fmt,
                                                        "resample_out_buffer");
         if (!avr->resample_out_buffer) {
@@ -192,15 +211,14 @@ int avresample_open(AVAudioResampleContext *avr)
         }
     }
     if (avr->out_convert_needed) {
-        avr->out_buffer = ff_audio_data_alloc(avr->out_channels, 0,
+        avr->out_buffer = ff_audio_data_alloc(out_ch, 0,
                                               avr->out_sample_fmt, "out_buffer");
         if (!avr->out_buffer) {
             ret = AVERROR(EINVAL);
             goto error;
         }
     }
-    avr->out_fifo = av_audio_fifo_alloc(avr->out_sample_fmt, avr->out_channels,
-                                        1024);
+    avr->out_fifo = av_audio_fifo_alloc(avr->out_sample_fmt, out_ch, 1024);
     if (!avr->out_fifo) {
         ret = AVERROR(ENOMEM);
         goto error;
@@ -209,7 +227,7 @@ int avresample_open(AVAudioResampleContext *avr)
     /* setup contexts */
     if (avr->in_convert_needed) {
         avr->ac_in = ff_audio_convert_alloc(avr, avr->internal_sample_fmt,
-                                            avr->in_sample_fmt, avr->in_channels,
+                                            avr->in_sample_fmt, in_ch,
                                             avr->in_sample_rate,
                                             avr->remap_point == REMAP_IN_CONVERT);
         if (!avr->ac_in) {
@@ -224,7 +242,7 @@ int avresample_open(AVAudioResampleContext *avr)
         else
             src_fmt = avr->in_sample_fmt;
         avr->ac_out = ff_audio_convert_alloc(avr, avr->out_sample_fmt, src_fmt,
-                                             avr->out_channels,
+                                             out_ch,
                                              avr->out_sample_rate,
                                              avr->remap_point == REMAP_OUT_CONVERT);
         if (!avr->ac_out) {
@@ -355,7 +373,7 @@ int attribute_align_arg avresample_convert(AVAudioResampleContext *avr,
     direct_output = output && av_audio_fifo_size(avr->out_fifo) == 0;
     if (output) {
         ret = ff_audio_data_init(&output_buffer, output, out_plane_size,
-                                 avr->out_channels, out_samples,
+                                 avr->out_ch_layout.nb_channels, out_samples,
                                  avr->out_sample_fmt, 0, "output");
         if (ret < 0)
             return ret;
@@ -365,7 +383,7 @@ int attribute_align_arg avresample_convert(AVAudioResampleContext *avr,
     if (input) {
         /* initialize input_buffer with input data */
         ret = ff_audio_data_init(&input_buffer, input, in_plane_size,
-                                 avr->in_channels, in_samples,
+                                 avr->in_ch_layout.nb_channels, in_samples,
                                  avr->in_sample_fmt, 1, "input");
         if (ret < 0)
             return ret;
@@ -414,7 +432,7 @@ int attribute_align_arg avresample_convert(AVAudioResampleContext *avr,
                 if (ret < 0)
                     return ret;
             }
-            ff_audio_data_set_channels(avr->in_buffer, avr->in_channels);
+            ff_audio_data_set_channels(avr->in_buffer, avr->in_ch_layout.nb_channels);
             if (avr->downmix_needed) {
                 av_dlog(avr, "[downmix] in_buffer\n");
                 ret = ff_audio_mix(avr->am, avr->in_buffer);
@@ -504,8 +522,8 @@ int avresample_get_matrix(AVAudioResampleContext *avr, double *matrix,
     if (avr->am)
         return ff_audio_mix_get_matrix(avr->am, matrix, stride);
 
-    in_channels  = av_get_channel_layout_nb_channels(avr->in_channel_layout);
-    out_channels = av_get_channel_layout_nb_channels(avr->out_channel_layout);
+    in_channels  = avr->in_ch_layout.nb_channels;
+    out_channels = avr->out_ch_layout.nb_channels;
 
     if ( in_channels <= 0 ||  in_channels > AVRESAMPLE_MAX_CHANNELS ||
         out_channels <= 0 || out_channels > AVRESAMPLE_MAX_CHANNELS) {
@@ -533,8 +551,8 @@ int avresample_set_matrix(AVAudioResampleContext *avr, const double *matrix,
     if (avr->am)
         return ff_audio_mix_set_matrix(avr->am, matrix, stride);
 
-    in_channels  = av_get_channel_layout_nb_channels(avr->in_channel_layout);
-    out_channels = av_get_channel_layout_nb_channels(avr->out_channel_layout);
+    in_channels  = avr->in_ch_layout.nb_channels;
+    out_channels = avr->out_ch_layout.nb_channels;
 
     if ( in_channels <= 0 ||  in_channels > AVRESAMPLE_MAX_CHANNELS ||
         out_channels <= 0 || out_channels > AVRESAMPLE_MAX_CHANNELS) {
@@ -562,7 +580,7 @@ int avresample_set_channel_mapping(AVAudioResampleContext *avr,
     ChannelMapInfo *info = &avr->ch_map_info;
     int in_channels, ch, i;
 
-    in_channels = av_get_channel_layout_nb_channels(avr->in_channel_layout);
+    in_channels = avr->in_ch_layout.nb_channels;
     if (in_channels <= 0 ||  in_channels > AVRESAMPLE_MAX_CHANNELS) {
         av_log(avr, AV_LOG_ERROR, "Invalid input channel layout\n");
         return AVERROR(EINVAL);

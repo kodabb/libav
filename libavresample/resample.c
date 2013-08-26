@@ -267,7 +267,7 @@ int avresample_set_compensation(AVAudioResampleContext *avr, int sample_delta,
         /* buffer any remaining samples in the output FIFO before closing */
         fifo_samples = av_audio_fifo_size(avr->out_fifo);
         if (fifo_samples > 0) {
-            fifo_buf = ff_audio_data_alloc(avr->out_channels, fifo_samples,
+            fifo_buf = ff_audio_data_alloc(avr->out_ch_layout.nb_channels, fifo_samples,
                                            avr->out_sample_fmt, NULL);
             if (!fifo_buf)
                 return AVERROR(EINVAL);
