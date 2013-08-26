@@ -44,8 +44,10 @@
  * matrix):
  * @code
  * AVAudioResampleContext *avr = avresample_alloc_context();
- * av_opt_set_int(avr, "in_channel_layout",  AV_CH_LAYOUT_5POINT1, 0);
- * av_opt_set_int(avr, "out_channel_layout", AV_CH_LAYOUT_STEREO,  0);
+ * AVChannelLayout in_ch_layout  = (AVChannelLayout)AV_CHANNEL_LAYOUT_5POINT1;
+ * AVChannelLayout out_ch_layout = (AVChannelLayout)AV_CHANNEL_LAYOUT_STEREO;
+ * av_opt_set_channel_layout(avr, "in_ch_layout",  &in_ch_layout,  0);
+ * av_opt_set_channel_layout(avr, "out_ch_layout", &out_ch_layout, 0);
  * av_opt_set_int(avr, "in_sample_rate",     48000,                0);
  * av_opt_set_int(avr, "out_sample_rate",    44100,                0);
  * av_opt_set_int(avr, "in_sample_fmt",      AV_SAMPLE_FMT_FLTP,   0);
@@ -92,6 +94,7 @@
  *  avresample_free().
  */
 
+#include "libavutil/attributes.h"
 #include "libavutil/avutil.h"
 #include "libavutil/channel_layout.h"
 #include "libavutil/dict.h"
@@ -167,7 +170,7 @@ AVAudioResampleContext *avresample_alloc_context(void);
 /**
  * Initialize AVAudioResampleContext.
  * @note The context must be configured using the AVOption API.
- * @note The fields "in_channel_layout", "out_channel_layout",
+ * @note The fields "in_ch_layout", "out_ch_layout",
  *       "in_sample_rate", "out_sample_rate", "in_sample_fmt",
  *       "out_sample_fmt" must be set.
  *
@@ -212,6 +215,38 @@ void avresample_close(AVAudioResampleContext *avr);
  */
 void avresample_free(AVAudioResampleContext **avr);
 
+#if FF_API_OLD_CHANNEL_LAYOUT
+/**
+ * Generate a channel mixing matrix.
+ *
+ * This function is the one used internally by libavresample for building the
+ * default mixing matrix. It is made public just as a utility function for
+ * building custom matrices.
+ *
+ * @param in_layout           input channel layout
+ * @param out_layout          output channel layout
+ * @param center_mix_level    mix level for the center channel
+ * @param surround_mix_level  mix level for the surround channel(s)
+ * @param lfe_mix_level       mix level for the low-frequency effects channel
+ * @param normalize           if 1, coefficients will be normalized to prevent
+ *                            overflow. if 0, coefficients will not be
+ *                            normalized.
+ * @param[out] matrix         mixing coefficients; matrix[i + stride * o] is
+ *                            the weight of input channel i in output channel o.
+ * @param stride              distance between adjacent input channels in the
+ *                            matrix array
+ * @param matrix_encoding     matrixed stereo downmix mode (e.g. dplii)
+ * @return                    0 on success, negative AVERROR code on failure
+ *
+ * @deprecated use avresample_build_matrix2()
+ */
+attribute_deprecated
+int avresample_build_matrix(uint64_t in_layout, uint64_t out_layout,
+                            double center_mix_level, double surround_mix_level,
+                            double lfe_mix_level, int normalize, double *matrix,
+                            int stride, enum AVMatrixEncoding matrix_encoding);
+#endif
+
 /**
  * Generate a channel mixing matrix.
  *
@@ -234,10 +269,11 @@ void avresample_free(AVAudioResampleContext **avr);
  * @param matrix_encoding     matrixed stereo downmix mode (e.g. dplii)
  * @return                    0 on success, negative AVERROR code on failure
  */
-int avresample_build_matrix(uint64_t in_layout, uint64_t out_layout,
-                            double center_mix_level, double surround_mix_level,
-                            double lfe_mix_level, int normalize, double *matrix,
-                            int stride, enum AVMatrixEncoding matrix_encoding);
+int avresample_build_matrix2(const AVChannelLayout *in_layout,
+                             const AVChannelLayout *out_layout,
+                             double center_mix_level, double surround_mix_level,
+                             double lfe_mix_level, int normalize, double *matrix,
+                             int stride, enum AVMatrixEncoding matrix_encoding);
 
 /**
  * Get the current channel mixing matrix.
