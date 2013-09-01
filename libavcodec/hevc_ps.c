@@ -344,6 +344,21 @@ static void decode_vui(HEVCContext *s, SPS *sps)
         vui->def_disp_win.right_offset  = get_ue_golomb(gb);
         vui->def_disp_win.top_offset    = get_ue_golomb(gb);
         vui->def_disp_win.bottom_offset = get_ue_golomb(gb);
+
+        if (s->avctx->flags2 & CODEC_FLAG2_IGNORE_CROP) {
+            av_log(s->avctx, AV_LOG_DEBUG,
+                   "discarding vui default display window, "
+                   "original values are l:%u r:%u t:%u b:%u\n",
+                   vui->def_disp_win.left_offset,
+                   vui->def_disp_win.right_offset,
+                   vui->def_disp_win.top_offset,
+                   vui->def_disp_win.bottom_offset);
+
+            vui->def_disp_win.left_offset   =
+            vui->def_disp_win.right_offset  =
+            vui->def_disp_win.top_offset    =
+            vui->def_disp_win.bottom_offset = 0;
+        }
     }
 
     vui->vui_timing_info_present_flag = get_bits1(gb);
@@ -440,6 +455,22 @@ int ff_hevc_decode_nal_sps(HEVCContext *s)
         sps->pic_conf_win.right_offset  = get_ue_golomb(gb);
         sps->pic_conf_win.top_offset    = get_ue_golomb(gb);
         sps->pic_conf_win.bottom_offset = get_ue_golomb(gb);
+
+        if (s->avctx->flags2 & CODEC_FLAG2_IGNORE_CROP) {
+            av_log(s->avctx, AV_LOG_DEBUG,
+                   "discarding sps conformance window, "
+                   "original values are l:%u r:%u t:%u b:%u\n",
+                   sps->pic_conf_win.left_offset,
+                   sps->pic_conf_win.right_offset,
+                   sps->pic_conf_win.top_offset,
+                   sps->pic_conf_win.bottom_offset);
+
+            sps->pic_conf_win.left_offset   =
+            sps->pic_conf_win.right_offset  =
+            sps->pic_conf_win.top_offset    =
+            sps->pic_conf_win.bottom_offset = 0;
+        }
+
     }
     if (s->avctx->flags2 & CODEC_FLAG2_IGNORE_CROP) {
         sps->pic_conf_win.left_offset   =
