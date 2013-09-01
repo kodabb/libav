@@ -948,6 +948,8 @@ void ff_hevc_hls_filters(HEVCContext *s, int x_ctb, int y_ctb, int ctb_size);
 
 void ff_hevc_pps_free(PPS **ppps);
 
+int ff_hevc_apply_window(HEVCContext *s, HEVCWindow *window);
+
 extern const uint8_t ff_hevc_qpel_extra_before[4];
 extern const uint8_t ff_hevc_qpel_extra_after[4];
 extern const uint8_t ff_hevc_qpel_extra[4];

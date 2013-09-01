@@ -179,7 +179,6 @@ int ff_hevc_output_frame(HEVCContext *s, AVFrame *out, int flush)
     int min_poc   = 0xFFFF;
     int i, j, min_idx, ret;
     AVFrame *dst, *src;
-    int step_x, step_y;
 
     do {
         for (i = 0; i < FF_ARRAY_ELEMS(s->DPB); i++) {
@@ -209,8 +208,6 @@ int ff_hevc_output_frame(HEVCContext *s, AVFrame *out, int flush)
             if (ret < 0)
                 return ret;
 
-            //TODO: 2 is only valid for 420
-            step_x = step_y = 2;
             for (j = 0; j < 3; j++) {
                 int off = (s->sps->pic_conf_win.left_offset >> s->sps->hshift[j]) << s->sps->pixel_shift +
                           (s->sps->pic_conf_win.top_offset >> s->sps->vshift[j]) * dst->linesize[j];
@@ -395,4 +392,30 @@ int ff_hevc_get_num_poc(HEVCContext *s)
             ret += !!long_rps->UsedByCurrPicLt[i];
     }
     return ret;
+}
+
+int ff_hevc_apply_window(HEVCContext *s, HEVCWindow *window)
+{
+    int original_width  = s->avctx->width;
+    int original_height = s->avctx->height;
+
+    s->avctx->width -= window->left_offset + window->right_offset;
+    s->avctx->height -= window->top_offset + window->bottom_offset;
+
+    if (s->avctx->width <= 0 || s->avctx->height <= 0) {
+        av_log(s->avctx, AV_LOG_ERROR, "Invalid frame dimensions: %dx%d.\n",
+               s->avctx->width, s->avctx->height);
+        if (s->avctx->err_recognition & AV_EF_EXPLODE)
+            return AVERROR_INVALIDDATA;
+
+        av_log(s->avctx, AV_LOG_WARNING, "Ignoring window information.\n");
+        window->left_offset   =
+        window->top_offset    =
+        window->right_offset  =
+        window->bottom_offset = 0;
+        s->avctx->width = original_width;
+        s->avctx->height = original_height;
+    }
+
+    return 0;
 }

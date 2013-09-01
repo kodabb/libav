@@ -451,10 +451,11 @@ int ff_hevc_decode_nal_sps(HEVCContext *s)
 
     sps->pic_conformance_flag = get_bits1(gb);
     if (sps->pic_conformance_flag) {
-        sps->pic_conf_win.left_offset   = get_ue_golomb(gb);
-        sps->pic_conf_win.right_offset  = get_ue_golomb(gb);
-        sps->pic_conf_win.top_offset    = get_ue_golomb(gb);
-        sps->pic_conf_win.bottom_offset = get_ue_golomb(gb);
+        //TODO: * 2 is only valid for 420
+        sps->pic_conf_win.left_offset   = get_ue_golomb(gb) * 2;
+        sps->pic_conf_win.right_offset  = get_ue_golomb(gb) * 2;
+        sps->pic_conf_win.top_offset    = get_ue_golomb(gb) * 2;
+        sps->pic_conf_win.bottom_offset = get_ue_golomb(gb) * 2;
 
         if (s->avctx->flags2 & CODEC_FLAG2_IGNORE_CROP) {
             av_log(s->avctx, AV_LOG_DEBUG,
