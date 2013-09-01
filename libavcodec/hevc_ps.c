@@ -4,6 +4,7 @@
  * Copyright (C) 2012 - 2103 Guillaume Martres
  * Copyright (C) 2012 - 2103 Mickael Raulet
  * Copyright (C) 2012 - 2013 Gildas Cocherel
+ * Copyright (C) 2013 Vittorio Giovara
  *
  * This file is part of Libav.
  *
