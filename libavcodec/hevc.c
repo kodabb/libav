@@ -448,8 +448,29 @@ static int hls_slice_header(HEVCContext *s)
             if (ret < 0)
                 return AVERROR(ENOMEM);
         }
-        s->avctx->width  = s->sps->pic_width_in_luma_samples;
-        s->avctx->height = s->sps->pic_height_in_luma_samples;
+
+        s->avctx->coded_width = s->sps->pic_width_in_luma_samples;
+        s->avctx->coded_height = s->sps->pic_height_in_luma_samples;
+        //TODO: 2 is only valid for 420
+        s->avctx->width = s->sps->pic_width_in_luma_samples - 2 *
+           (s->sps->pic_conf_win.left_offset + s->sps->pic_conf_win.right_offset);
+        s->avctx->height = s->sps->pic_height_in_luma_samples - 2 *
+           (s->sps->pic_conf_win.top_offset + s->sps->pic_conf_win.bottom_offset);
+
+        if (s->avctx->width <= 0 || s->avctx->height <= 0) {
+            av_log(s->avctx, AV_LOG_ERROR, "Invalid conformance window dimensions: %dx%d.\n",
+                   s->avctx->width, s->avctx->height);
+            if (s->avctx->err_recognition & AV_EF_EXPLODE)
+                return AVERROR_INVALIDDATA;
+
+            av_log(s->avctx, AV_LOG_WARNING, "Ignoring conformance window information.\n");
+            s->sps->pic_conf_win.left_offset =
+            s->sps->pic_conf_win.top_offset =
+            s->sps->pic_conf_win.right_offset =
+            s->sps->pic_conf_win.bottom_offset = 0;
+            s->avctx->width = s->sps->pic_width_in_luma_samples;
+            s->avctx->height = s->sps->pic_height_in_luma_samples;
+        }
 
         if (s->sps->chroma_format_idc == 0 || s->sps->separate_colour_plane_flag) {
             av_log(s->avctx, AV_LOG_ERROR,
