@@ -359,6 +359,15 @@ static void decode_vui(HEVCContext *s, SPS *sps)
             vui->def_disp_win.top_offset    =
             vui->def_disp_win.bottom_offset = 0;
         }
+
+        if (s->strict_def_disp_win &&
+            vui->def_disp_win.left_offset & (0x1F >> (sps->bit_depth > 8)) &&
+            !(s->avctx->flags & CODEC_FLAG_UNALIGNED)) {
+            vui->def_disp_win.left_offset &= ~(0x1F >> (sps->bit_depth > 8));
+            av_log(s->avctx, AV_LOG_WARNING, "Reducing left default display window "
+                   "to %d chroma samples to preserve alignment.\n",
+                   vui->def_disp_win.left_offset);
+        }
     }
 
     vui->vui_timing_info_present_flag = get_bits1(gb);
@@ -471,7 +480,6 @@ int ff_hevc_decode_nal_sps(HEVCContext *s)
             sps->pic_conf_win.top_offset    =
             sps->pic_conf_win.bottom_offset = 0;
         }
-
     }
     if (s->avctx->flags2 & CODEC_FLAG2_IGNORE_CROP) {
         sps->pic_conf_win.left_offset   =
@@ -494,6 +502,15 @@ int ff_hevc_decode_nal_sps(HEVCContext *s)
                sps->bit_depth);
         ret = AVERROR_PATCHWELCOME;
         goto err;
+    }
+
+    if (sps->pic_conformance_flag &&
+        sps->pic_conf_win.left_offset & (0x1F >> (sps->bit_depth > 8)) &&
+        !(s->avctx->flags & CODEC_FLAG_UNALIGNED)) {
+        sps->pic_conf_win.left_offset &= ~(0x1F >> (sps->bit_depth > 8));
+        av_log(s->avctx, AV_LOG_WARNING, "Reducing left conformance window to %d "
+               "chroma samples to preserve alignment.\n",
+               sps->pic_conf_win.left_offset);
     }
 
     sps->log2_max_poc_lsb = get_ue_golomb(gb) + 4;
