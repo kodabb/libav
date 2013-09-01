@@ -472,6 +472,27 @@ static int hls_slice_header(HEVCContext *s)
             s->avctx->height = s->sps->pic_height_in_luma_samples;
         }
 
+        if (s->strict_def_disp_win) {
+            s->avctx->width -= (s->sps->vui.def_disp_win.left_offset + s->sps->vui.def_disp_win.right_offset);
+            s->avctx->height -= (s->sps->vui.def_disp_win.top_offset + s->sps->vui.def_disp_win.bottom_offset);
+
+            if (s->avctx->width <= 0 || s->avctx->height <= 0) {
+                av_log(s->avctx, AV_LOG_ERROR, "Invalid default display window dimensions: %dx%d.\n",
+                       s->avctx->width, s->avctx->height);
+
+                if (s->avctx->err_recognition & AV_EF_EXPLODE)
+                    return AVERROR_INVALIDDATA;
+
+                av_log(s->avctx, AV_LOG_WARNING, "Ignoring default display window information.\n");
+                s->avctx->width += (s->sps->vui.def_disp_win.left_offset + s->sps->vui.def_disp_win.right_offset);
+                s->avctx->height += (s->sps->vui.def_disp_win.top_offset + s->sps->vui.def_disp_win.bottom_offset);
+                s->sps->vui.def_disp_win.left_offset =
+                s->sps->vui.def_disp_win.top_offset =
+                s->sps->vui.def_disp_win.right_offset =
+                s->sps->vui.def_disp_win.bottom_offset = 0;
+            }
+        }
+
         if (s->sps->chroma_format_idc == 0 || s->sps->separate_colour_plane_flag) {
             av_log(s->avctx, AV_LOG_ERROR,
                    "TODO: s->sps->chroma_format_idc == 0 || "
@@ -2660,6 +2681,8 @@ static void hevc_decode_flush(AVCodecContext *avctx)
 #define PAR (AV_OPT_FLAG_DECODING_PARAM | AV_OPT_FLAG_VIDEO_PARAM)
 static const AVOption options[] = {
     { "disable-au", "disable read frame AU by AU", OFFSET(disable_au),
+        AV_OPT_TYPE_INT, {.i64 = 0}, 0, 1, PAR },
+    { "strict-displaywin", "stricly apply default display window size", OFFSET(strict_def_disp_win),
         AV_OPT_TYPE_INT, {.i64 = 0}, 0, 1, PAR },
     { NULL },
 };

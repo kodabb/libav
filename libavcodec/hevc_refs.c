@@ -212,8 +212,11 @@ int ff_hevc_output_frame(HEVCContext *s, AVFrame *out, int flush)
             //TODO: 2 is only valid for 420
             step_x = step_y = 2;
             for (j = 0; j < 3; j++) {
-                int off = (((step_x * s->sps->pic_conf_win.left_offset) >> s->sps->hshift[j]) << s->sps->pixel_shift) +
-                          (((step_y * s->sps->pic_conf_win.top_offset) >> s->sps->vshift[j]) * dst->linesize[j]);
+                int off = (s->sps->pic_conf_win.left_offset >> s->sps->hshift[j]) << s->sps->pixel_shift +
+                          (s->sps->pic_conf_win.top_offset >> s->sps->vshift[j]) * dst->linesize[j];
+                if (s->strict_def_disp_win)
+                    off += (s->sps->vui.def_disp_win.left_offset >> s->sps->hshift[j]) +
+                           (s->sps->vui.def_disp_win.top_offset >> s->sps->vshift[j]) * dst->linesize[j]; 
                 dst->data[j] += off;
             }
             return 1;
