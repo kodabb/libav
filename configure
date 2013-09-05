@@ -2706,6 +2706,12 @@ probe_cc(){
         _depflags='-MMD'
         _cflags_speed='-O3'
         _cflags_size='-Os'
+    elif $_cc -v 2>&1 | grep -q tcc; then
+        _type=tcc
+        _ident=$($_cc -v | head -n1)
+        _depflags='-MD -MF $(@:.o=.d)'
+        _cflags_speed='-O2'
+        _cflags_size='-Os'
     elif $_cc -V 2>&1 | grep -q Sun; then
         _type=suncc
         _ident=$($_cc -V 2>&1 | head -n1 | cut -d' ' -f 2-)
@@ -2883,7 +2889,7 @@ if test -n "$sysroot"; then
             add_cppflags --sysroot="$sysroot"
             add_ldflags --sysroot="$sysroot"
         ;;
-        tms470)
+        tms470|tcc)
             add_cppflags -I"$sysinclude"
             add_ldflags  --sysroot="$sysroot"
         ;;
@@ -4205,6 +4211,8 @@ elif enabled_any msvc icl; then
         # not supported (build will fail)
         disable inline_asm
     fi
+elif enabled tcc; then
+    disable inline_asm
 fi
 
 case $target_os in
