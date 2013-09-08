@@ -25,6 +25,50 @@ enabled encoders.
 A description of some of the currently available audio encoders
 follows.
 
+@anchor{aacenc}
+@section aac
+
+Advanced Audio Coding (AAC) encoder.
+
+This encoder is an experimental Libav-native AAC encoder. Currently only the
+low complexity (AAC-LC) profile is supported. To use this encoder, you must set
+@option{strict} option to @samp{experimental} or lower.
+
+As this encoder is experimental, unexpected behavior may exist from time to
+time. For a more stable AAC encoder, see @ref{libvo-aacenc}. However, be warned
+that it has a worse quality reported by some users.
+
+@c Comment this out until somebody writes the respective documentation.
+@c See also @ref{libfaac}, @ref{libaacplus}, and @ref{libfdk-aac-enc}.
+
+@subsection Options
+
+@table @option
+@item b
+Set bit rate in bits/s. Setting this automatically activates constant bit rate
+(CBR) mode.
+
+@item q
+Set quality for variable bit rate (VBR) mode. This option is valid only using
+the @command{avconv} command-line tool. For library interface users, use
+@option{global_quality}.
+
+@item stereo_mode
+Set stereo encoding mode. Possible values:
+
+@table @samp
+@item auto
+Automatically selected by the encoder.
+
+@item ms_off
+Disable middle/side encoding. This is the default.
+
+@item ms_force
+Force middle/side encoding.
+@end table
+
+@end table
+
 @section ac3 and ac3_fixed
 
 AC-3 audio encoders.
@@ -552,6 +596,7 @@ maximum value is 10.
 
 @end table
 
+@anchor{libvo-aacenc}
 @section libvo-aacenc
 
 VisualOn AAC encoder
