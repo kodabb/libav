@@ -41,37 +41,37 @@
  */
 #define SAMPLE(tab, x, y) ((tab)[(y) * s->sps->pic_width_in_luma_samples + (x)])
 #define SAMPLE_CTB(tab, x, y) ((tab)[(y) * pic_width_in_ctb + (x)])
-#define SAMPLE_CBF(tab, x, y) ((tab)[((y) & ((1<<log2_trafo_size)-1)) * MAX_CU_SIZE + ((x) & ((1<<log2_trafo_size)-1))])
+#define SAMPLE_CBF(tab, x, y) ((tab)[((y) & ((1 << log2_trafo_size) - 1)) * MAX_CU_SIZE + ((x) & ((1 << log2_trafo_size) - 1))])
 
 /**
  * Table 7-3: NAL unit type codes
  */
 enum NALUnitType {
-    NAL_TRAIL_R     =  0,
-    NAL_TRAIL_N     =  1,
-    NAL_TSA_N       =  2,
-    NAL_TSA_R       =  3,
-    NAL_STSA_N      =  4,
-    NAL_STSA_R      =  5,
-    NAL_RADL_N      =  6,
-    NAL_RADL_R      =  7,
-    NAL_RASL_N      =  8,
-    NAL_RASL_R      =  9,
-    NAL_BLA_W_LP    = 16,
-    NAL_BLA_W_RADL  = 17,
-    NAL_BLA_N_LP    = 18,
-    NAL_IDR_W_RADL  = 19,
-    NAL_IDR_N_LP    = 20,
-    NAL_CRA_NUT     = 21,
-    NAL_VPS         = 32,
-    NAL_SPS         = 33,
-    NAL_PPS         = 34,
-    NAL_AUD         = 35,
-    NAL_EOS_NUT     = 36,
-    NAL_EOB_NUT     = 37,
-    NAL_FD_NUT      = 38,
-    NAL_SEI_PREFIX  = 39,
-    NAL_SEI_SUFFIX  = 40,
+    NAL_TRAIL_R    = 0,
+    NAL_TRAIL_N    = 1,
+    NAL_TSA_N      = 2,
+    NAL_TSA_R      = 3,
+    NAL_STSA_N     = 4,
+    NAL_STSA_R     = 5,
+    NAL_RADL_N     = 6,
+    NAL_RADL_R     = 7,
+    NAL_RASL_N     = 8,
+    NAL_RASL_R     = 9,
+    NAL_BLA_W_LP   = 16,
+    NAL_BLA_W_RADL = 17,
+    NAL_BLA_N_LP   = 18,
+    NAL_IDR_W_RADL = 19,
+    NAL_IDR_N_LP   = 20,
+    NAL_CRA_NUT    = 21,
+    NAL_VPS        = 32,
+    NAL_SPS        = 33,
+    NAL_PPS        = 34,
+    NAL_AUD        = 35,
+    NAL_EOS_NUT    = 36,
+    NAL_EOB_NUT    = 37,
+    NAL_FD_NUT     = 38,
+    NAL_SEI_PREFIX = 39,
+    NAL_SEI_SUFFIX = 40,
 };
 
 typedef struct ShortTermRPS {
@@ -131,8 +131,6 @@ typedef struct RefPicListTab {
 #define DEFAULT_INTRA_TC_OFFSET 2
 
 #define HEVC_CONTEXTS 183
-
-
 
 #define MAX_ENTRIES 100
 
@@ -310,7 +308,6 @@ typedef struct SPS {
     int log2_min_transform_block_size; ///< log2_min_transform_block_size_minus2 + 2
     int log2_max_trafo_size;
 
-
     int max_transform_hierarchy_depth_inter;
     int max_transform_hierarchy_depth_intra;
 
@@ -324,7 +321,7 @@ typedef struct SPS {
     uint8_t temporal_id_nesting_flag;
 
     int num_short_term_ref_pic_sets;
-    ShortTermRPS short_term_rps_list[MAX_SHORT_TERM_RPS_COUNT+1];
+    ShortTermRPS short_term_rps_list[MAX_SHORT_TERM_RPS_COUNT + 1];
 
     uint8_t long_term_ref_pics_present_flag;
     uint8_t num_long_term_ref_pics_sps;
@@ -473,9 +470,9 @@ typedef struct SliceHeader {
 
     uint8_t slice_loop_filter_across_slices_enabled_flag;
 
-    int* entry_point_offset;
-    int * offset;
-    int * size;
+    int *entry_point_offset;
+    int *offset;
+    int *size;
     int num_entry_point_offsets;
 
     uint8_t luma_log2_weight_denom;
@@ -485,7 +482,6 @@ typedef struct SliceHeader {
     int16_t chroma_weight_l0[16][2];
     int16_t chroma_weight_l1[16][2];
     int16_t luma_weight_l1[16];
-
 
     int16_t luma_offset_l0[16];
     int16_t chroma_offset_l0[16][2];
@@ -547,9 +543,9 @@ enum SyntaxElement {
 
 enum PartMode {
     PART_2Nx2N = 0,
-    PART_2NxN = 1,
-    PART_Nx2N = 2,
-    PART_NxN = 3,
+    PART_2NxN  = 1,
+    PART_Nx2N  = 2,
+    PART_NxN   = 3,
     PART_2NxnU = 4,
     PART_2NxnD = 5,
     PART_nLx2N = 6,
@@ -587,7 +583,6 @@ typedef struct CodingUnit {
 
     int x;
     int y;
-
 } CodingUnit;
 
 enum IntraPredMode {
@@ -634,10 +629,10 @@ typedef struct Mv {
 } Mv;
 
 typedef struct MvField {
-      Mv  mv[2];
-      int8_t ref_idx[2];
-      int8_t pred_flag[2];
-      uint8_t is_intra;
+    Mv mv[2];
+    int8_t ref_idx[2];
+    int8_t pred_flag[2];
+    uint8_t is_intra;
 } MvField;
 
 // MERGE
@@ -728,9 +723,9 @@ typedef struct HEVCFrame {
 } HEVCFrame;
 
 typedef struct Filter_data {
-	int x;
-	int y;
-	int size;
+    int x;
+    int y;
+    int size;
 } Filter_data;
 
 typedef struct HEVCLocalContext {
@@ -752,9 +747,9 @@ typedef struct HEVCLocalContext {
     uint8_t ctb_up_flag;
     uint8_t ctb_up_right_flag;
     uint8_t ctb_up_left_flag;
-    int     start_of_tiles_x;
-    int     end_of_tiles_x;
-    int     end_of_tiles_y;
+    int start_of_tiles_x;
+    int end_of_tiles_x;
+    int end_of_tiles_y;
     uint8_t *edge_emu_buffer;
     CodingTree ct;
     CodingUnit cu;
@@ -766,17 +761,17 @@ typedef struct HEVCLocalContext {
 
 typedef struct HEVCContext {
     const AVClass *c;  // needed by private avoptions
-    AVCodecContext      *avctx;
+    AVCodecContext *avctx;
 
-    struct HEVCContext  *sList[MAX_NB_THREADS];
+    struct HEVCContext *sList[MAX_NB_THREADS];
 
-    HEVCLocalContext    *HEVClcList[MAX_NB_THREADS];
-    HEVCLocalContext     HEVClc;
+    HEVCLocalContext *HEVClcList[MAX_NB_THREADS];
+    HEVCLocalContext HEVClc;
 
-    uint8_t             threads_number;
-    int                 disable_au;
-    int                 width;
-    int                 height;
+    uint8_t threads_number;
+    int disable_au;
+    int width;
+    int height;
 
     uint8_t cabac_state[HEVC_CONTEXTS];
 
@@ -816,13 +811,11 @@ typedef struct HEVCContext {
     uint8_t *horizontal_bs;
     uint8_t *vertical_bs;
 
-
     //  CU
     uint8_t *skip_flag;
     uint8_t *tab_ct_depth;
     // PU
     uint8_t *tab_ipm;
-
 
     uint8_t *cbf_luma; // cbf_luma of colocated TU
     uint8_t *is_pcm;
@@ -848,7 +841,7 @@ typedef struct HEVCContext {
 
     // for checking the frame checksums
     struct AVMD5 *md5_ctx;
-    uint8_t       md5[3][16];
+    uint8_t md5[3][16];
     uint8_t is_md5;
 
     int strict_def_disp_win;
@@ -871,7 +864,7 @@ void ff_hevc_flush_dpb(HEVCContext *s);
 int ff_hevc_add_ref(HEVCContext *s, AVFrame *frame, int poc);
 void ff_hevc_compute_poc(HEVCContext *s, int poc_lsb);
 void ff_hevc_free_refPicListTab(HEVCContext *s, HEVCFrame *ref);
-RefPicList* ff_hevc_get_ref_list(HEVCContext *s, int short_ref_idx, int x0, int y0);
+RefPicList *ff_hevc_get_ref_list(HEVCContext *s, int short_ref_idx, int x0, int y0);
 void ff_hevc_set_ref_poc_list(HEVCContext *s);
 
 void ff_hevc_save_states(HEVCContext *s, int ctb_addr_ts);
@@ -938,7 +931,7 @@ int ff_hevc_set_new_ref(HEVCContext *s, AVFrame **frame, int poc);
 int ff_hevc_output_frame(HEVCContext *s, AVFrame *frame, int flush);
 
 void ff_hevc_luma_mv_merge_mode(HEVCContext *s, int x0, int y0, int nPbW, int nPbH, int log2_cb_size, int part_idx, int merge_idx, MvField *mv);
-void ff_hevc_luma_mv_mvp_mode(HEVCContext *s, int x0, int y0, int nPbW, int nPbH, int log2_cb_size, int part_idx, int merge_idx, MvField *mv , int mvp_lx_flag, int LX);
+void ff_hevc_luma_mv_mvp_mode(HEVCContext *s, int x0, int y0, int nPbW, int nPbH, int log2_cb_size, int part_idx, int merge_idx, MvField *mv, int mvp_lx_flag, int LX);
 void ff_hevc_set_qPy(HEVCContext *s, int xC, int yC, int xBase, int yBase, int log2_cb_size);
 void ff_hevc_deblocking_boundary_strengths(HEVCContext *s, int x0, int y0, int log2_trafo_size);
 int ff_hevc_cu_qp_delta_sign_flag(HEVCContext *s);
