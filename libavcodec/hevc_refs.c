@@ -34,8 +34,8 @@ int ff_hevc_find_ref_idx(HEVCContext *s, int poc)
             if ((ref->flags & HEVC_FRAME_FLAG_SHORT_REF) != 0 && ref->poc == poc)
                 return i;
             if ((ref->flags & HEVC_FRAME_FLAG_SHORT_REF) != 0 && (ref->poc & LtMask) == poc)
-	            return i;
-	    }
+                return i;
+        }
     }
     av_log(s->avctx, AV_LOG_ERROR,
            "Could not find ref with POC %d\n", poc);
@@ -51,8 +51,8 @@ void ff_hevc_free_refPicListTab(HEVCContext *s, HEVCFrame *ref)
         return;
 
     ctb_count = s->sps->pic_width_in_ctbs * s->sps->pic_height_in_ctbs;
-    for (j = ctb_count-1; j > 0; j--) {
-        if (ref->refPicListTab[j] != ref->refPicListTab[j-1])
+    for (j = ctb_count - 1; j > 0; j--) {
+        if (ref->refPicListTab[j] != ref->refPicListTab[j - 1])
             av_free(ref->refPicListTab[j]);
         ref->refPicListTab[j] = NULL;
     }
@@ -111,12 +111,12 @@ static void malloc_refPicListTab(HEVCContext *s)
     int ctb_addr_ts = s->pps->ctb_addr_rs_to_ts[s->sh.slice_address];
 
     ref->refPicListTab[ctb_addr_ts] = av_mallocz(sizeof(RefPicListTab));
-    for (i = ctb_addr_ts; i < ctb_count-1; i++)
-        ref->refPicListTab[i+1] = ref->refPicListTab[i];
-    ref->refPicList = (RefPicList*) ref->refPicListTab[ctb_addr_ts];
+    for (i = ctb_addr_ts; i < ctb_count - 1; i++)
+        ref->refPicListTab[i + 1] = ref->refPicListTab[i];
+    ref->refPicList = (RefPicList *)ref->refPicListTab[ctb_addr_ts];
 }
 
-RefPicList* ff_hevc_get_ref_list(HEVCContext *s, int short_ref_idx, int x0, int y0)
+RefPicList *ff_hevc_get_ref_list(HEVCContext *s, int short_ref_idx, int x0, int y0)
 {
     if (x0 < 0 || y0 < 0) {
         return s->ref->refPicList;
@@ -124,9 +124,9 @@ RefPicList* ff_hevc_get_ref_list(HEVCContext *s, int short_ref_idx, int x0, int 
         HEVCFrame *ref   = &s->DPB[short_ref_idx];
         int x_cb         = x0 >> s->sps->log2_ctb_size;
         int y_cb         = y0 >> s->sps->log2_ctb_size;
-        int pic_width_cb = (s->sps->pic_width_in_luma_samples + (1<<s->sps->log2_ctb_size)-1 ) >> s->sps->log2_ctb_size;
+        int pic_width_cb = (s->sps->pic_width_in_luma_samples + (1 << s->sps->log2_ctb_size) - 1) >> s->sps->log2_ctb_size;
         int ctb_addr_ts  = s->pps->ctb_addr_rs_to_ts[y_cb * pic_width_cb + x_cb];
-        return (RefPicList*) ref->refPicListTab[ctb_addr_ts];
+        return (RefPicList *)ref->refPicListTab[ctb_addr_ts];
     }
 }
 
@@ -159,9 +159,9 @@ int ff_hevc_set_new_ref(HEVCContext *s, AVFrame **frame, int poc)
     for (i = 0; i < FF_ARRAY_ELEMS(s->DPB); i++) {
         HEVCFrame *ref = &s->DPB[i];
         if (!ref->frame->buf[0]) {
-            *frame         = ref->frame;
-            s->ref = ref;
-            ref->poc       = poc;
+            *frame   = ref->frame;
+            s->ref   = ref;
+            ref->poc = poc;
 
             ref->flags    = HEVC_FRAME_FLAG_OUTPUT | HEVC_FRAME_FLAG_SHORT_REF;
             ref->sequence = s->seq_decode;
@@ -204,7 +204,7 @@ int ff_hevc_output_frame(HEVCContext *s, AVFrame *out, int flush)
             src = frame->frame;
 
             frame->flags &= ~HEVC_FRAME_FLAG_OUTPUT;
-            ret = av_frame_ref(dst, src);
+            ret           = av_frame_ref(dst, src);
             if (ret < 0)
                 return ret;
 
@@ -213,7 +213,7 @@ int ff_hevc_output_frame(HEVCContext *s, AVFrame *out, int flush)
                           (s->sps->pic_conf_win.top_offset >> s->sps->vshift[j]) * dst->linesize[j];
                 if (s->strict_def_disp_win)
                     off += (s->sps->vui.def_disp_win.left_offset >> s->sps->hshift[j]) +
-                           (s->sps->vui.def_disp_win.top_offset >> s->sps->vshift[j]) * dst->linesize[j]; 
+                           (s->sps->vui.def_disp_win.top_offset >> s->sps->vshift[j]) * dst->linesize[j];
                 dst->data[j] += off;
             }
             return 1;
@@ -244,10 +244,10 @@ void ff_hevc_compute_poc(HEVCContext *s, int poc_lsb)
 
 static void set_ref_pic_list(HEVCContext *s)
 {
-    SliceHeader *sh = &s->sh;
-    RefPicList  *refPocList = s->sh.refPocList;
-    RefPicList  *refPicList;
-    RefPicList  refPicListTmp[2]= {{{0}}};
+    SliceHeader *sh        = &s->sh;
+    RefPicList *refPocList = s->sh.refPocList;
+    RefPicList *refPicList;
+    RefPicList refPicListTmp[2] = { { { 0 } } };
 
     uint8_t num_ref_idx_lx_act[2];
     uint8_t cIdx;
@@ -256,15 +256,15 @@ static void set_ref_pic_list(HEVCContext *s)
     uint8_t first_list;
     uint8_t sec_list;
     uint8_t i, list_idx;
-	uint8_t nb_list = s->sh.slice_type == B_SLICE ? 2 : 1;
+    uint8_t nb_list = s->sh.slice_type == B_SLICE ? 2 : 1;
 
     malloc_refPicListTab(s);
     refPicList = s->DPB[find_next_ref(s, s->poc)].refPicList;
 
     num_ref_idx_lx_act[0] = sh->num_ref_idx_l0_active;
     num_ref_idx_lx_act[1] = sh->num_ref_idx_l1_active;
-    refPicList[1].numPic = 0;
-    for ( list_idx = 0; list_idx < nb_list; list_idx++) {
+    refPicList[1].numPic  = 0;
+    for (list_idx = 0; list_idx < nb_list; list_idx++) {
         /* The order of the elements is
          * ST_CURR_BEF - ST_CURR_AFT - LT_CURR for the RefList0 and
          * ST_CURR_AFT - ST_CURR_BEF - LT_CURR for the RefList1
@@ -278,38 +278,38 @@ static void set_ref_pic_list(HEVCContext *s)
          * num_ref_idx_lx_act.
          */
         num_poc_total_curr = refPocList[ST_CURR_BEF].numPic + refPocList[ST_CURR_AFT].numPic + refPocList[LT_CURR].numPic;
-        num_rps_curr_lx    = num_poc_total_curr<num_ref_idx_lx_act[list_idx] ? num_poc_total_curr : num_ref_idx_lx_act[list_idx];
-        cIdx = 0;
-        for(i = 0; i < refPocList[first_list].numPic; i++) {
-            refPicListTmp[list_idx].list[cIdx] = refPocList[first_list].list[i];
-            refPicListTmp[list_idx].idx[cIdx]  = refPocList[first_list].idx[i];
-            refPicListTmp[list_idx].isLongTerm[cIdx]  = 0;
+        num_rps_curr_lx    = num_poc_total_curr < num_ref_idx_lx_act[list_idx] ? num_poc_total_curr : num_ref_idx_lx_act[list_idx];
+        cIdx               = 0;
+        for (i = 0; i < refPocList[first_list].numPic; i++) {
+            refPicListTmp[list_idx].list[cIdx]       = refPocList[first_list].list[i];
+            refPicListTmp[list_idx].idx[cIdx]        = refPocList[first_list].idx[i];
+            refPicListTmp[list_idx].isLongTerm[cIdx] = 0;
             cIdx++;
         }
-        for(i = 0; i < refPocList[sec_list].numPic; i++) {
-            refPicListTmp[list_idx].list[cIdx] = refPocList[sec_list].list[i];
-            refPicListTmp[list_idx].idx[cIdx]  = refPocList[sec_list].idx[i];
-            refPicListTmp[list_idx].isLongTerm[cIdx]  = 0;
+        for (i = 0; i < refPocList[sec_list].numPic; i++) {
+            refPicListTmp[list_idx].list[cIdx]       = refPocList[sec_list].list[i];
+            refPicListTmp[list_idx].idx[cIdx]        = refPocList[sec_list].idx[i];
+            refPicListTmp[list_idx].isLongTerm[cIdx] = 0;
             cIdx++;
         }
-        for(i = 0; i < refPocList[LT_CURR].numPic; i++) {
-            refPicListTmp[list_idx].list[cIdx] = refPocList[LT_CURR].list[i];
-            refPicListTmp[list_idx].idx[cIdx]  = refPocList[LT_CURR].idx[i];
-            refPicListTmp[list_idx].isLongTerm[cIdx]  = 1;
+        for (i = 0; i < refPocList[LT_CURR].numPic; i++) {
+            refPicListTmp[list_idx].list[cIdx]       = refPocList[LT_CURR].list[i];
+            refPicListTmp[list_idx].idx[cIdx]        = refPocList[LT_CURR].idx[i];
+            refPicListTmp[list_idx].isLongTerm[cIdx] = 1;
             cIdx++;
         }
         refPicList[list_idx].numPic = num_rps_curr_lx;
         if (s->sh.ref_pic_list_modification_flag_lx[list_idx] == 1) {
-            for(i = 0; i < num_rps_curr_lx; i++) {
-                refPicList[list_idx].list[i] = refPicListTmp[list_idx].list[sh->list_entry_lx[list_idx][ i ]];
-                refPicList[list_idx].idx[i]  = refPicListTmp[list_idx].idx[sh->list_entry_lx[list_idx][ i ]];
-                refPicList[list_idx].isLongTerm[i]  = refPicListTmp[list_idx].isLongTerm[sh->list_entry_lx[list_idx][ i ]];
+            for (i = 0; i < num_rps_curr_lx; i++) {
+                refPicList[list_idx].list[i]       = refPicListTmp[list_idx].list[sh->list_entry_lx[list_idx][i]];
+                refPicList[list_idx].idx[i]        = refPicListTmp[list_idx].idx[sh->list_entry_lx[list_idx][i]];
+                refPicList[list_idx].isLongTerm[i] = refPicListTmp[list_idx].isLongTerm[sh->list_entry_lx[list_idx][i]];
             }
         } else {
-            for(i = 0; i < num_rps_curr_lx; i++) {
-                refPicList[list_idx].list[i] = refPicListTmp[list_idx].list[i];
-                refPicList[list_idx].idx[i]  = refPicListTmp[list_idx].idx[i];
-                refPicList[list_idx].isLongTerm[i]  = refPicListTmp[list_idx].isLongTerm[i];
+            for (i = 0; i < num_rps_curr_lx; i++) {
+                refPicList[list_idx].list[i]       = refPicListTmp[list_idx].list[i];
+                refPicList[list_idx].idx[i]        = refPicListTmp[list_idx].idx[i];
+                refPicList[list_idx].isLongTerm[i] = refPicListTmp[list_idx].isLongTerm[i];
             }
         }
     }
@@ -318,15 +318,15 @@ static void set_ref_pic_list(HEVCContext *s)
 void ff_hevc_set_ref_poc_list(HEVCContext *s)
 {
     int i;
-    int j = 0;
-    int k = 0;
-    ShortTermRPS *rps        = s->sh.short_term_rps;
-    LongTermRPS *long_rps    = &s->sh.long_term_rps;
-    RefPicList   *refPocList = s->sh.refPocList;
-    int MaxPicOrderCntLsb = 1 << s->sps->log2_max_poc_lsb;
+    int j                  = 0;
+    int k                  = 0;
+    ShortTermRPS *rps      = s->sh.short_term_rps;
+    LongTermRPS *long_rps  = &s->sh.long_term_rps;
+    RefPicList *refPocList = s->sh.refPocList;
+    int MaxPicOrderCntLsb  = 1 << s->sps->log2_max_poc_lsb;
     if (rps != NULL) {
-        for (i = 0; i < rps->num_negative_pics; i ++) {
-            if ( rps->used[i] == 1 ) {
+        for (i = 0; i < rps->num_negative_pics; i++) {
+            if (rps->used[i] == 1) {
                 refPocList[ST_CURR_BEF].list[j] = s->poc + rps->delta_poc[i];
                 refPocList[ST_CURR_BEF].idx[j]  = ff_hevc_find_ref_idx(s, refPocList[ST_CURR_BEF].list[j]);
                 j++;
@@ -337,8 +337,8 @@ void ff_hevc_set_ref_poc_list(HEVCContext *s)
             }
         }
         refPocList[ST_CURR_BEF].numPic = j;
-        j = 0;
-        for (i = rps->num_negative_pics; i < rps->num_delta_pocs; i ++) {
+        j                              = 0;
+        for (i = rps->num_negative_pics; i < rps->num_delta_pocs; i++) {
             if (rps->used[i] == 1) {
                 refPocList[ST_CURR_AFT].list[j] = s->poc + rps->delta_poc[i];
                 refPocList[ST_CURR_AFT].idx[j]  = ff_hevc_find_ref_idx(s, refPocList[ST_CURR_AFT].list[j]);
@@ -350,8 +350,8 @@ void ff_hevc_set_ref_poc_list(HEVCContext *s)
             }
         }
         refPocList[ST_CURR_AFT].numPic = j;
-        refPocList[ST_FOLL].numPic = k;
-        for( i = 0, j= 0, k = 0; i < long_rps->num_long_term_sps + long_rps->num_long_term_pics; i++) {
+        refPocList[ST_FOLL].numPic     = k;
+        for (i = 0, j = 0, k = 0; i < long_rps->num_long_term_sps + long_rps->num_long_term_pics; i++) {
             int pocLt = long_rps->PocLsbLt[i];
             if (long_rps->delta_poc_msb_present_flag[i])
                 pocLt += s->poc - long_rps->DeltaPocMsbCycleLt[i] * MaxPicOrderCntLsb - s->sh.pic_order_cnt_lsb;
@@ -399,7 +399,7 @@ int ff_hevc_apply_window(HEVCContext *s, HEVCWindow *window)
     int original_width  = s->avctx->width;
     int original_height = s->avctx->height;
 
-    s->avctx->width -= window->left_offset + window->right_offset;
+    s->avctx->width  -= window->left_offset + window->right_offset;
     s->avctx->height -= window->top_offset + window->bottom_offset;
 
     if (s->avctx->width <= 0 || s->avctx->height <= 0) {
@@ -413,7 +413,7 @@ int ff_hevc_apply_window(HEVCContext *s, HEVCWindow *window)
         window->top_offset    =
         window->right_offset  =
         window->bottom_offset = 0;
-        s->avctx->width = original_width;
+        s->avctx->width  = original_width;
         s->avctx->height = original_height;
     }
 
