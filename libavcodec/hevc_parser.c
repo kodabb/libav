@@ -57,7 +57,7 @@ static int hevc_find_frame_end(AVCodecParserContext *s, const uint8_t *buf, int 
             if (first_slice_segment_in_pic_flag) {
                 if (!pc->frame_start_found) {
                     pc->frame_start_found = 1;
-                    s->key_frame = nut >= NAL_BLA_W_LP && nut <= NAL_CRA_NUT;
+                    s->key_frame          = nut >= NAL_BLA_W_LP && nut <= NAL_CRA_NUT;
                 } else { // First slice of next frame found
                     pc->frame_start_found = 0;
                     return i - 5;
@@ -82,13 +82,13 @@ static int hevc_parse(AVCodecParserContext *s,
     } else {
         next = hevc_find_frame_end(s, buf, buf_size);
         if (ff_combine_frame(pc, next, &buf, &buf_size) < 0) {
-            *poutbuf = NULL;
+            *poutbuf      = NULL;
             *poutbuf_size = 0;
             return buf_size;
         }
     }
 
-    *poutbuf = buf;
+    *poutbuf      = buf;
     *poutbuf_size = buf_size;
     return next;
 }
@@ -98,7 +98,7 @@ static int hevc_split(AVCodecContext *avctx, const uint8_t *buf, int buf_size)
 {
     int i;
     uint32_t state = -1;
-    int has_ps = 0;
+    int has_ps     = 0;
 
     for (i = 0; i < buf_size; i++) {
         state = (state << 8) | buf[i];
