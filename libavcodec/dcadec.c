@@ -1660,7 +1660,6 @@ static int dca_decode_frame(AVCodecContext *avctx, void *data,
     int buf_size = avpkt->size;
 
     int lfe_samples;
-    int num_core_channels = 0;
     int i, ret;
     float  **samples_flt;
     DCAContext *s = avctx->priv_data;
@@ -1694,9 +1693,6 @@ static int dca_decode_frame(AVCodecContext *avctx, void *data,
             return ret;
         }
     }
-
-    /* record number of core channels incase less than max channels are requested */
-    num_core_channels = s->prim_channels;
 
     if (s->ext_coding)
         s->core_ext_mask = dca_ext_audio_descr_mask[s->ext_descr];
@@ -1804,7 +1800,7 @@ static int dca_decode_frame(AVCodecContext *avctx, void *data,
         avctx->channel_layout = dca_core_channel_layout[s->amode];
 
         if (s->xch_present && (!avctx->request_channels ||
-                               avctx->request_channels > num_core_channels + !!s->lfe)) {
+                               avctx->request_channels > s->prim_channels + !!s->lfe)) {
             avctx->channel_layout |= AV_CH_BACK_CENTER;
             if (s->lfe) {
                 avctx->channel_layout |= AV_CH_LOW_FREQUENCY;
@@ -1813,7 +1809,7 @@ static int dca_decode_frame(AVCodecContext *avctx, void *data,
                 s->channel_order_tab = dca_channel_reorder_nolfe_xch[s->amode];
             }
         } else {
-            channels = num_core_channels + !!s->lfe;
+            channels = s->prim_channels + !!s->lfe;
             s->xch_present = 0; /* disable further xch processing */
             if (s->lfe) {
                 avctx->channel_layout |= AV_CH_LOW_FREQUENCY;
