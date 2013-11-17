@@ -12,6 +12,9 @@ FATE_FILTER-$(call FILTERDEMDEC, YADIF, MPEGTS, MPEG2VIDEO) += $(FATE_YADIF)
 FATE_SAMPLES_AVCONV += $(FATE_FILTER-yes)
 
 
+FATE_FILTER_VSYNTH-$(call ALLYES, SCALE_FILTER SETDAR_FILTER) += fate-filter-aspect
+fate-filter-aspect: CMD = framecrc -c:v pgmyuv -i $(SRC) -vf scale=w=512,setdar=dar_num=16:dar_den=9
+
 FATE_FILTER_VSYNTH-$(CONFIG_BOXBLUR_FILTER) += fate-filter-boxblur
 fate-filter-boxblur: CMD = framecrc -c:v pgmyuv -i $(SRC) -vf boxblur=2:1
 
