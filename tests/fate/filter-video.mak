@@ -24,6 +24,12 @@ fate-filter-fade: CMD = framecrc -c:v pgmyuv -i $(SRC) -vf fade=in:0:25,fade=out
 FATE_FILTER_VSYNTH-$(call ALLYES, INTERLACE_FILTER FIELDORDER_FILTER) += fate-filter-fieldorder
 fate-filter-fieldorder: CMD = framecrc -c:v pgmyuv -i $(SRC) -vf interlace=tff,fieldorder=bff -sws_flags +accurate_rnd+bitexact
 
+FATE_FILTER_VSYNTH-$(CONFIG_FPS_FILTER) += fate-filter-fps-double
+fate-filter-fps-double: CMD = framecrc -c:v pgmyuv -i $(SRC) -vf fps=fps=50:start_time=1 -frames 25
+
+FATE_FILTER_VSYNTH-$(CONFIG_FPS_FILTER) += fate-filter-fps-esoteric
+fate-filter-fps-esoteric: CMD = framecrc -r 15 -c:v pgmyuv -i $(SRC) -vf fps=fps=29.97 -frames 25
+
 FATE_FILTER_VSYNTH-$(CONFIG_GRADFUN_FILTER) += fate-filter-gradfun
 fate-filter-gradfun: CMD = framecrc -c:v pgmyuv -i $(SRC) -vf gradfun
 
