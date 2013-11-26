@@ -38,7 +38,6 @@
 #include "ratecontrol.h"
 #include "parser.h"
 #include "mpeg12data.h"
-#include "rl.h"
 #include "thread.h"
 #include "videodsp.h"
 
