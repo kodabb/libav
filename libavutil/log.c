@@ -45,13 +45,13 @@ static int flags;
 
 #if HAVE_SETCONSOLETEXTATTRIBUTE
 #include <windows.h>
-static const uint8_t color[] = { 12, 12, 12, 14, 7, 10, 11 };
+static const uint8_t color[] = { 12, 12, 12, 14, 7, 10, 2, 11 };
 static int16_t background, attr_orig;
 static HANDLE con;
 #define set_color(x)  SetConsoleTextAttribute(con, background | color[x])
 #define reset_color() SetConsoleTextAttribute(con, attr_orig)
 #else
-static const uint8_t color[] = { 0x41, 0x41, 0x11, 0x03, 9, 0x02, 0x06 };
+static const uint8_t color[] = { 0x41, 0x41, 0x11, 0x03, 0x09, 0x02, 0x13, 0x06};
 #define set_color(x)  fprintf(stderr, "\033[%d;3%dm", color[x] >> 4, color[x]&15)
 #define reset_color() fprintf(stderr, "\033[0m")
 #endif
@@ -102,7 +102,7 @@ void av_log_default_callback(void* ptr, int level, const char* fmt, va_list vl)
     char line[1024];
     static int is_atty;
     AVClass* avc = ptr ? *(AVClass **) ptr : NULL;
-    if (level > av_log_level)
+    if (level > av_log_level && level != AV_LOG_HINT)
         return;
     line[0] = 0;
     if (print_prefix && avc) {

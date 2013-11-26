@@ -144,6 +144,10 @@ typedef struct AVClass {
 #define AV_LOG_DEBUG    48
 
 /**
+ * Possible help text.
+ */
+#define AV_LOG_HINT     56
+/**
  * @}
  */
 
