@@ -761,11 +761,12 @@ static int open_input_file(OptionsContext *o, const char *filename)
         }
 
         av_log(NULL, AV_LOG_WARNING, "Codec AVOption %s (%s) specified for "
-               "input file #%d (%s) has not been used for any stream. The most "
-               "likely reason is either wrong type (e.g. a video option with "
-               "no video streams) or that it is a private option of some decoder "
-               "which was not actually used for any stream.\n", e->key,
+               "input file #%d (%s) has not been used for any stream.", e->key,
                option->help ? option->help : "", nb_input_files - 1, filename);
+        av_log(NULL, AV_LOG_HINT, "The most likely reason is either wrong type "
+               "(e.g. a video option with no video streams) or that it is a "
+               "private option of some decoder which was not actually used "
+               "for any stream.\n");
     }
     av_dict_free(&unused_opts);
 
