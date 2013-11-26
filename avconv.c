@@ -2441,9 +2441,9 @@ int main(int argc, char **argv)
         exit_program(1);
 
     if (nb_output_files <= 0 && nb_input_files == 0) {
-        show_usage();
-        av_log(NULL, AV_LOG_WARNING, "Use -h to get full help or, even better, run 'man %s'\n", program_name);
-        exit_program(1);
+        show_usage();\
+        av_log(NULL, AV_LOG_HINT, "Use -h to get full help or, even better, run 'man %s'\n", program_name);
+        exit_program(1);\
     }
 
     /* file converter / grab */
