@@ -611,6 +611,7 @@ int configure_filtergraph(FilterGraph *fg)
     if (simple && (!inputs || inputs->next || !outputs || outputs->next)) {
         av_log(NULL, AV_LOG_ERROR, "Simple filtergraph '%s' does not have "
                "exactly one input and output.\n", graph_desc);
+        av_log(NULL, AV_LOG_HINT, "Try using -filter_complex instead of -vf.\n");
         return AVERROR(EINVAL);
     }
 
