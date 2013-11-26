@@ -1814,9 +1814,10 @@ static int transcode_init(void)
                 goto dump_format;
             }
             assert_avoptions(ost->opts);
-            if (ost->st->codec->bit_rate && ost->st->codec->bit_rate < 1000)
-                av_log(NULL, AV_LOG_WARNING, "The bitrate parameter is set too low."
-                                             "It takes bits/s as argument, not kbits/s\n");
+            if (ost->st->codec->bit_rate && ost->st->codec->bit_rate < 1000) {
+                av_log(NULL, AV_LOG_WARNING, "The bitrate parameter is set too low.\n");
+                av_log(NULL, AV_LOG_HINT, "Use bits/s as argument, not kbits/s\n");
+            }
             extra_size += ost->st->codec->extradata_size;
         } else {
             av_opt_set_dict(ost->st->codec, &ost->opts);
