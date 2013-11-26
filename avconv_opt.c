@@ -513,10 +513,10 @@ static void add_input_streams(OptionsContext *o, AVFormatContext *ic)
                     if (!ist->hwaccel_id) {
                         av_log(NULL, AV_LOG_FATAL, "Unrecognized hwaccel: %s.\n",
                                hwaccel);
-                        av_log(NULL, AV_LOG_FATAL, "Supported hwaccels: ");
+                        av_log(NULL, AV_LOG_HINT, "Supported hwaccels: ");
                         for (i = 0; hwaccels[i].name; i++)
-                            av_log(NULL, AV_LOG_FATAL, "%s ", hwaccels[i].name);
-                        av_log(NULL, AV_LOG_FATAL, "\n");
+                            av_log(NULL, AV_LOG_HINT, "%s ", hwaccels[i].name);
+                        av_log(NULL, AV_LOG_HINT, "\n");
                         exit_program(1);
                     }
                 }
