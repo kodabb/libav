@@ -1233,9 +1233,8 @@ static int opt_streamid(void *optctx, const char *opt, const char *arg)
     av_strlcpy(idx_str, arg, sizeof(idx_str));
     p = strchr(idx_str, ':');
     if (!p) {
-        av_log(NULL, AV_LOG_FATAL,
-               "Invalid value '%s' for option '%s', required syntax is 'index:value'\n",
-               arg, opt);
+        av_log(NULL, AV_LOG_FATAL, "Invalid value '%s' for option '%s'\n", arg, opt);
+        av_log(NULL, AV_LOG_HINT, "Required syntax is 'index:value'\n");
         exit_program(1);
     }
     *p++ = '\0';
