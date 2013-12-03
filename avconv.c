@@ -1755,6 +1755,15 @@ static int transcode_init(void)
                 if (ost->forced_keyframes)
                     parse_forced_key_frames(ost->forced_keyframes, ost,
                                             ost->st->codec);
+
+                if (ost->top_field_first == 1)
+                    codec->field_order = AV_FIELD_TT;
+                else if (ost->top_field_first == 0)
+                    codec->field_order = AV_FIELD_BB;
+
+                if (codec->field_order != AV_FIELD_UNKNOWN &&
+                    codec->field_order != AV_FIELD_PROGRESSIVE)
+                    codec->flags |= CODEC_FLAG_INTERLACED_DCT | CODEC_FLAG_INTERLACED_ME;
                 break;
             case AVMEDIA_TYPE_SUBTITLE:
                 codec->time_base = (AVRational){1, 1000};
