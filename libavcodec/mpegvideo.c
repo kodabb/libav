@@ -108,7 +108,7 @@ const enum AVPixelFormat ff_pixfmt_list_420[] = {
     AV_PIX_FMT_NONE
 };
 
-static void dct_unquantize_mpeg1_intra_c(MpegEncContext *s,
+static void dct_unquantize_mpeg1_intra_c(MpegDecContext *s,
                                    int16_t *block, int n, int qscale)
 {
     int i, level, nCoeffs;
@@ -140,7 +140,7 @@ static void dct_unquantize_mpeg1_intra_c(MpegEncContext *s,
     }
 }
 
-static void dct_unquantize_mpeg1_inter_c(MpegEncContext *s,
+static void dct_unquantize_mpeg1_inter_c(MpegDecContext *s,
                                    int16_t *block, int n, int qscale)
 {
     int i, level, nCoeffs;
@@ -169,7 +169,7 @@ static void dct_unquantize_mpeg1_inter_c(MpegEncContext *s,
     }
 }
 
-static void dct_unquantize_mpeg2_intra_c(MpegEncContext *s,
+static void dct_unquantize_mpeg2_intra_c(MpegDecContext *s,
                                    int16_t *block, int n, int qscale)
 {
     int i, level, nCoeffs;
@@ -199,7 +199,7 @@ static void dct_unquantize_mpeg2_intra_c(MpegEncContext *s,
     }
 }
 
-static void dct_unquantize_mpeg2_intra_bitexact(MpegEncContext *s,
+static void dct_unquantize_mpeg2_intra_bitexact(MpegDecContext *s,
                                    int16_t *block, int n, int qscale)
 {
     int i, level, nCoeffs;
@@ -232,7 +232,7 @@ static void dct_unquantize_mpeg2_intra_bitexact(MpegEncContext *s,
     block[63]^=sum&1;
 }
 
-static void dct_unquantize_mpeg2_inter_c(MpegEncContext *s,
+static void dct_unquantize_mpeg2_inter_c(MpegDecContext *s,
                                    int16_t *block, int n, int qscale)
 {
     int i, level, nCoeffs;
@@ -263,7 +263,7 @@ static void dct_unquantize_mpeg2_inter_c(MpegEncContext *s,
     block[63]^=sum&1;
 }
 
-static void dct_unquantize_h263_intra_c(MpegEncContext *s,
+static void dct_unquantize_h263_intra_c(MpegDecContext *s,
                                   int16_t *block, int n, int qscale)
 {
     int i, level, qmul, qadd;
@@ -300,7 +300,7 @@ static void dct_unquantize_h263_intra_c(MpegEncContext *s,
     }
 }
 
-static void dct_unquantize_h263_inter_c(MpegEncContext *s,
+static void dct_unquantize_h263_inter_c(MpegDecContext *s,
                                   int16_t *block, int n, int qscale)
 {
     int i, level, qmul, qadd;
@@ -330,7 +330,7 @@ static void mpeg_er_decode_mb(void *opaque, int ref, int mv_dir, int mv_type,
                               int (*mv)[2][4][2],
                               int mb_x, int mb_y, int mb_intra, int mb_skipped)
 {
-    MpegEncContext *s = opaque;
+    MpegDecContext *s = opaque;
 
     s->mv_dir     = mv_dir;
     s->mv_type    = mv_type;
@@ -354,7 +354,7 @@ static void mpeg_er_decode_mb(void *opaque, int ref, int mv_dir, int mv_type,
 }
 
 /* init common dct for both encoder and decoder */
-av_cold int ff_dct_common_init(MpegEncContext *s)
+av_cold int ff_dct_common_init(MpegDecContext *s)
 {
     ff_dsputil_init(&s->dsp, s->avctx);
     ff_hpeldsp_init(&s->hdsp, s->avctx->flags);
@@ -392,7 +392,7 @@ av_cold int ff_dct_common_init(MpegEncContext *s)
     return 0;
 }
 
-static int frame_size_alloc(MpegEncContext *s, int linesize)
+static int frame_size_alloc(MpegDecContext *s, int linesize)
 {
     int alloc_size = FFALIGN(FFABS(linesize) + 32, 32);
 
@@ -420,7 +420,7 @@ fail:
 /**
  * Allocate a frame buffer
  */
-static int alloc_frame_buffer(MpegEncContext *s, Picture *pic)
+static int alloc_frame_buffer(MpegDecContext *s, Picture *pic)
 {
     int r, ret;
 
@@ -498,7 +498,7 @@ void ff_free_picture_tables(Picture *pic)
     }
 }
 
-static int alloc_picture_tables(MpegEncContext *s, Picture *pic)
+static int alloc_picture_tables(MpegDecContext *s, Picture *pic)
 {
     const int big_mb_num    = s->mb_stride * (s->mb_height + 1) + 1;
     const int mb_array_size = s->mb_stride * s->mb_height;
@@ -565,7 +565,7 @@ do {\
  * Allocate a Picture.
  * The pixels are allocated/set by calling get_buffer() if shared = 0
  */
-int ff_alloc_picture(MpegEncContext *s, Picture *pic, int shared)
+int ff_alloc_picture(MpegDecContext *s, Picture *pic, int shared)
 {
     int i, ret;
 
@@ -617,7 +617,7 @@ fail:
 /**
  * Deallocate a picture.
  */
-void ff_mpeg_unref_picture(MpegEncContext *s, Picture *pic)
+void ff_mpeg_unref_picture(MpegDecContext *s, Picture *pic)
 {
     int off = offsetof(Picture, mb_mean) + sizeof(pic->mb_mean);
 
@@ -681,7 +681,7 @@ do {\
     return 0;
 }
 
-int ff_mpeg_ref_picture(MpegEncContext *s, Picture *dst, Picture *src)
+int ff_mpeg_ref_picture(MpegDecContext *s, Picture *dst, Picture *src)
 {
     int ret;
 
@@ -719,7 +719,7 @@ fail:
     return ret;
 }
 
-static void exchange_uv(MpegEncContext *s)
+static void exchange_uv(MpegDecContext *s)
 {
     int16_t (*tmp)[64];
 
@@ -728,7 +728,7 @@ static void exchange_uv(MpegEncContext *s)
     s->pblocks[5] = tmp;
 }
 
-static int init_duplicate_context(MpegEncContext *s)
+static int init_duplicate_context(MpegDecContext *s)
 {
     int y_size = s->b8_stride * (2 * s->mb_height + 1);
     int c_size = s->mb_stride * (s->mb_height + 1);
@@ -775,7 +775,7 @@ fail:
     return -1; // free() through ff_MPV_common_end()
 }
 
-static void free_duplicate_context(MpegEncContext *s)
+static void free_duplicate_context(MpegDecContext *s)
 {
     if (s == NULL)
         return;
@@ -795,7 +795,7 @@ static void free_duplicate_context(MpegEncContext *s)
     s->block = NULL;
 }
 
-static void backup_duplicate_context(MpegEncContext *bak, MpegEncContext *src)
+static void backup_duplicate_context(MpegDecContext *bak, MpegDecContext *src)
 {
 #define COPY(a) bak->a = src->a
     COPY(edge_emu_buffer);
@@ -822,14 +822,14 @@ static void backup_duplicate_context(MpegEncContext *bak, MpegEncContext *src)
 #undef COPY
 }
 
-int ff_update_duplicate_context(MpegEncContext *dst, MpegEncContext *src)
+int ff_update_duplicate_context(MpegDecContext *dst, MpegDecContext *src)
 {
-    MpegEncContext bak;
+    MpegDecContext bak;
     int i, ret;
     // FIXME copy only needed parts
     // START_TIMER
     backup_duplicate_context(&bak, dst);
-    memcpy(dst, src, sizeof(MpegEncContext));
+    memcpy(dst, src, sizeof(MpegDecContext));
     backup_duplicate_context(dst, &bak);
     for (i = 0; i < 12; i++) {
         dst->pblocks[i] = &dst->block[i];
@@ -851,7 +851,7 @@ int ff_mpeg_update_thread_context(AVCodecContext *dst,
                                   const AVCodecContext *src)
 {
     int i, ret;
-    MpegEncContext *s = dst->priv_data, *s1 = src->priv_data;
+    MpegDecContext *s = dst->priv_data, *s1 = src->priv_data;
 
     if (dst == src || !s1->context_initialized)
         return 0;
@@ -859,7 +859,7 @@ int ff_mpeg_update_thread_context(AVCodecContext *dst,
     // FIXME can parameters change on I-frames?
     // in that case dst may need a reinit
     if (!s->context_initialized) {
-        memcpy(s, s1, sizeof(MpegEncContext));
+        memcpy(s, s1, sizeof(*s));
 
         s->avctx                 = dst;
         s->bitstream_buffer      = NULL;
@@ -969,12 +969,12 @@ do {\
 }
 
 /**
- * Set the given MpegEncContext to common defaults
+ * Set the given MpegDecContext to common defaults
  * (same for encoding and decoding).
  * The changed fields will not depend upon the
- * prior state of the MpegEncContext.
+ * prior state of the MpegDecContext.
  */
-void ff_MPV_common_defaults(MpegEncContext *s)
+void ff_MPV_common_defaults(MpegDecContext *s)
 {
     s->y_dc_scale_table      =
     s->c_dc_scale_table      = ff_mpeg1_dc_scale_table;
@@ -993,16 +993,16 @@ void ff_MPV_common_defaults(MpegEncContext *s)
 }
 
 /**
- * Set the given MpegEncContext to defaults for decoding.
+ * Set the given MpegDecContext to defaults for decoding.
  * the changed fields will not depend upon
- * the prior state of the MpegEncContext.
+ * the prior state of the MpegDecContext.
  */
-void ff_MPV_decode_defaults(MpegEncContext *s)
+void ff_MPV_decode_defaults(MpegDecContext *s)
 {
     ff_MPV_common_defaults(s);
 }
 
-static int init_er(MpegEncContext *s)
+static int init_er(MpegDecContext *s)
 {
     ERContext *er = &s->er;
     int mb_array_size = s->mb_height * s->mb_stride;
@@ -1040,9 +1040,9 @@ fail:
 }
 
 /**
- * Initialize and allocates MpegEncContext fields dependent on the resolution.
+ * Initialize and allocates MpegDecContext fields dependent on the resolution.
  */
-static int init_context_frame(MpegEncContext *s)
+static int init_context_frame(MpegDecContext *s)
 {
     int y_size, c_size, yc_size, i, mb_array_size, mv_table_size, x, y;
 
@@ -1183,7 +1183,7 @@ fail:
  * init common structure for both encoder and decoder.
  * this assumes that some variables like width/height are already set
  */
-av_cold int ff_MPV_common_init(MpegEncContext *s)
+av_cold int ff_MPV_common_init(MpegDecContext *s)
 {
     int i;
     int nb_slices = (HAVE_THREADS &&
@@ -1259,8 +1259,8 @@ av_cold int ff_MPV_common_init(MpegEncContext *s)
     if (s->width && s->height) {
         if (nb_slices > 1) {
             for (i = 1; i < nb_slices; i++) {
-                s->thread_context[i] = av_malloc(sizeof(MpegEncContext));
-                memcpy(s->thread_context[i], s, sizeof(MpegEncContext));
+                s->thread_context[i] = av_malloc(sizeof(*s->thread_context[0]));
+                memcpy(s->thread_context[i], s, sizeof(*s->thread_context[0]));
             }
 
             for (i = 0; i < nb_slices; i++) {
@@ -1287,11 +1287,11 @@ av_cold int ff_MPV_common_init(MpegEncContext *s)
 }
 
 /**
- * Frees and resets MpegEncContext fields depending on the resolution.
+ * Frees and resets MpegDecContext fields depending on the resolution.
  * Is used during resolution changes to avoid a full reinitialization of the
  * codec.
  */
-static int free_context_frame(MpegEncContext *s)
+static int free_context_frame(MpegDecContext *s)
 {
     int i, j, k;
 
@@ -1341,7 +1341,7 @@ static int free_context_frame(MpegEncContext *s)
     return 0;
 }
 
-int ff_MPV_common_frame_size_change(MpegEncContext *s)
+int ff_MPV_common_frame_size_change(MpegDecContext *s)
 {
     int i, err = 0;
 
@@ -1386,8 +1386,8 @@ int ff_MPV_common_frame_size_change(MpegEncContext *s)
         int nb_slices = s->slice_context_count;
         if (nb_slices > 1) {
             for (i = 1; i < nb_slices; i++) {
-                s->thread_context[i] = av_malloc(sizeof(MpegEncContext));
-                memcpy(s->thread_context[i], s, sizeof(MpegEncContext));
+                s->thread_context[i] = av_malloc(sizeof(MpegDecContext));
+                memcpy(s->thread_context[i], s, sizeof(MpegDecContext));
             }
 
             for (i = 0; i < nb_slices; i++) {
@@ -1414,7 +1414,7 @@ int ff_MPV_common_frame_size_change(MpegEncContext *s)
 }
 
 /* init common structure for both encoder and decoder */
-void ff_MPV_common_end(MpegEncContext *s)
+void ff_MPV_common_end(MpegDecContext *s)
 {
     int i;
 
@@ -1457,7 +1457,7 @@ void ff_MPV_common_end(MpegEncContext *s)
     s->linesize = s->uvlinesize = 0;
 }
 
-static void release_unused_pictures(MpegEncContext *s)
+static void release_unused_pictures(MpegDecContext *s)
 {
     int i;
 
@@ -1468,7 +1468,7 @@ static void release_unused_pictures(MpegEncContext *s)
     }
 }
 
-static inline int pic_is_unused(MpegEncContext *s, Picture *pic)
+static inline int pic_is_unused(MpegDecContext *s, Picture *pic)
 {
     if (pic->f.buf[0] == NULL)
         return 1;
@@ -1477,7 +1477,7 @@ static inline int pic_is_unused(MpegEncContext *s, Picture *pic)
     return 0;
 }
 
-static int find_unused_picture(MpegEncContext *s, int shared)
+static int find_unused_picture(MpegDecContext *s, int shared)
 {
     int i;
 
@@ -1496,7 +1496,7 @@ static int find_unused_picture(MpegEncContext *s, int shared)
     return AVERROR_INVALIDDATA;
 }
 
-int ff_find_unused_picture(MpegEncContext *s, int shared)
+int ff_find_unused_picture(MpegDecContext *s, int shared)
 {
     int ret = find_unused_picture(s, shared);
 
@@ -1514,7 +1514,7 @@ int ff_find_unused_picture(MpegEncContext *s, int shared)
  * generic function called after decoding
  * the header and before a frame is decoded.
  */
-int ff_MPV_frame_start(MpegEncContext *s, AVCodecContext *avctx)
+int ff_MPV_frame_start(MpegDecContext *s, AVCodecContext *avctx)
 {
     int i, ret;
     Picture *pic;
@@ -1721,7 +1721,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
 }
 
 /* called after a frame has been decoded. */
-void ff_MPV_frame_end(MpegEncContext *s)
+void ff_MPV_frame_end(MpegDecContext *s)
 {
 #if FF_API_XVMC
 FF_DISABLE_DEPRECATION_WARNINGS
@@ -1764,7 +1764,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
 /**
  * Print debugging info for the given picture.
  */
-void ff_print_debug_info(MpegEncContext *s, Picture *p)
+void ff_print_debug_info(MpegDecContext *s, Picture *p)
 {
     AVFrame *pict;
     if (s->avctx->hwaccel || !p || !p->mb_type)
@@ -1864,7 +1864,7 @@ void ff_print_debug_info(MpegEncContext *s, Picture *p)
 /**
  * find the lowest MB row referenced in the MVs
  */
-int ff_MPV_lowest_referenced_row(MpegEncContext *s, int dir)
+int ff_MPV_lowest_referenced_row(MpegDecContext *s, int dir)
 {
     int my_max = INT_MIN, my_min = INT_MAX, qpel_shift = !s->quarter_sample;
     int my, off, i, mvs;
@@ -1900,7 +1900,7 @@ unhandled:
 }
 
 /* put block[] to dest[] */
-static inline void put_dct(MpegEncContext *s,
+static inline void put_dct(MpegDecContext *s,
                            int16_t *block, int i, uint8_t *dest, int line_size, int qscale)
 {
     s->dct_unquantize_intra(s, block, i, qscale);
@@ -1908,7 +1908,7 @@ static inline void put_dct(MpegEncContext *s,
 }
 
 /* add block[] to dest[] */
-static inline void add_dct(MpegEncContext *s,
+static inline void add_dct(MpegDecContext *s,
                            int16_t *block, int i, uint8_t *dest, int line_size)
 {
     if (s->block_last_index[i] >= 0) {
@@ -1916,7 +1916,7 @@ static inline void add_dct(MpegEncContext *s,
     }
 }
 
-static inline void add_dequant_dct(MpegEncContext *s,
+static inline void add_dequant_dct(MpegDecContext *s,
                            int16_t *block, int i, uint8_t *dest, int line_size, int qscale)
 {
     if (s->block_last_index[i] >= 0) {
@@ -1929,7 +1929,7 @@ static inline void add_dequant_dct(MpegEncContext *s,
 /**
  * Clean dc, ac, coded_block for the current non-intra MB.
  */
-void ff_clean_intra_table_entries(MpegEncContext *s)
+void ff_clean_intra_table_entries(MpegDecContext *s)
 {
     int wrap = s->b8_stride;
     int xy = s->block_index[0];
@@ -1970,7 +1970,7 @@ void ff_clean_intra_table_entries(MpegEncContext *s)
    s->interlaced_dct : true if interlaced dct used (mpeg2)
  */
 static av_always_inline
-void MPV_decode_mb_internal(MpegEncContext *s, int16_t block[12][64],
+void MPV_decode_mb_internal(MpegDecContext *s, int16_t block[12][64],
                             int is_mpeg12)
 {
     const int mb_xy = s->mb_y * s->mb_stride + s->mb_x;
@@ -2204,7 +2204,8 @@ skip_idct:
     }
 }
 
-void ff_MPV_decode_mb(MpegEncContext *s, int16_t block[12][64]){
+void ff_MPV_decode_mb(MpegDecContext *s, int16_t block[12][64])
+{
 #if !CONFIG_SMALL
     if(s->out_format == FMT_MPEG1) {
         MPV_decode_mb_internal(s, block, 1);
@@ -2290,7 +2291,7 @@ void ff_draw_horiz_band(AVCodecContext *avctx, DSPContext *dsp, Picture *cur,
     }
 }
 
-void ff_mpeg_draw_horiz_band(MpegEncContext *s, int y, int h)
+void ff_mpeg_draw_horiz_band(MpegDecContext *s, int y, int h)
 {
     int draw_edges = s->unrestricted_mv && !s->intra_only;
     ff_draw_horiz_band(s->avctx, &s->dsp, &s->current_picture,
@@ -2299,7 +2300,8 @@ void ff_mpeg_draw_horiz_band(MpegEncContext *s, int y, int h)
                        s->v_edge_pos, s->h_edge_pos);
 }
 
-void ff_init_block_index(MpegEncContext *s){ //FIXME maybe rename
+void ff_init_block_index(MpegDecContext *s)
+{
     const int linesize   = s->current_picture.f.linesize[0]; //not s->linesize as this would be wrong for field pics
     const int uvlinesize = s->current_picture.f.linesize[1];
     const int mb_size= 4;
@@ -2362,7 +2364,7 @@ void ff_block_permute(int16_t *block, uint8_t *permutation, const uint8_t *scant
 
 void ff_mpeg_flush(AVCodecContext *avctx){
     int i;
-    MpegEncContext *s = avctx->priv_data;
+    MpegDecContext *s = avctx->priv_data;
 
     if(s==NULL || s->picture==NULL)
         return;
@@ -2390,7 +2392,7 @@ void ff_mpeg_flush(AVCodecContext *avctx){
 /**
  * set qscale and update qscale dependent variables.
  */
-void ff_set_qscale(MpegEncContext * s, int qscale)
+void ff_set_qscale(MpegDecContext *s, int qscale)
 {
     if (qscale < 1)
         qscale = 1;
@@ -2404,14 +2406,14 @@ void ff_set_qscale(MpegEncContext * s, int qscale)
     s->c_dc_scale= s->c_dc_scale_table[ s->chroma_qscale ];
 }
 
-void ff_MPV_report_decode_progress(MpegEncContext *s)
+void ff_MPV_report_decode_progress(MpegDecContext *s)
 {
     if (s->pict_type != AV_PICTURE_TYPE_B && !s->partitioned_frame && !s->er.error_occurred)
         ff_thread_report_progress(&s->current_picture_ptr->tf, s->mb_y, 0);
 }
 
 #if CONFIG_ERROR_RESILIENCE
-void ff_mpeg_er_frame_start(MpegEncContext *s)
+void ff_mpeg_er_frame_start(MpegDecContext *s)
 {
     ERContext *er = &s->er;
 

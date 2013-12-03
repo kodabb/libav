@@ -49,7 +49,7 @@ static inline void dct_unquantize_h263_helper_c(int16_t *block, int qmul, int qa
 }
 #endif
 
-static void dct_unquantize_h263_intra_armv5te(MpegEncContext *s,
+static void dct_unquantize_h263_intra_armv5te(MpegDecContext *s,
                                   int16_t *block, int n, int qscale)
 {
     int level, qmul, qadd;
@@ -78,7 +78,7 @@ static void dct_unquantize_h263_intra_armv5te(MpegEncContext *s,
     block[0] = level;
 }
 
-static void dct_unquantize_h263_inter_armv5te(MpegEncContext *s,
+static void dct_unquantize_h263_inter_armv5te(MpegDecContext *s,
                                   int16_t *block, int n, int qscale)
 {
     int qmul, qadd;
@@ -94,7 +94,7 @@ static void dct_unquantize_h263_inter_armv5te(MpegEncContext *s,
     ff_dct_unquantize_h263_armv5te(block, qmul, qadd, nCoeffs + 1);
 }
 
-av_cold void ff_MPV_common_init_armv5te(MpegEncContext *s)
+av_cold void ff_MPV_common_init_armv5te(MpegDecContext *s)
 {
     s->dct_unquantize_h263_intra = dct_unquantize_h263_intra_armv5te;
     s->dct_unquantize_h263_inter = dct_unquantize_h263_inter_armv5te;
