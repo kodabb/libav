@@ -536,8 +536,7 @@ static void do_video_out(AVFormatContext *s,
         /* raw pictures are written as AVPicture structure to
            avoid any copies. We support temporarily the older
            method. */
-        enc->coded_frame->interlaced_frame = in_picture->interlaced_frame;
-        enc->coded_frame->top_field_first  = in_picture->top_field_first;
+        enc->coded_frame->field_state = in_picture->field_state;
         pkt.data   = (uint8_t *)in_picture;
         pkt.size   =  sizeof(AVPicture);
         pkt.pts    = av_rescale_q(in_picture->pts, enc->time_base, ost->st->time_base);
@@ -548,8 +547,13 @@ static void do_video_out(AVFormatContext *s,
         int got_packet;
 
         if (ost->st->codec->flags & (CODEC_FLAG_INTERLACED_DCT|CODEC_FLAG_INTERLACED_ME) &&
-            ost->top_field_first >= 0)
-            in_picture->top_field_first = !!ost->top_field_first;
+            ost->top_field_first >= 0) {
+            if (ost->top_field_first)
+                in_picture->field_state = AV_FRAME_INTERLACED_TFF;
+            else
+                in_picture->field_state = AV_FRAME_INTERLACED_BFF;
+        } else
+            in_picture->field_state = AV_FRAME_PROGRESSIVE;
 
         in_picture->quality = ost->st->codec->global_quality;
         if (!enc->me_threshold)
