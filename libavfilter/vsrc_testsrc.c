@@ -134,9 +134,9 @@ static int request_frame(AVFilterLink *outlink)
 
     frame->pts                 = test->pts++;
     frame->key_frame           = 1;
-    frame->interlaced_frame    = 0;
     frame->pict_type           = AV_PICTURE_TYPE_I;
     frame->sample_aspect_ratio = test->sar;
+    ff_avframe_fieldstate_set(frame, AV_FRAME_PROGRESSIVE);
     test->nb_frame++;
     test->fill_picture_fn(outlink->src, frame);
 
