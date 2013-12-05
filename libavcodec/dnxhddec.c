@@ -109,10 +109,13 @@ static int dnxhd_decode_header(DNXHDContext *ctx, AVFrame *frame,
     }
     if (buf[5] & 2) { /* interlaced */
         ctx->cur_field = buf[5] & 1;
-        frame->interlaced_frame = 1;
-        frame->top_field_first  = first_field ^ ctx->cur_field;
+        if (first_field ^ ctx->cur_field)
+            frame->field_state = AV_FRAME_INTERLACED_TFF;
+        else
+            frame->field_state = AV_FRAME_INTERLACED_BFF;
         av_log(ctx->avctx, AV_LOG_DEBUG, "interlaced %d, cur field %d\n", buf[5] & 3, ctx->cur_field);
-    }
+    } else
+        frame->field_state = AV_FRAME_PROGRESSIVE;
 
     ctx->height = AV_RB16(buf + 0x18);
     ctx->width  = AV_RB16(buf + 0x1a);
@@ -153,11 +156,12 @@ static int dnxhd_decode_header(DNXHDContext *ctx, AVFrame *frame,
 
     av_dlog(ctx->avctx, "mb width %d, mb height %d\n", ctx->mb_width, ctx->mb_height);
 
-    if ((ctx->height+15)>>4 == ctx->mb_height && frame->interlaced_frame)
+    if ((ctx->height + 15) >> 4 == ctx->mb_height &&
+        (frame->field_state & AV_FRAME_INTERLACED))
         ctx->height <<= 1;
 
     if (ctx->mb_height > 68 ||
-        (ctx->mb_height << frame->interlaced_frame) > (ctx->height+15)>>4) {
+        (ctx->mb_height << (frame->field_state & AV_FRAME_INTERLACED)) > (ctx->height + 15) >> 4) {
         av_log(ctx->avctx, AV_LOG_ERROR, "mb height too big: %d\n", ctx->mb_height);
         return -1;
     }
@@ -274,7 +278,7 @@ static int dnxhd_decode_macroblock(DNXHDContext *ctx, AVFrame *frame, int x, int
         ctx->decode_dct_block(ctx, ctx->blocks[i], i, qscale);
     }
 
-    if (frame->interlaced_frame) {
+    if (frame->field_state & AV_FRAME_INTERLACED) {
         dct_linesize_luma   <<= 1;
         dct_linesize_chroma <<= 1;
     }
@@ -363,7 +367,7 @@ static int dnxhd_decode_frame(AVCodecContext *avctx, void *data, int *got_frame,
 
     dnxhd_decode_macroblocks(ctx, picture, buf + 0x280, buf_size - 0x280);
 
-    if (first_field && picture->interlaced_frame) {
+    if (first_field && (picture->field_state & AV_FRAME_INTERLACED)) {
         buf      += ctx->cid_table->coding_unit_size;
         buf_size -= ctx->cid_table->coding_unit_size;
         first_field = 0;
