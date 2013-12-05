@@ -459,7 +459,11 @@ static int decode_frame(AVCodecContext *avctx, void *data, int *got_frame,
 
     frame.f->key_frame = 1;
     frame.f->pict_type = AV_PICTURE_TYPE_I;
-    frame.f->interlaced_frame = !!c->interlaced;
+    if (c->interlaced)
+        // fields are coded ortogonally, not bff or tff
+        ff_avframe_fieldstate_set(frame.f, AV_FRAME_INTERLACED);
+    else
+        ff_avframe_fieldstate_set(frame.f, AV_FRAME_PROGRESSIVE);
 
     *got_frame = 1;
 
