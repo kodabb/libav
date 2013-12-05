@@ -106,8 +106,8 @@ int avfilter_copy_frame_props(AVFilterBufferRef *dst, const AVFrame *src)
         dst->video->w                   = src->width;
         dst->video->h                   = src->height;
         dst->video->pixel_aspect        = src->sample_aspect_ratio;
-        dst->video->interlaced          = src->interlaced_frame;
-        dst->video->top_field_first     = src->top_field_first;
+        dst->video->interlaced          = ff_avframe_fieldstate_get(src) & AV_FRAME_INTERLACED;
+        dst->video->top_field_first     = ff_avframe_fieldstate_get(src) == AV_FRAME_INTERLACED_TFF;
         dst->video->key_frame           = src->key_frame;
         dst->video->pict_type           = src->pict_type;
         break;
@@ -137,8 +137,13 @@ int avfilter_copy_buf_props(AVFrame *dst, const AVFilterBufferRef *src)
         dst->width               = src->video->w;
         dst->height              = src->video->h;
         dst->sample_aspect_ratio = src->video->pixel_aspect;
-        dst->interlaced_frame    = src->video->interlaced;
-        dst->top_field_first     = src->video->top_field_first;
+        if (src->video->interlaced) {
+            if (src->video->top_field_first)
+                ff_avframe_fieldstate_set(dst, AV_FRAME_INTERLACED_TFF);
+            else
+                ff_avframe_fieldstate_set(dst, AV_FRAME_INTERLACED_BFF);
+        } else
+            ff_avframe_fieldstate_set(dst, AV_FRAME_PROGRESSIVE);
         dst->key_frame           = src->video->key_frame;
         dst->pict_type           = src->video->pict_type;
         break;
