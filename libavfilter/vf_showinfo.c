@@ -41,6 +41,7 @@ static int filter_frame(AVFilterLink *inlink, AVFrame *frame)
     const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(inlink->format);
     uint32_t plane_checksum[4] = {0}, checksum = 0;
     int i, plane, vsub = desc->log2_chroma_h;
+    char interlaced;
 
     for (plane = 0; frame->data[plane] && plane < 4; plane++) {
         size_t linesize = av_image_get_linesize(frame->format, frame->width, plane);
@@ -54,6 +55,30 @@ static int filter_frame(AVFilterLink *inlink, AVFrame *frame)
         }
     }
 
+    switch (ff_avframe_fieldstate_get(frame)) {
+        case AV_FRAME_PROGRESSIVE:
+            interlaced = 'P';
+            break;
+        case AV_FRAME_PROGRESSIVE_PSF:
+            interlaced = 'F';
+            break;
+        case AV_FRAME_PROGRESSIVE_ADAM7:
+            interlaced = 'A';
+            break;
+        case AV_FRAME_INTERLACED_BFF:
+            interlaced = 'B';
+            break;
+        case AV_FRAME_INTERLACED_TFF:
+            interlaced = 'T';
+            break;
+        case AV_FRAME_INTERLACED:
+            interlaced = 'I';
+            break;
+        case AV_FRAME_UNKNOWN:
+            interlaced = '?';
+            break;
+    }
+
     av_log(ctx, AV_LOG_INFO,
            "n:%d pts:%"PRId64" pts_time:%f "
            "fmt:%s sar:%d/%d s:%dx%d i:%c iskey:%d type:%c "
@@ -63,8 +88,7 @@ static int filter_frame(AVFilterLink *inlink, AVFrame *frame)
            desc->name,
            frame->sample_aspect_ratio.num, frame->sample_aspect_ratio.den,
            frame->width, frame->height,
-           !frame->interlaced_frame ? 'P' :         /* Progressive  */
-           frame->top_field_first   ? 'T' : 'B',    /* Top / Bottom */
+           interlaced,
            frame->key_frame,
            av_get_picture_type_char(frame->pict_type),
            checksum, plane_checksum[0], plane_checksum[1], plane_checksum[2], plane_checksum[3]);
