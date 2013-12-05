@@ -493,9 +493,13 @@ static int decode_frame(AVCodecContext *avctx,
                     av_log(avctx, AV_LOG_ERROR, "get_buffer() failed\n");
                     goto fail;
                 }
-                p->pict_type        = AV_PICTURE_TYPE_I;
-                p->key_frame        = 1;
-                p->interlaced_frame = !!s->interlace_type;
+                p->pict_type = AV_PICTURE_TYPE_I;
+                p->key_frame = 1;
+                if (s->interlace_type)
+                    // adam7 is only for displaying faster at compression cost
+                    ff_avframe_fieldstate_set(p, AV_FRAME_PROGRESSIVE_ADAM7);
+                else
+                    ff_avframe_fieldstate_set(p, AV_FRAME_PROGRESSIVE);
 
                 /* compute the compressed row size */
                 if (!s->interlace_type) {
