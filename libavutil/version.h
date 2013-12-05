@@ -108,6 +108,9 @@
 #ifndef FF_API_XVMC
 #define FF_API_XVMC                     (LIBAVUTIL_VERSION_MAJOR < 54)
 #endif
+#ifndef FF_API_INTERLACED_FRAME
+#define FF_API_INTERLACED_FRAME         (LIBAVUTIL_VERSION_MAJOR < 53)
+#endif
 
 /**
  * @}

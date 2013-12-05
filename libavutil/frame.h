@@ -294,15 +294,19 @@ typedef struct AVFrame {
      */
     int repeat_pict;
 
+#ifdef FF_API_INTERLACED_FRAME
     /**
      * The content of the picture is interlaced.
      */
+    attribute_deprecated
     int interlaced_frame;
 
     /**
      * If the content is interlaced, is top field displayed first.
      */
+    attribute_deprecated
     int top_field_first;
+#endif
 
     /**
      * Tell user application that palette has changed from previous frame.
