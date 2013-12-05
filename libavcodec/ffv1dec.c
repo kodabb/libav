@@ -316,15 +316,13 @@ static int decode_slice_header(FFV1Context *f, FFV1Context *fs)
     }
 
     ps = get_symbol(c, state, 0);
-    if (ps == 1) {
-        f->cur->interlaced_frame = 1;
-        f->cur->top_field_first  = 1;
-    } else if (ps == 2) {
-        f->cur->interlaced_frame = 1;
-        f->cur->top_field_first  = 0;
-    } else if (ps == 3) {
-        f->cur->interlaced_frame = 0;
-    }
+    if (ps == 1)
+        f->cur->field_state = AV_FRAME_INTERLACED_TFF;
+    else if (ps == 2)
+        f->cur->field_state = AV_FRAME_INTERLACED_BFF;
+    else if (ps == 3)
+        f->cur->field_state = AV_FRAME_PROGRESSIVE;
+
     f->cur->sample_aspect_ratio.num = get_symbol(c, state, 0);
     f->cur->sample_aspect_ratio.den = get_symbol(c, state, 0);
 
