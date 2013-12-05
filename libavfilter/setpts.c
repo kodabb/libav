@@ -133,7 +133,7 @@ static int filter_frame(AVFilterLink *inlink, AVFrame *frame)
     setpts->var_values[VAR_RTCTIME   ] = av_gettime();
 
     if (inlink->type == AVMEDIA_TYPE_VIDEO) {
-        setpts->var_values[VAR_INTERLACED] = frame->interlaced_frame;
+        setpts->var_values[VAR_INTERLACED] = ff_avframe_fieldstate_get(frame) & AV_FRAME_INTERLACED;
     } else {
         setpts->var_values[VAR_S] = frame->nb_samples;
     }
