@@ -63,8 +63,9 @@ static int filter_frame(AVFilterLink *inlink, AVFrame *frame)
            desc->name,
            frame->sample_aspect_ratio.num, frame->sample_aspect_ratio.den,
            frame->width, frame->height,
-           !frame->interlaced_frame ? 'P' :         /* Progressive  */
-           frame->top_field_first   ? 'T' : 'B',    /* Top / Bottom */
+           frame->field_state == AV_FRAME_PROGRESSIVE ? 'P' :
+           frame->field_state == AV_FRAME_INTERLACED_TFF ? 'T' :
+           frame->field_state == AV_FRAME_INTERLACED_BFF ? 'B' : ' ',
            frame->key_frame,
            av_get_picture_type_char(frame->pict_type),
            checksum, plane_checksum[0], plane_checksum[1], plane_checksum[2], plane_checksum[3]);
