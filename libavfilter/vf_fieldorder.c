@@ -92,11 +92,12 @@ static int filter_frame(AVFilterLink *inlink, AVFrame *frame)
     int h, plane, line_step, line_size, line;
     uint8_t *data;
 
-    if (!frame->interlaced_frame ||
-        frame->top_field_first == s->dst_tff) {
+    if (frame->field_state == AV_FRAME_PROGRESSIVE ||
+        (!s->dst_tff && frame->field_state == AV_FRAME_INTERLACED_BFF) ||
+        ( s->dst_tff && frame->field_state == AV_FRAME_INTERLACED_TFF)) {
         av_log(ctx, AV_LOG_VERBOSE,
                "Skipping %s.\n",
-               frame->interlaced_frame ?
+               frame->field_state != AV_FRAME_PROGRESSIVE ?
                "frame with same field order" : "progressive frame");
         return ff_filter_frame(outlink, frame);
     }
@@ -140,7 +141,10 @@ static int filter_frame(AVFilterLink *inlink, AVFrame *frame)
             }
         }
     }
-    frame->top_field_first = s->dst_tff;
+    if (s->dst_tff)
+        frame->field_state = AV_FRAME_INTERLACED_TFF;
+    else
+        frame->field_state = AV_FRAME_INTERLACED_BFF;
 
     return ff_filter_frame(outlink, frame);
 }
