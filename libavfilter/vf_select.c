@@ -200,8 +200,8 @@ static int select_frame(AVFilterContext *ctx, AVFrame *frame)
     select->var_values[VAR_PREV_PTS] = TS2D(frame->pts);
 
     select->var_values[VAR_INTERLACE_TYPE] =
-        !frame->interlaced_frame     ? INTERLACE_TYPE_P :
-        frame->top_field_first ? INTERLACE_TYPE_T : INTERLACE_TYPE_B;
+        frame->field_state == AV_FRAME_PROGRESSIVE ? INTERLACE_TYPE_P :
+        frame->field_state == AV_FRAME_INTERLACED_TFF ? INTERLACE_TYPE_T : INTERLACE_TYPE_B;
     select->var_values[VAR_PICT_TYPE] = frame->pict_type;
 
     res = av_expr_eval(select->expr, select->var_values, NULL);
