@@ -272,8 +272,7 @@ static int return_frame(AVFilterContext *ctx, int is_second)
     int tff, ret;
 
     if (yadif->parity == -1) {
-        tff = yadif->cur->interlaced_frame ?
-              yadif->cur->top_field_first : 1;
+        tff = yadif->cur->field_state == AV_FRAME_INTERLACED_TFF;
     } else {
         tff = yadif->parity ^ 1;
     }
@@ -284,7 +283,7 @@ static int return_frame(AVFilterContext *ctx, int is_second)
             return AVERROR(ENOMEM);
 
         av_frame_copy_props(yadif->out, yadif->cur);
-        yadif->out->interlaced_frame = 0;
+        yadif->out->field_state = AV_FRAME_PROGRESSIVE;
     }
 
     filter(ctx, yadif->out, tff ^ !is_second, tff);
@@ -322,7 +321,8 @@ static int filter_frame(AVFilterLink *link, AVFrame *frame)
     if (!yadif->cur)
         return 0;
 
-    if (yadif->auto_enable && !yadif->cur->interlaced_frame) {
+    if (yadif->auto_enable &&
+        yadif->cur->field_state == AV_FRAME_PROGRESSIVE) {
         yadif->out  = av_frame_clone(yadif->cur);
         if (!yadif->out)
             return AVERROR(ENOMEM);
@@ -342,7 +342,7 @@ static int filter_frame(AVFilterLink *link, AVFrame *frame)
         return AVERROR(ENOMEM);
 
     av_frame_copy_props(yadif->out, yadif->cur);
-    yadif->out->interlaced_frame = 0;
+    yadif->cur->field_state = AV_FRAME_PROGRESSIVE;
 
     if (yadif->out->pts != AV_NOPTS_VALUE)
         yadif->out->pts *= 2;
@@ -408,7 +408,8 @@ static int poll_frame(AVFilterLink *link)
     }
     assert(yadif->next || !val);
 
-    if (yadif->auto_enable && yadif->next && !yadif->next->interlaced_frame)
+    if (yadif->auto_enable && yadif->next &&
+        yadif->next->field_state == AV_FRAME_PROGRESSIVE)
         return val;
 
     return val * ((yadif->mode&1)+1);
