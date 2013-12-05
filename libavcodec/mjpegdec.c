@@ -308,10 +308,13 @@ int ff_mjpeg_decode_sof(MJpegDecodeContext *s)
             s->height < ((s->org_height * 3) / 4)) {
             s->interlaced                    = 1;
             s->bottom_field                  = s->interlace_polarity;
-            s->picture_ptr->interlaced_frame = 1;
-            s->picture_ptr->top_field_first  = !s->interlace_polarity;
+            if (s->interlace_polarity)
+                s->picture_ptr->field_state = AV_FRAME_INTERLACED_BFF;
+            else
+                s->picture_ptr->field_state = AV_FRAME_INTERLACED_TFF;
             height *= 2;
-        }
+        } else
+            s->picture_ptr->field_state = AV_FRAME_PROGRESSIVE;
 
         ret = ff_set_dimensions(s->avctx, width, height);
         if (ret < 0)
