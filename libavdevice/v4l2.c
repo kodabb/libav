@@ -843,9 +843,14 @@ static int v4l2_read_packet(AVFormatContext *s1, AVPacket *pkt)
         return res;
     }
 
-    if (frame && s->interlaced) {
-        frame->interlaced_frame = 1;
-        frame->top_field_first = s->top_field_first;
+    if (frame) {
+        if (s->interlaced) {
+            if (s->top_field_first)
+                frame->field_state = AV_FRAME_INTERLACED_TFF;
+            else
+                frame->field_state = AV_FRAME_INTERLACED_BFF;
+        } else
+            frame->field_state = AV_FRAME_PROGRESSIVE;
     }
 
     return pkt->size;
