@@ -187,7 +187,7 @@ static int filter_frame(AVFilterLink *inlink, AVFrame *buf)
     if (!s->cur || !s->next)
         return 0;
 
-    if (s->cur->interlaced_frame) {
+    if (ff_avframe_fieldstate_get(s->cur) & AV_FRAME_INTERLACED) {
         av_log(ctx, AV_LOG_WARNING,
                "video is already interlaced, adjusting framerate only\n");
         out = av_frame_clone(s->cur);
@@ -205,9 +205,12 @@ static int filter_frame(AVFilterLink *inlink, AVFrame *buf)
         return AVERROR(ENOMEM);
 
     av_frame_copy_props(out, s->cur);
-    out->interlaced_frame = 1;
-    out->top_field_first  = tff;
-    out->pts             /= 2;  // adjust pts to new framerate
+
+    if (tff)
+        ff_avframe_fieldstate_set(out, AV_FRAME_INTERLACED_TFF);
+    else
+        ff_avframe_fieldstate_set(out, AV_FRAME_INTERLACED_BFF);
+    out->pts /= 2;  // adjust pts to new framerate
 
     /* copy upper/lower field from cur */
     copy_picture_field(s->cur, out, inlink, tff ? FIELD_UPPER : FIELD_LOWER);
