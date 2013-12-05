@@ -919,8 +919,9 @@ static void dnxhd_load_picture(DNXHDEncContext *ctx, const AVFrame *frame)
         ctx->thread[i]->dct_uv_offset = ctx->m.uvlinesize*8;
     }
 
-    ctx->m.avctx->coded_frame->interlaced_frame = frame->interlaced_frame;
-    ctx->cur_field = frame->interlaced_frame && !frame->top_field_first;
+    ff_avframe_fieldstate_set(ctx->m.avctx->coded_frame,
+                              ff_avframe_fieldstate_get(frame));
+    ctx->cur_field = ff_avframe_fieldstate_get(frame) == AV_FRAME_INTERLACED_BFF;
 }
 
 static int dnxhd_encode_picture(AVCodecContext *avctx, AVPacket *pkt,
