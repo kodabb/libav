@@ -166,12 +166,13 @@ static int decode_frame_header(ProresContext *ctx, const uint8_t *buf,
         ctx->scantable_type = ctx->frame_type;
     }
 
-    if (ctx->frame_type) {      /* if interlaced */
-        ctx->frame->interlaced_frame = 1;
-        ctx->frame->top_field_first  = ctx->frame_type & 1;
-    } else {
-        ctx->frame->interlaced_frame = 0;
-    }
+    if (ctx->frame_type)        /* if interlaced */
+        if (ctx->frame_type & 1)
+            ctx->frame->field_state = AV_FRAME_INTERLACED_TFF;
+        else
+            ctx->frame->field_state = AV_FRAME_INTERLACED_BFF;
+    else
+        ctx->frame->field_state = AV_FRAME_PROGRESSIVE;
 
     avctx->color_primaries = buf[14];
     avctx->color_trc       = buf[15];
@@ -219,6 +220,7 @@ static int decode_picture_header(ProresContext *ctx, const uint8_t *buf,
     int   i, hdr_size, pic_data_size, num_slices;
     int   slice_width_factor, slice_height_factor;
     int   remainder, num_x_slices;
+    int   interlaced;
     const uint8_t *data_ptr, *index_ptr;
 
     hdr_size = data_size > 0 ? buf[0] >> 3 : 0;
@@ -245,10 +247,12 @@ static int decode_picture_header(ProresContext *ctx, const uint8_t *buf,
     ctx->slice_width_factor  = slice_width_factor;
     ctx->slice_height_factor = slice_height_factor;
 
+    interlaced = ctx->frame->field_state & AV_FRAME_INTERLACED;
+
     ctx->num_x_mbs = (avctx->width + 15) >> 4;
     ctx->num_y_mbs = (avctx->height +
-                      (1 << (4 + ctx->frame->interlaced_frame)) - 1) >>
-                     (4 + ctx->frame->interlaced_frame);
+                      (1 << (4 + interlaced)) - 1) >>
+                     (4 + interlaced);
 
     remainder    = ctx->num_x_mbs & ((1 << slice_width_factor) - 1);
     num_x_slices = (ctx->num_x_mbs >> slice_width_factor) + (remainder & 1) +
@@ -585,8 +589,8 @@ static int decode_slice(AVCodecContext *avctx, void *tdata)
     v_linesize = pic->linesize[2];
     a_linesize = pic->linesize[3];
 
-    if (pic->interlaced_frame) {
-        if (!(pic_num ^ pic->top_field_first)) {
+    if (pic->field_state & AV_FRAME_INTERLACED) {
+        if (!(pic_num ^ (pic->field_state == AV_FRAME_INTERLACED_TFF))) {
             y_data += y_linesize;
             u_data += u_linesize;
             v_data += v_linesize;
@@ -716,7 +720,7 @@ static int decode_frame(AVCodecContext *avctx, void *data, int *got_frame,
     ProresContext *ctx = avctx->priv_data;
     const uint8_t *buf = avpkt->data;
     int buf_size       = avpkt->size;
-    int frame_hdr_size, pic_num, pic_data_size;
+    int frame_hdr_size, pic_num, pic_data_size, interlaced;
 
     ctx->frame            = data;
     ctx->frame->pict_type = AV_PICTURE_TYPE_I;
@@ -740,7 +744,8 @@ static int decode_frame(AVCodecContext *avctx, void *data, int *got_frame,
     if (ff_get_buffer(avctx, ctx->frame, 0) < 0)
         return -1;
 
-    for (pic_num = 0; ctx->frame->interlaced_frame - pic_num + 1; pic_num++) {
+    interlaced = ctx->frame->field_state & AV_FRAME_INTERLACED;
+    for (pic_num = 0; interlaced - pic_num + 1; pic_num++) {
         pic_data_size = decode_picture_header(ctx, buf, buf_size, avctx);
         if (pic_data_size < 0)
             return AVERROR_INVALIDDATA;
