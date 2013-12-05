@@ -451,7 +451,14 @@ static av_cold int X264_init(AVCodecContext *avctx)
     if (avctx->thread_type)
         x4->params.b_sliced_threads = avctx->thread_type == FF_THREAD_SLICE;
 
-    x4->params.b_interlaced   = avctx->flags & CODEC_FLAG_INTERLACED_DCT;
+    if ((avctx->field_order != AV_FIELD_PROGRESSIVE &&
+         avctx->field_order != AV_FIELD_UNKNOWN) ||
+        avctx->flags & (CODEC_FLAG_INTERLACED_DCT | CODEC_FLAG_INTERLACED_ME)) {
+        x4->params.b_interlaced = 1;
+        if (avctx->field_order == AV_FIELD_TT ||
+            avctx->field_order == AV_FIELD_TB)
+            x4->params.b_tff = 1;
+    }
 
     x4->params.b_open_gop     = !(avctx->flags & CODEC_FLAG_CLOSED_GOP);
 
