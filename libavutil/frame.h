@@ -74,6 +74,19 @@ typedef struct AVFrameSideData {
 } AVFrameSideData;
 
 /**
+ * AVFieldState describes the interlacing mode of a frame (if any).
+ * You can quickly check if a frame is interlaced using AV_FRAME_INTERLACED
+ * as a bitmask.
+ */
+enum AVFieldState {
+    AV_FRAME_UNKNOWN        = 0x02,  //< unknown frame field information
+    AV_FRAME_INTERLACED     = 0x01,  //< interlaced frame, unknown field mode
+    AV_FRAME_INTERLACED_TFF = 0x03,  //< interlaced frame, top field first
+    AV_FRAME_INTERLACED_BFF = 0x05,  //< interlaced frame, bottom field field
+    AV_FRAME_PROGRESSIVE    = 0x04,  //< progressive frame
+};
+
+/**
  * This structure describes decoded (raw) audio or video data.
  *
  * AVFrame must be allocated using av_frame_alloc(). Note that this only
@@ -399,6 +412,11 @@ typedef struct AVFrame {
      * Frame flags, a combination of @ref lavu_frame_flags
      */
     int flags;
+
+    /**
+     *
+     */
+    enum AVFieldState field_state;
 } AVFrame;
 
 /**
