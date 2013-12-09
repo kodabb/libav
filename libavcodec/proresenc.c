@@ -516,7 +516,8 @@ static int encode_slice(AVCodecContext *avctx, const AVFrame *pic,
     if (ctx->pictures_per_frame == 1)
         line_add = 0;
     else
-        line_add = ctx->cur_picture_idx ^ !pic->top_field_first;
+        line_add = ctx->cur_picture_idx ^
+            (ff_avframe_fieldstate_get(pic) == AV_FRAME_INTERLACED_BFF);
 
     if (ctx->force_quant) {
         qmat = ctx->quants[0];
@@ -760,7 +761,8 @@ static int find_slice_quant(AVCodecContext *avctx, const AVFrame *pic,
     if (ctx->pictures_per_frame == 1)
         line_add = 0;
     else
-        line_add = ctx->cur_picture_idx ^ !pic->top_field_first;
+        line_add = ctx->cur_picture_idx ^
+            (ff_avframe_fieldstate_get(pic) == AV_FRAME_INTERLACED_BFF);
     mbs = x + mbs_per_slice;
 
     for (i = 0; i < ctx->num_planes; i++) {
@@ -961,7 +963,7 @@ static int encode_frame(AVCodecContext *avctx, AVPacket *pkt,
 
     frame_flags = ctx->chroma_factor << 6;
     if (avctx->flags & CODEC_FLAG_INTERLACED_DCT)
-        frame_flags |= pic->top_field_first ? 0x04 : 0x08;
+        frame_flags |= ff_avframe_fieldstate_get(pic) == AV_FRAME_INTERLACED_TFF ? 0x04 : 0x08;
     bytestream_put_byte  (&buf, frame_flags);
 
     bytestream_put_byte  (&buf, 0);             // reserved
