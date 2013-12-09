@@ -1777,6 +1777,20 @@ void avcodec_string(char *buf, int buf_size, AVCodecContext *enc, int encode)
             snprintf(buf + strlen(buf), buf_size - strlen(buf),
                      ", %dx%d",
                      enc->width, enc->height);
+
+            if (enc->field_order != AV_FIELD_UNKNOWN) {
+                snprintf(buf + strlen(buf), buf_size - strlen(buf),
+                         "%s",
+                         enc->field_order == AV_FIELD_PROGRESSIVE ? "p" : "i");
+                if (enc->field_order != AV_FIELD_PROGRESSIVE &&
+                    av_log_get_level() >= AV_LOG_DEBUG) {
+                    snprintf(buf + strlen(buf), buf_size - strlen(buf),
+                             "%s",
+                             enc->field_order == AV_FIELD_TT ||
+                             enc->field_order == AV_FIELD_TB ? " tff" : " bff");
+                }
+            }
+
             if (enc->sample_aspect_ratio.num) {
                 av_reduce(&display_aspect_ratio.num, &display_aspect_ratio.den,
                           enc->width * enc->sample_aspect_ratio.num,
