@@ -155,9 +155,12 @@ static int X264_frame(AVCodecContext *ctx, AVPacket *pkt, const AVFrame *frame,
             frame->pict_type == AV_PICTURE_TYPE_P ? X264_TYPE_P :
             frame->pict_type == AV_PICTURE_TYPE_B ? X264_TYPE_B :
                                             X264_TYPE_AUTO;
-        if (x4->params.b_tff != frame->top_field_first) {
-            x4->params.b_tff = frame->top_field_first;
-            x264_encoder_reconfig(x4->enc, &x4->params);
+        if (frame->field_state & AV_FRAME_INTERLACED) {
+            if ((x4->params.b_tff && frame->field_state == AV_FRAME_INTERLACED_TFF) ||
+                (!x4->params.b_tff && frame->field_state == AV_FRAME_INTERLACED_BFF)) {
+                x4->params.b_tff = !x4->params.b_tff;
+                x264_encoder_reconfig(x4->enc, &x4->params);
+            }
         }
         if (x4->params.vui.i_sar_height != ctx->sample_aspect_ratio.den ||
             x4->params.vui.i_sar_width  != ctx->sample_aspect_ratio.num) {
