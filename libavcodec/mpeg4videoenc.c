@@ -1117,7 +1117,7 @@ void ff_mpeg4_encode_picture_header(MpegEncContext *s, int picture_number)
     }
     put_bits(&s->pb, 3, 0);     /* intra dc VLC threshold */
     if (!s->progressive_sequence) {
-        put_bits(&s->pb, 1, s->current_picture_ptr->f.top_field_first);
+        put_bits(&s->pb, 1, s->current_picture_ptr->f.field_state == AV_FRAME_INTERLACED_TFF);
         put_bits(&s->pb, 1, s->alternate_scan);
     }
     // FIXME sprite stuff
