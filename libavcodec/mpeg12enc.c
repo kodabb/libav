@@ -412,7 +412,9 @@ void ff_mpeg1_encode_picture_header(MpegEncContext *s, int picture_number)
         if (s->progressive_sequence)
             put_bits(&s->pb, 1, 0);             /* no repeat */
         else
-            put_bits(&s->pb, 1, s->current_picture_ptr->f.top_field_first);
+            put_bits(&s->pb, 1,
+                     ff_avframe_fieldstate_get(&s->current_picture_ptr->f) == AV_FRAME_INTERLACED_TFF);
+
         /* XXX: optimize the generation of this flag with entropy measures */
         s->frame_pred_frame_dct = s->progressive_sequence;
 
