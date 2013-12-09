@@ -341,8 +341,7 @@ static int dvvideo_decode_frame(AVCodecContext *avctx,
         av_log(avctx, AV_LOG_ERROR, "get_buffer() failed\n");
         return -1;
     }
-    s->frame->interlaced_frame = 1;
-    s->frame->top_field_first  = 0;
+    s->frame->field_state = AV_FRAME_INTERLACED_BFF;
 
     s->buf = buf;
     avctx->execute(avctx, dv_decode_video_segment, s->sys->work_chunks, NULL,
