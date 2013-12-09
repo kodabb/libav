@@ -136,6 +136,7 @@ static int X264_frame(AVCodecContext *ctx, AVPacket *pkt, const AVFrame *frame,
     int nnal, i, ret;
     x264_picture_t pic_out;
     AVFrameSideData *side_data;
+    AVFieldState field_state;
 
     x264_picture_init( &x4->pic );
     x4->pic.img.i_csp   = x4->params.i_csp;
@@ -155,9 +156,13 @@ static int X264_frame(AVCodecContext *ctx, AVPacket *pkt, const AVFrame *frame,
             frame->pict_type == AV_PICTURE_TYPE_P ? X264_TYPE_P :
             frame->pict_type == AV_PICTURE_TYPE_B ? X264_TYPE_B :
                                             X264_TYPE_AUTO;
-        if (x4->params.b_tff != frame->top_field_first) {
-            x4->params.b_tff = frame->top_field_first;
-            x264_encoder_reconfig(x4->enc, &x4->params);
+        field_state = ff_avframe_fieldstate_get(frame);
+        if (field_state & AV_FRAME_INTERLACED) {
+            if ((x4->params.b_tff && field_state == AV_FRAME_INTERLACED_TFF) ||
+                (!x4->params.b_tff && field_state == AV_FRAME_INTERLACED_BFF)) {
+                x4->params.b_tff = !x4->params.b_tff;
+                x264_encoder_reconfig(x4->enc, &x4->params);
+            }
         }
         if (x4->params.vui.i_sar_height != ctx->sample_aspect_ratio.den ||
             x4->params.vui.i_sar_width  != ctx->sample_aspect_ratio.num) {
