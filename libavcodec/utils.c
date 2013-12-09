@@ -1493,6 +1493,17 @@ int attribute_align_arg avcodec_decode_video2(AVCodecContext *avctx, AVFrame *pi
                     return err;
             }
 
+            if (avctx->field_order == AV_FIELD_UNKNOWN) {
+                if (picture->field_state == AV_FRAME_PROGRESSIVE)
+                    avctx->field_order = AV_FIELD_PROGRESSIVE;
+                else if (picture->field_state == AV_FRAME_INTERLACED_TFF)
+                    avctx->field_order = AV_FIELD_TT;
+                else if (picture->field_state == AV_FRAME_INTERLACED_BFF)
+                    avctx->field_order = AV_FIELD_BB;
+                else
+                    av_log(avctx, AV_LOG_WARNING, "Decoder didn't initialize field_state correctly.\n");
+            }
+
             avctx->frame_number++;
         } else
             av_frame_unref(picture);
