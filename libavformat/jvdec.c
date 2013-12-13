@@ -115,7 +115,7 @@ static int read_header(AVFormatContext *s)
         return AVERROR(ENOMEM);
 
     offset = 0x68 + ast->nb_index_entries * 16;
-    for(i = 0; i < ast->nb_index_entries; i++) {
+    for (i = 0; i < ast->nb_index_entries; i++) {
         AVIndexEntry *e   = ast->index_entries + i;
         JVFrame      *jvf = jv->frames + i;
 
@@ -171,7 +171,7 @@ static int read_packet(AVFormatContext *s, AVPacket *pkt)
         switch(jv->state) {
         case JV_AUDIO:
             jv->state++;
-            if (jvf->audio_size ) {
+            if (jvf->audio_size) {
                 if (av_get_packet(s->pb, pkt, jvf->audio_size) < 0)
                     return AVERROR(ENOMEM);
                 pkt->stream_index = 0;
@@ -222,7 +222,7 @@ static int read_seek(AVFormatContext *s, int stream_index,
     if (flags & (AVSEEK_FLAG_BYTE|AVSEEK_FLAG_FRAME))
         return AVERROR(ENOSYS);
 
-    switch(stream_index) {
+    switch (stream_index) {
     case 0:
         i = av_index_search_timestamp(ast, ts, flags);
         break;
