@@ -380,6 +380,31 @@ int av_frame_copy_props(AVFrame *dst, const AVFrame *src)
     dst->display_picture_number = src->display_picture_number;
     dst->flags                  = src->flags;
 
+#if FF_API_INTERLACED_FRAME
+FF_DISABLE_DEPRECATION_WARNINGS
+    if (dst->field_state == AV_FRAME_UNKNOWN) {
+        if (src->interlaced_frame) {
+            if (src->top_field_first)
+                dst->field_state = AV_FRAME_INTERLACED_TFF;
+            else
+                dst->field_state = AV_FRAME_INTERLACED_BFF;
+        } else
+            dst->field_state = AV_FRAME_PROGRESSIVE;
+    } else {
+        if (src->field_state == AV_FRAME_PROGRESSIVE) {
+            dst->interlaced_frame = 0;
+            dst->top_field_first  = 0;
+        } else if (src->field_state == AV_FRAME_INTERLACED_TFF) {
+            dst->interlaced_frame = 1;
+            dst->top_field_first  = 1;
+        } else if (src->field_state == AV_FRAME_INTERLACED_BFF) {
+            dst->interlaced_frame = 1;
+            dst->top_field_first  = 0;
+        }
+    }
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
+
     memcpy(dst->error, src->error, sizeof(dst->error));
 
     for (i = 0; i < src->nb_side_data; i++) {
