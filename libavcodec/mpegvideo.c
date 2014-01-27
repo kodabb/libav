@@ -1682,16 +1682,23 @@ int ff_MPV_frame_start(MpegEncContext *s, AVCodecContext *avctx)
 
     s->current_picture_ptr = pic;
     // FIXME use only the vars from current_pic
-    s->current_picture_ptr->f.top_field_first = s->top_field_first;
-    if (s->codec_id == AV_CODEC_ID_MPEG1VIDEO ||
-        s->codec_id == AV_CODEC_ID_MPEG2VIDEO) {
-        if (s->picture_structure != PICT_FRAME)
-            s->current_picture_ptr->f.top_field_first =
-                (s->picture_structure == PICT_TOP_FIELD) == s->first_field;
+    if (s->progressive_frame || s->progressive_sequence)
+        s->current_picture_ptr->f.field_state = AV_FRAME_PROGRESSIVE;
+    else {
+        if (s->top_field_first)
+            s->current_picture_ptr->f.field_state = AV_FRAME_INTERLACED_TFF;
+        else
+            s->current_picture_ptr->f.field_state = AV_FRAME_INTERLACED_BFF;
+        if ((s->codec_id == AV_CODEC_ID_MPEG1VIDEO ||
+             s->codec_id == AV_CODEC_ID_MPEG2VIDEO) &&
+            s->picture_structure != PICT_FRAME) {
+            if ((s->picture_structure == PICT_TOP_FIELD) == s->first_field)
+                s->current_picture_ptr->f.field_state = AV_FRAME_INTERLACED_TFF;
+            else
+                s->current_picture_ptr->f.field_state = AV_FRAME_INTERLACED_BFF;
+        }
     }
-    s->current_picture_ptr->f.interlaced_frame = !s->progressive_frame &&
-                                                 !s->progressive_sequence;
-    s->current_picture_ptr->field_picture      =  s->picture_structure != PICT_FRAME;
+    s->current_picture_ptr->field_picture = s->picture_structure != PICT_FRAME;
 
     s->current_picture_ptr->f.pict_type = s->pict_type;
     // if (s->flags && CODEC_FLAG_QSCALE)
