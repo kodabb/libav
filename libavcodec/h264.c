@@ -1966,8 +1966,8 @@ static void decode_postinit(H264Context *h, int setup_finished)
         return;
     }
 
-    cur->f.interlaced_frame = 0;
-    cur->f.repeat_pict      = 0;
+    cur->f.field_state = AV_FRAME_UNKNOWN;
+    cur->f.repeat_pict = 0;
 
     /* Signal interlacing information externally. */
     /* Prioritize picture timing SEI information over used
@@ -1976,18 +1976,21 @@ static void decode_postinit(H264Context *h, int setup_finished)
     if (h->sps.pic_struct_present_flag) {
         switch (h->sei_pic_struct) {
         case SEI_PIC_STRUCT_FRAME:
+            cur->f.field_state = AV_FRAME_PROGRESSIVE;
             break;
         case SEI_PIC_STRUCT_TOP_FIELD:
+            cur->f.field_state = AV_FRAME_INTERLACED_TFF;
+            break;
         case SEI_PIC_STRUCT_BOTTOM_FIELD:
-            cur->f.interlaced_frame = 1;
+            cur->f.field_state = AV_FRAME_INTERLACED_BFF;
             break;
         case SEI_PIC_STRUCT_TOP_BOTTOM:
         case SEI_PIC_STRUCT_BOTTOM_TOP:
             if (FIELD_OR_MBAFF_PICTURE(h))
-                cur->f.interlaced_frame = 1;
+                cur->f.field_state = AV_FRAME_INTERLACED;
             else
                 // try to flag soft telecine progressive
-                cur->f.interlaced_frame = h->prev_interlaced_frame;
+                cur->f.field_state = h->prev_interlaced_frame;
             break;
         case SEI_PIC_STRUCT_TOP_BOTTOM_TOP:
         case SEI_PIC_STRUCT_BOTTOM_TOP_BOTTOM:
@@ -2004,30 +2007,39 @@ static void decode_postinit(H264Context *h, int setup_finished)
             break;
         }
 
-        if ((h->sei_ct_type & 3) &&
-            h->sei_pic_struct <= SEI_PIC_STRUCT_BOTTOM_TOP)
-            cur->f.interlaced_frame = (h->sei_ct_type & (1 << 1)) != 0;
-    } else {
         /* Derive interlacing flag from used decoding process. */
-        cur->f.interlaced_frame = FIELD_OR_MBAFF_PICTURE(h);
+        if (FIELD_OR_MBAFF_PICTURE(h)) {
+            if ((h->sei_ct_type & 3) &&
+                h->sei_pic_struct <= SEI_PIC_STRUCT_BOTTOM_TOP)
+                if ((h->sei_ct_type & (1 << 1)) != 0)
+                    cur->f.field_state = AV_FRAME_INTERLACED_TFF;
+                else
+                    cur->f.field_state = AV_FRAME_INTERLACED_BFF;
+        } else {
+            cur->f.field_state = AV_FRAME_PROGRESSIVE;
+        }
     }
-    h->prev_interlaced_frame = cur->f.interlaced_frame;
+    h->prev_interlaced_frame = cur->f.field_state;
 
     if (cur->field_poc[0] != cur->field_poc[1]) {
-        /* Derive top_field_first from field pocs. */
-        cur->f.top_field_first = cur->field_poc[0] < cur->field_poc[1];
+        /* Derive field_state from field pocs. */
+        if (cur->field_poc[0] < cur->field_poc[1])
+            cur->f.field_state = AV_FRAME_INTERLACED_TFF;
+        else
+            cur->f.field_state = AV_FRAME_INTERLACED_BFF;
     } else {
-        if (cur->f.interlaced_frame || h->sps.pic_struct_present_flag) {
+        if ((cur->f.field_state & AV_FRAME_INTERLACED) ||
+            h->sps.pic_struct_present_flag) {
             /* Use picture timing SEI information. Even if it is a
              * information of a past frame, better than nothing. */
             if (h->sei_pic_struct == SEI_PIC_STRUCT_TOP_BOTTOM ||
                 h->sei_pic_struct == SEI_PIC_STRUCT_TOP_BOTTOM_TOP)
-                cur->f.top_field_first = 1;
+                cur->f.field_state = AV_FRAME_INTERLACED_TFF;
             else
-                cur->f.top_field_first = 0;
+                cur->f.field_state = AV_FRAME_INTERLACED_BFF;
         } else {
             /* Most likely progressive */
-            cur->f.top_field_first = 0;
+            cur->f.field_state = AV_FRAME_PROGRESSIVE;
         }
     }
 
