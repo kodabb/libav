@@ -186,6 +186,7 @@ int ff_hevc_output_frame(HEVCContext *s, AVFrame *out, int flush)
             pixel_shift = desc->comp[0].depth_minus1 > 7;
 
             ret = av_frame_ref(out, frame->frame);
+            out->field_state = AV_FRAME_PROGRESSIVE;
             ff_hevc_unref_frame(s, frame, HEVC_FRAME_FLAG_OUTPUT);
             if (ret < 0)
                 return ret;
