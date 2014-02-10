@@ -246,6 +246,12 @@ int av_frame_ref(AVFrame *dst, const AVFrame *src)
     memcpy(dst->data,     src->data,     sizeof(src->data));
     memcpy(dst->linesize, src->linesize, sizeof(src->linesize));
 
+    if (src->priv) {
+        dst->priv = av_buffer_ref(src->priv);
+        if (!dst->priv)
+            goto fail;
+    }
+
     return 0;
 
 fail:
@@ -282,6 +288,10 @@ void av_frame_unref(AVFrame *frame)
     for (i = 0; i < frame->nb_extended_buf; i++)
         av_buffer_unref(&frame->extended_buf[i]);
     av_freep(&frame->extended_buf);
+
+    if (&frame->priv)
+        av_buffer_unref(&frame->priv);
+
     get_frame_defaults(frame);
 }
 

@@ -401,6 +401,10 @@ typedef struct AVFrame {
  */
 #define AV_FRAME_FLAG_CORRUPT       (1 << 0)
 /**
+ * This is a multiview frame, e.g. read XXX to get additional frames.
+ */
+#define AV_FRAME_MULTIVIEW          (1 << 1)
+/**
  * @}
  */
 
@@ -408,6 +412,11 @@ typedef struct AVFrame {
      * Frame flags, a combination of @ref lavu_frame_flags
      */
     int flags;
+
+    /**
+     * Private data, check flags for usage.
+     */
+    AVBufferRef *priv;
 } AVFrame;
 
 /**
