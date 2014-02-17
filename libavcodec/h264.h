@@ -283,9 +283,9 @@ typedef struct H264Context {
     GetBitContext gb;
     ERContext er;
 
-    Picture *DPB;
-    Picture *cur_pic_ptr;
-    Picture cur_pic;
+    Picture *DPB;           // Decoded Picture Buffer
+    Picture *cur_pic_ptr;   // pointer to the current frame in the DPB
+    Picture cur_pic;        // picture describing both fields
 
     int pixel_shift;    ///< 0 for 8-bit H264, 1 for high-bit-depth H264
     int chroma_qp[2];   // QPc
