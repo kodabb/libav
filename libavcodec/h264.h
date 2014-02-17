@@ -565,6 +565,11 @@ typedef struct H264Context {
      * @{
      */
     struct H264Context *thread_context[MAX_THREADS];
+    /**
+     * @name Members for slice based multithreading
+     * @{
+     */
+    struct H264Context *mvc_context[MAX_VIEW_COUNT];
 
     /**
      * current slice number, used to initalize slice_num of each thread/context

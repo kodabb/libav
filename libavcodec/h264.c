@@ -3201,6 +3201,48 @@ static int h264_slice_header_init(H264Context *h, int reinit)
         return ret;
     }
 
+///////////////////////////////////////////////////////////////////
+    h->mvc_context[0] = h;
+    for (i = 1; i < MAX_VIEW_COUNT; i++) {
+        H264Context *c = h->mvc_context[i] = av_mallocz(sizeof(H264Context));
+        if (!c)
+            return AVERROR(ENOMEM);
+        c->avctx             = h->avctx;
+        c->dsp               = h->dsp;
+        c->vdsp              = h->vdsp;
+        c->h264dsp           = h->h264dsp;
+        c->h264qpel          = h->h264qpel;
+        c->h264chroma        = h->h264chroma;
+        c->sps               = h->sps;
+        c->pps               = h->pps;
+        c->pixel_shift       = h->pixel_shift;
+        c->width             = h->width;
+        c->height            = h->height;
+        c->linesize          = h->linesize;
+        c->uvlinesize        = h->uvlinesize;
+        c->chroma_x_shift    = h->chroma_x_shift;
+        c->chroma_y_shift    = h->chroma_y_shift;
+        c->qscale            = h->qscale;
+        c->droppable         = h->droppable;
+        c->data_partitioning = h->data_partitioning;
+        c->low_delay         = h->low_delay;
+        c->mb_width          = h->mb_width;
+        c->mb_height         = h->mb_height;
+        c->mb_stride         = h->mb_stride;
+        c->mb_num            = h->mb_num;
+        c->flags             = h->flags;
+        c->workaround_bugs   = h->workaround_bugs;
+        c->pict_type         = h->pict_type;
+
+        init_scan_tables(c);
+        clone_tables(c, h, i);
+
+        context_init(c);
+
+        c->context_initialized = 1;
+    }
+/////////////////////////////////////////////////////////////////////
+
     if (nb_slices > MAX_THREADS || (nb_slices > h->mb_height && h->mb_height)) {
         int max_slices;
         if (h->mb_height)
@@ -3369,7 +3411,7 @@ static int decode_slice_header(H264Context *h, H264Context *h0)
     if (slice_type > 9) {
         av_log(h->avctx, AV_LOG_ERROR,
                "slice type too large (%d) at %d %d\n",
-               h->slice_type, h->mb_x, h->mb_y);
+               slice_type, h->mb_x, h->mb_y);
         return AVERROR_INVALIDDATA;
     }
     if (slice_type > 4) {
@@ -3416,7 +3458,7 @@ static int decode_slice_header(H264Context *h, H264Context *h0)
     }
 
 //    ff_mvc_set_active_pps(h, &h->pps);
-    ff_mvc_set_active_sps(h, h->pps.sps_id);
+    ff_mvc_set_active_sps(h0, h->pps.sps_id);
     sps = ff_mvc_get_sps(h0, h->pps.sps_id);
 
     if (h->pps.sps_id != h->sps.sps_id ||
@@ -3477,8 +3519,12 @@ static int decode_slice_header(H264Context *h, H264Context *h0)
          h->height != h->avctx->coded_height  ||
          needs_reinit)) {
         if (h != h0) {
-            av_log(h->avctx, AV_LOG_ERROR, "changing width/height on "
-                   "slice %d\n", h0->current_slice + 1);
+            av_log(h->avctx, AV_LOG_ERROR,
+                   "changing width %d -> %d / height %d -> %d on "
+                   "slice %d\n",
+                   h->width, h->avctx->coded_width,
+                   h->height, h->avctx->coded_height,
+                   h0->current_slice + 1);
             return AVERROR_INVALIDDATA;
         }
 
@@ -4699,9 +4745,12 @@ again:
             case NAL_EXT_SLICE:
                 init_get_bits(&hx->gb, ptr, bit_length);
                 if (h->nal_unit_type == NAL_EXT_SLICE) {
+                    init_get_bits(&h->gb, ptr, bit_length);
                     ff_mvc_decode_nal_header(h);
-                    av_log(avctx, AV_LOG_WARNING, "view_id in header: %d\n", h->view_id);
-                    break;
+                    av_log(avctx, AV_LOG_WARNING, "view_id in header: %d/%d\n",
+                           h->view_id, h->voidx);
+                    hx = h->mvc_context[h->voidx];
+                    hx->gb = h->gb;
                 }
                 hx->intra_gb_ptr      =
                 hx->inter_gb_ptr      = &hx->gb;

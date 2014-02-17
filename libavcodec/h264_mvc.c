@@ -23,6 +23,8 @@
 
 SPS *ff_mvc_get_sps(H264Context *h, unsigned int id)
 {
+    av_log(NULL, AV_LOG_ERROR, "Getting ssps[%d] from %d\n",
+           id, h->nal_unit_type);
     if (h->ssps_buffers[id])
         return h->ssps_buffers[id];
 
@@ -250,8 +252,7 @@ int ff_mvc_decode_nal_header(H264Context *h)
     skip_bits1(gb);     /* reserved_one_bit */
     h->is_mvc          = 1;
 
-    if (h->nal_unit_type == NAL_PREFIX)
-        h->voidx = ff_mvc_id_to_voidx(h, h->view_id);
+    h->voidx = ff_mvc_id_to_voidx(h, h->view_id);
 
     av_log(h->avctx, AV_LOG_VERBOSE, "NALU:%d nidr:%d pri:%d vid:%d tid:%d an:%d iv:%d\n",
            h->nal_unit_type,
