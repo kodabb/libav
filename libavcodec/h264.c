@@ -5098,12 +5098,28 @@ static const AVProfile profiles[] = {
     { FF_PROFILE_UNKNOWN },
 };
 
+#define OFFSET(x) offsetof(H264Context, x)
+#define PAR (AV_OPT_FLAG_DECODING_PARAM | AV_OPT_FLAG_VIDEO_PARAM)
+static const AVOption options[] = {
+    { "layer-max", "Decode up to layer #", OFFSET(layer_max),
+        AV_OPT_TYPE_INT, {.i64 = 0}, 0, INT_MAX, PAR },
+    { NULL},
+};
+
+static const AVClass h264_decoder_class = {
+    .class_name = "H264 decoder",
+    .item_name  = av_default_item_name,
+    .option     = options,
+    .version    = LIBAVUTIL_VERSION_INT,
+};
+
 AVCodec ff_h264_decoder = {
     .name                  = "h264",
     .long_name             = NULL_IF_CONFIG_SMALL("H.264 / AVC / MPEG-4 part 10 / MVC"),
     .type                  = AVMEDIA_TYPE_VIDEO,
     .id                    = AV_CODEC_ID_H264,
     .priv_data_size        = sizeof(H264Context),
+    .priv_class            = &h264_decoder_class;
     .init                  = ff_h264_decode_init,
     .close                 = h264_decode_end,
     .decode                = h264_decode_frame,

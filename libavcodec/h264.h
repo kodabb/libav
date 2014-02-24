@@ -694,6 +694,8 @@ typedef struct H264Context {
     int voidx;
     int voidx_list[1024];
     //struct H264Context *layer;
+
+    int layer_max;
 } H264Context;
 
 extern const uint8_t ff_h264_chroma_qp[3][QP_MAX_NUM + 1]; ///< One chroma qp table for each supported bit depth (8, 9, 10).
