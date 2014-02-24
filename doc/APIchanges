@@ -13,6 +13,11 @@ libavutil:     2013-12-xx
 
 API changes, most recent first:
 
+2014-xx-xx - xxxxxxx - lavu 53.06.0 - frame.h
+  Introduce AVFieldState enum to handle all possible interlacing states in
+  a uniform way. It's possible to determine the state with a bitmask check of
+  AV_FRAME_INTERLACED or AV_FRAME_PROGRESSIVE.
+
 2014-xx-xx - xxxxxxx - lavu 53.05.0 - frame.h
   Add av_frame_copy() for copying the frame data.
 

@@ -526,3 +526,24 @@ int av_frame_copy(AVFrame *dst, const AVFrame *src)
 
     return AVERROR(EINVAL);
 }
+
+inline void ff_avframe_fieldstate_set(AVFrame *frame, enum AVFieldState state)
+{
+    frame->field_state = state;
+    frame->interlaced_frame = state & AV_FRAME_INTERLACED;
+    frame->top_field_first = state == AV_FRAME_INTERLACED_TFF;
+}
+
+inline enum AVFieldState ff_avframe_fieldstate_get(const AVFrame *frame)
+{
+    if (frame->field_state == AV_FRAME_UNKNOWN) {
+        if (!frame->interlaced_frame)
+            return AV_FRAME_PROGRESSIVE;
+        else if (frame->top_field_first)
+            return AV_FRAME_INTERLACED_TFF;
+        else
+            return AV_FRAME_INTERLACED_BFF;
+    }
+
+    return frame->field_state;
+}
