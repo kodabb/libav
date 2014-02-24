@@ -190,6 +190,15 @@ static int X264_frame(AVCodecContext *ctx, AVPacket *pkt, const AVFrame *frame,
             case AV_STEREO3D_FRAMESEQUENCE:
                 fpa_type = 5;
                 break;
+            case AV_STEREO3D_SIDEBYSIDE_QUINCUNX:
+                fpa_type = X264_BUILD >= 0 ? 30 : -1;
+                break;
+            case AV_STEREO3D_2D:
+                fpa_type = X264_BUILD >= 0 ? 6 : -1;
+                break;
+            case AV_STEREO3D_RECTANGLES:
+                fpa_type = X264_BUILD >= 0 ? 7 : -1;
+                break;
             default:
                 fpa_type = -1;
                 break;
