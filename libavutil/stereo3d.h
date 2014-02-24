@@ -102,6 +102,12 @@ enum AVStereo3DType {
      *    ...
      */
     AV_STEREO3D_COLUMNS,
+
+    /**
+     * Views are in separate streams (eg. MKV) or
+     * in separate layers (eg. MVC).
+     */
+    AV_STEREO3D_MULTIVIEW,
 };
 
 
