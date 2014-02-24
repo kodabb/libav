@@ -102,6 +102,16 @@ enum AVStereo3DType {
      *    ...
      */
     AV_STEREO3D_COLUMNS,
+
+    /**
+     * Views are around each other.
+     *
+     *    LLLLLRRR
+     *    LLLLLRRR
+     *    RRRRRXXX
+     *    ...
+     */
+    AV_STEREO3D_RECTANGLES,
 };
 
 
