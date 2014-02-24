@@ -565,11 +565,6 @@ typedef struct H264Context {
      * @{
      */
     struct H264Context *thread_context[MAX_THREADS];
-    /**
-     * @name Members for slice based multithreading
-     * @{
-     */
-    struct H264Context *mvc_context[MAX_VIEW_COUNT];
 
     /**
      * current slice number, used to initalize slice_num of each thread/context
@@ -696,6 +691,12 @@ typedef struct H264Context {
     //struct H264Context *layer;
 
     int layer_max;
+
+    /**
+     * @name Members for extra layers decoding
+     * @{
+     */
+    struct H264Context *mvc_context[MAX_VIEW_COUNT];
 } H264Context;
 
 extern const uint8_t ff_h264_chroma_qp[3][QP_MAX_NUM + 1]; ///< One chroma qp table for each supported bit depth (8, 9, 10).
