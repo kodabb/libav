@@ -2068,6 +2068,11 @@ static void decode_postinit(H264Context *h, int setup_finished)
 
         if (h->content_interpretation_type == 2)
             stereo->flags = AV_STEREO3D_FLAG_INVERT;
+    } else if (h->is_mvc && h->ssps.num_views == 2) {
+        AVStereo3D *stereo = av_stereo3d_create_side_data(&cur->f);
+        if (!stereo)
+            return;
+        stereo->type = AV_STEREO3D_MULTIVIEW;
     }
 
     // FIXME do something with unavailable reference frames
