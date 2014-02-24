@@ -1283,6 +1283,9 @@ Views are eacked by column.
 @item frameseq
 Views are temporally interleaved.
 
+@item rects
+Views are around each other.
+
 @end table
 
 @end table

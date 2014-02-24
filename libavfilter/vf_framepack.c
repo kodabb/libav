@@ -118,6 +118,10 @@ static int config_output(AVFilterLink *outlink)
     case AV_STEREO3D_TOPBOTTOM:
         height *= 2;
         break;
+    case AV_STEREO3D_RECTANGLES:
+        width  = 3 * width / 2;
+        height = 3 * height / 2;
+    break;
     default:
         av_log(ctx, AV_LOG_ERROR, "Unknown packing mode.");
         return AVERROR_INVALIDDATA;
@@ -202,6 +206,62 @@ static void vertical_frame_pack(FramepackContext *s,
     }
 }
 
+//TODO:redo
+static void rect_frame_pack(FramepackContext *s, AVFrame *dst)
+{
+    int plane, i, j;
+#if 0
+    for (plane = 0; plane < s->pix_desc->nb_components; plane++) {
+        const uint8_t *leftp  = s->left->data[plane];
+        const uint8_t *rightp = s->right->data[plane];
+        uint8_t *dstp;
+        int lines  = s->left->height;
+        int stride = dst->width;
+        int black  = 0;
+
+        if (plane == 1 || plane == 2) {
+            stride = dst->width >> s->pix_desc->log2_chroma_w;
+            lines = -(-s->left->height >> s->pix_desc->log2_chroma_h);
+            black = 127;
+        }
+
+        dstp = dst->data[plane];
+        // copy left frame and half of right frame
+        for (i = 0; i < lines; i++) {
+            dstp = dst->data[plane] + i * dst->linesize[plane];
+
+            // left
+            memcpy(dstp, leftp, stride * 2 / 3);
+            dstp += stride * 2 / 3;
+
+            // half of right
+            memcpy(dstp, rightp, stride / 3);
+
+            leftp  += s->left->linesize[plane];
+            rightp += s->right->linesize[plane];
+        }
+        // copy right part of right frame, horizontally
+        for (i = 0; i < lines / 2; i++) {
+            dstp = dst->data[plane] + (lines + i) * dst->linesize[plane];
+
+            // top right half
+            rightp = s->right->data[plane] + stride / 3 + s->right->linesize[plane] * i;
+            memcpy(dstp, rightp, stride / 3);
+            dstp += stride / 3;
+
+            // bottom right half
+            rightp = s->right->data[plane] + stride / 3 + s->right->linesize[plane] * (i + lines / 2);
+            memcpy(dstp, rightp, stride / 3);
+            dstp += stride / 3;
+
+            // free space
+            for (j = 0; j < stride / 3; j++)
+                dstp[j] = black;
+        }
+    }
+#endif
+}
+
 static av_always_inline void spatial_frame_pack(FramepackContext *s, AVFrame *dst)
 {
     switch (s->format) {
@@ -216,6 +276,9 @@ static av_always_inline void spatial_frame_pack(FramepackContext *s, AVFrame *ds
         break;
     case AV_STEREO3D_LINES:
         vertical_frame_pack(s, dst, 1);
+        break;
+    case AV_STEREO3D_RECTANGLES:
+        rect_frame_pack(s, dst);
         break;
     }
 }
@@ -315,6 +378,8 @@ static const AVOption options[] = {
         { .i64 = AV_STEREO3D_LINES }, INT_MIN, INT_MAX, .flags = V, .unit = "format" },
     { "columns", "Views are interleaved by columns", 0, AV_OPT_TYPE_CONST,
         { .i64 = AV_STEREO3D_COLUMNS }, INT_MIN, INT_MAX, .flags = V, .unit = "format" },
+    { "rects", "Views are around each other", 0, AV_OPT_TYPE_CONST,
+        { .i64 = AV_STEREO3D_RECTANGLES }, INT_MIN, INT_MAX, .flags = V, .unit = "format" },
     { NULL },
 };
 
