@@ -1,5 +1,7 @@
 /*
  * MVC-related functions
+ * Copyright (c) 2014 Vittorio Giovara <vittorio.giovara@gmail.com>
+ * Copyright (c) 2014 Luca Barbato <lu_zero@gentoo.org>
  *
  * This file is part of Libav.
  *
