@@ -2033,7 +2033,7 @@ static void decode_postinit(H264Context *h, int setup_finished)
 
     if (h->sei_frame_packing_present &&
         h->frame_packing_arrangement_type >= 0 &&
-        h->frame_packing_arrangement_type <= 6 &&
+        h->frame_packing_arrangement_type <= 7 &&
         h->content_interpretation_type > 0 &&
         h->content_interpretation_type < 3) {
         AVStereo3D *stereo = av_stereo3d_create_side_data(&cur->f);
@@ -2064,6 +2064,9 @@ static void decode_postinit(H264Context *h, int setup_finished)
             break;
         case 6:
             stereo->type = AV_STEREO3D_2D;
+            break;
+        case 7:
+            stereo->type = AV_STEREO3D_RECTANGLES;
             break;
         }
 
