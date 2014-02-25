@@ -1967,7 +1967,7 @@ static void decode_postinit(H264Context *h, int setup_finished)
         return;
     }
 
-    field_state = AV_FRAME_UNKNOWN;
+    field_state = AV_FRAME_PROGRESSIVE;
     cur->f.repeat_pict = 0;
 
     /* Signal interlacing information externally. */
@@ -1977,13 +1977,10 @@ static void decode_postinit(H264Context *h, int setup_finished)
     if (h->sps.pic_struct_present_flag) {
         switch (h->sei_pic_struct) {
         case SEI_PIC_STRUCT_FRAME:
-            field_state = AV_FRAME_PROGRESSIVE;
             break;
         case SEI_PIC_STRUCT_TOP_FIELD:
-            field_state = AV_FRAME_INTERLACED_TFF;
-            break;
         case SEI_PIC_STRUCT_BOTTOM_FIELD:
-            field_state = AV_FRAME_INTERLACED_BFF;
+            field_state = AV_FRAME_INTERLACED;
             break;
         case SEI_PIC_STRUCT_TOP_BOTTOM:
         case SEI_PIC_STRUCT_BOTTOM_TOP:
@@ -2008,17 +2005,14 @@ static void decode_postinit(H264Context *h, int setup_finished)
             break;
         }
 
+        if ((h->sei_ct_type & 3) &&
+            h->sei_pic_struct <= SEI_PIC_STRUCT_BOTTOM_TOP &&
+            (h->sei_ct_type & (1 << 1)) != 0)
+            field_state = AV_FRAME_INTERLACED;
+    } else {
         /* Derive interlacing flag from used decoding process. */
-        if (FIELD_OR_MBAFF_PICTURE(h)) {
-            if ((h->sei_ct_type & 3) &&
-                h->sei_pic_struct <= SEI_PIC_STRUCT_BOTTOM_TOP)
-                if ((h->sei_ct_type & (1 << 1)) != 0)
-                    field_state = AV_FRAME_INTERLACED_TFF;
-                else
-                    field_state = AV_FRAME_INTERLACED_BFF;
-        } else {
-            field_state = AV_FRAME_PROGRESSIVE;
-        }
+        if (FIELD_OR_MBAFF_PICTURE(h))
+            field_state = AV_FRAME_INTERLACED;
     }
     h->prev_interlaced_frame = field_state;
 
