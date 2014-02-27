@@ -559,9 +559,7 @@ int ff_h264_decode_picture_parameter_set(H264Context *h, int bit_length)
         goto fail;
     }
 
-    sps = h->sps_buffers[pps->sps_id];
-    if (!sps)
-        sps = h->ssps_buffers[pps->sps_id];
+    sps = ff_mvc_get_sps(h, pps->sps_id);
     if (!sps) {
         av_log(h->avctx, AV_LOG_ERROR, "sps_id %d out of range\n", pps->sps_id);
         goto fail;
