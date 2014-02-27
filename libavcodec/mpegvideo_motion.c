@@ -28,6 +28,7 @@
 #include "dsputil.h"
 #include "h261.h"
 #include "mpegvideo.h"
+#include "mbtype.h"
 #include "mjpegenc.h"
 #include "msmpeg4.h"
 #include "picttype.h"

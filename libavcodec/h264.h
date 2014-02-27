@@ -38,6 +38,7 @@
 #include "h264dsp.h"
 #include "h264pred.h"
 #include "h264qpel.h"
+#include "mbtype.h"
 #include "picttype.h"
 #include "rectangle.h"
 

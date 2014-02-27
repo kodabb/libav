@@ -24,6 +24,7 @@
 
 #include "avcodec.h"
 #include "dsputil.h"
+#include "mbtype.h"
 #include "mpegvideo.h"
 #include "msmpeg4.h"
 #include "libavutil/x86/asm.h"

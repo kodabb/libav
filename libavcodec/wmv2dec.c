@@ -22,6 +22,7 @@
 #include "mpegvideo.h"
 #include "h263.h"
 #include "mathops.h"
+#include "mbtype.h"
 #include "msmpeg4.h"
 #include "msmpeg4data.h"
 #include "intrax8.h"

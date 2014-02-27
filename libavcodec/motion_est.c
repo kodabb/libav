@@ -33,6 +33,7 @@
 
 #include "avcodec.h"
 #include "mathops.h"
+#include "mbtype.h"
 #include "mpegvideo.h"
 
 #undef NDEBUG
