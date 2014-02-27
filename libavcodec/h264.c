@@ -3240,7 +3240,8 @@ static int h264_slice_header_init(H264Context *h, int reinit)
         c->pict_type         = h->pict_type;
 
         init_scan_tables(c);
-        clone_tables(c, h, i);
+        // 0 is the slice offset normally, in this case we clone the same table
+        clone_tables(c, h, 0);
 
         context_init(c);
 
