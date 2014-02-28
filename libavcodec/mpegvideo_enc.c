@@ -52,6 +52,7 @@
 #include "mpeg4video.h"
 #include "internal.h"
 #include "bytestream.h"
+#include "picttype.h"
 #include <limits.h>
 
 static int encode_picture(MpegEncContext *s, int picture_number);

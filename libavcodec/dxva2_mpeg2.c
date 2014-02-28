@@ -21,6 +21,7 @@
  */
 
 #include "dxva2_internal.h"
+#include "picttype.h"
 
 #define MAX_SLICES (SLICE_MAX_START_CODE - SLICE_MIN_START_CODE + 1)
 struct dxva2_picture_context {

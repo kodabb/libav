@@ -85,12 +85,6 @@ enum OutputFormat {
 #define EXT_START_CODE          0x000001b5
 #define USER_START_CODE         0x000001b2
 
-/**
- * Value of Picture.reference when Picture is not a reference picture, but
- * is held for delayed output.
- */
-#define DELAYED_PIC_REF 4
-
 struct MpegEncContext;
 
 /**
@@ -640,10 +634,6 @@ typedef struct MpegEncContext {
     int progressive_sequence;
     int mpeg_f_code[2][2];
     int picture_structure;
-/* picture type */
-#define PICT_TOP_FIELD     1
-#define PICT_BOTTOM_FIELD  2
-#define PICT_FRAME         3
 
     int intra_dc_precision;
     int frame_pred_frame_dct;
