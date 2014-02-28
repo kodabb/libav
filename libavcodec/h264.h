@@ -33,14 +33,15 @@
 #include "dsputil.h"
 #include "error_resilience.h"
 #include "get_bits.h"
-#include "mpegvideo.h"
 #include "h264chroma.h"
 #include "h264dsp.h"
 #include "h264pred.h"
 #include "h264qpel.h"
 #include "mbtype.h"
+#include "parser.h"
 #include "picttype.h"
 #include "rectangle.h"
+#include "videodsp.h"
 
 #define H264_MAX_PICTURE_COUNT 32
 #define H264_MAX_THREADS       16
