@@ -154,27 +154,6 @@ void ff_h264_draw_horiz_band(H264Context *h, int y, int height)
     }
 }
 
-int ff_h264_alloc_scratch_buffers(H264Context *h, int linesize)
-{
-    int alloc_size = FFALIGN(FFABS(linesize) + 32, 32);
-
-    if (h->bipred_scratchpad)
-        return 0;
-
-    h->bipred_scratchpad = av_malloc(16 * 6 * alloc_size);
-    // edge emu needs blocksize + filter length - 1
-    // (= 21x21 for  h264)
-    h->edge_emu_buffer = av_mallocz(alloc_size * 2 * 21);
-
-    if (!h->bipred_scratchpad || !h->edge_emu_buffer) {
-        av_freep(&h->bipred_scratchpad);
-        av_freep(&h->edge_emu_buffer);
-        return AVERROR(ENOMEM);
-    }
-
-    return 0;
-}
-
 /**
  * Check if the top & left blocks are available if needed and
  * change the dc mode so it only uses the available blocks.

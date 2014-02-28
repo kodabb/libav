@@ -599,6 +599,27 @@ fail:
     return (ret < 0) ? ret : AVERROR(ENOMEM);
 }
 
+static int h264_alloc_scratch_buffers(H264Context *h, int linesize)
+{
+    int alloc_size = FFALIGN(FFABS(linesize) + 32, 32);
+
+    if (h->bipred_scratchpad)
+        return 0;
+
+    h->bipred_scratchpad = av_malloc(16 * 6 * alloc_size);
+    // edge emu needs blocksize + filter length - 1
+    // (= 21x21 for  h264)
+    h->edge_emu_buffer = av_mallocz(alloc_size * 2 * 21);
+
+    if (!h->bipred_scratchpad || !h->edge_emu_buffer) {
+        av_freep(&h->bipred_scratchpad);
+        av_freep(&h->edge_emu_buffer);
+        return AVERROR(ENOMEM);
+    }
+
+    return 0;
+}
+
 static void release_unused_pictures(H264Context *h, int remove_current)
 {
     int i;
@@ -668,7 +689,7 @@ static int h264_frame_start(H264Context *h)
      * FIXME: redo bipred weight to not require extra buffer? */
     for (i = 0; i < h->slice_context_count; i++)
         if (h->thread_context[i]) {
-            ret = ff_h264_alloc_scratch_buffers(h->thread_context[i], h->linesize);
+            ret = h264_alloc_scratch_buffers(h->thread_context[i], h->linesize);
             if (ret < 0)
                 return ret;
         }
@@ -2187,7 +2208,7 @@ int ff_h264_update_thread_context(AVCodecContext *dst,
 
     /* frame_start may not be called for the next thread (if it's decoding
      * a bottom field) so this has to be allocated here */
-    err = ff_h264_alloc_scratch_buffers(h, h1->linesize);
+    err = h264_alloc_scratch_buffers(h, h1->linesize);
     if (err < 0)
         return err;
 
