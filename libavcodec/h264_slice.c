@@ -2019,7 +2019,7 @@ int ff_h264_execute_decode_slices(H264Context *h, unsigned context_count)
       pic < old_ctx->DPB + MAX_PICTURE_COUNT) ?           \
      &new_ctx->DPB[pic - old_ctx->DPB] : NULL)
 
-static void copy_picture_range(Picture **to, Picture **from, int count,
+static void copy_picture_range(H264Picture **to, H264Picture **from, int count,
                                H264Context *new_base,
                                H264Context *old_base)
 {
@@ -2028,7 +2028,7 @@ static void copy_picture_range(Picture **to, Picture **from, int count,
     for (i = 0; i < count; i++) {
         assert((IN_RANGE(from[i], old_base, sizeof(*old_base)) ||
                 IN_RANGE(from[i], old_base->DPB,
-                         sizeof(Picture) * MAX_PICTURE_COUNT) ||
+                         sizeof(H264Picture) * H264_MAX_PICTURE_COUNT) ||
                 !from[i]));
         to[i] = REBASE_PICTURE(from[i], new_base, old_base);
     }
@@ -2119,7 +2119,6 @@ int ff_h264_update_thread_context(AVCodecContext *dst,
         memset(h->sps_buffers, 0, sizeof(h->sps_buffers));
         memset(h->pps_buffers, 0, sizeof(h->pps_buffers));
         memset(&h->er, 0, sizeof(h->er));
-        memset(&h->me, 0, sizeof(h->me));
         memset(&h->mb, 0, sizeof(h->mb));
         memset(&h->mb_luma_dc, 0, sizeof(h->mb_luma_dc));
         memset(&h->mb_padding, 0, sizeof(h->mb_padding));
