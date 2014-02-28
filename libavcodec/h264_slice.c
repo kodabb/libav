@@ -200,7 +200,7 @@ static int clone_slice(H264Context *dst, H264Context *src)
 }
 
 
-int ff_h264_slice_header_init(H264Context *h, int reinit)
+static int h264_slice_header_init(H264Context *h, int reinit)
 {
     int nb_slices = (HAVE_THREADS &&
                      h->avctx->active_thread_type & FF_THREAD_SLICE) ?
@@ -862,7 +862,7 @@ int ff_h264_decode_slice_header(H264Context *h, H264Context *h0)
         av_log(h->avctx, AV_LOG_INFO, "Reinit context to %dx%d, "
                "pix_fmt: %d\n", h->width, h->height, h->avctx->pix_fmt);
 
-        if ((ret = ff_h264_slice_header_init(h, 1)) < 0) {
+        if ((ret = h264_slice_header_init(h, 1)) < 0) {
             av_log(h->avctx, AV_LOG_ERROR,
                    "h264_slice_header_init() failed\n");
             return ret;
@@ -879,7 +879,7 @@ int ff_h264_decode_slice_header(H264Context *h, H264Context *h0)
             return ret;
         h->avctx->pix_fmt = ret;
 
-        if ((ret = ff_h264_slice_header_init(h, 0)) < 0) {
+        if ((ret = h264_slice_header_init(h, 0)) < 0) {
             av_log(h->avctx, AV_LOG_ERROR,
                    "h264_slice_header_init() failed\n");
             return ret;
@@ -2093,7 +2093,7 @@ int ff_h264_update_thread_context(AVCodecContext *dst,
         h->mb_stride = h1->mb_stride;
         h->b_stride  = h1->b_stride;
 
-        if ((err = ff_h264_slice_header_init(h, 1)) < 0) {
+        if ((err = h264_slice_header_init(h, 1)) < 0) {
             av_log(h->avctx, AV_LOG_ERROR, "h264_slice_header_init() failed");
             return err;
         }
