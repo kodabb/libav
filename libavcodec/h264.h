@@ -260,7 +260,7 @@ typedef struct MMCO {
 } MMCO;
 
 typedef struct H264Picture {
-    struct AVFrame f;
+    AVFrame *f;
     ThreadFrame tf;
 
     AVBufferRef *qscale_table_buf;

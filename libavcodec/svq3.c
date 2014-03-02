@@ -308,8 +308,8 @@ static inline void svq3_mc_dir_part(SVQ3Context *s,
     }
 
     /* form component predictions */
-    dest = h->cur_pic.f.data[0] + x + y * h->linesize;
-    src  = pic->f.data[0] + mx + my * h->linesize;
+    dest = h->cur_pic.f->data[0] + x + y * h->linesize;
+    src  = pic->f->data[0] + mx + my * h->linesize;
 
     if (emu) {
         h->vdsp.emulated_edge_mc(h->edge_emu_buffer, src,
@@ -335,8 +335,8 @@ static inline void svq3_mc_dir_part(SVQ3Context *s,
         blocksize++;
 
         for (i = 1; i < 3; i++) {
-            dest = h->cur_pic.f.data[i] + (x >> 1) + (y >> 1) * h->uvlinesize;
-            src  = pic->f.data[i] + mx + my * h->uvlinesize;
+            dest = h->cur_pic.f->data[i] + (x >> 1) + (y >> 1) * h->uvlinesize;
+            src  = pic->f->data[i] + mx + my * h->uvlinesize;
 
             if (emu) {
                 h->vdsp.emulated_edge_mc(h->edge_emu_buffer, src,
@@ -1039,7 +1039,7 @@ static void free_picture(AVCodecContext *avctx, H264Picture *pic)
     }
     av_buffer_unref(&pic->mb_type_buf);
 
-    av_frame_unref(&pic->f);
+    av_frame_unref(pic->f);
 }
 
 static int get_buffer(AVCodecContext *avctx, H264Picture *pic)
@@ -1074,19 +1074,19 @@ static int get_buffer(AVCodecContext *avctx, H264Picture *pic)
     }
     pic->reference = !(h->pict_type == AV_PICTURE_TYPE_B);
 
-    ret = ff_get_buffer(avctx, &pic->f,
+    ret = ff_get_buffer(avctx, pic->f,
                         pic->reference ? AV_GET_BUFFER_FLAG_REF : 0);
     if (ret < 0)
         goto fail;
 
     if (!h->edge_emu_buffer) {
-        h->edge_emu_buffer = av_mallocz(pic->f.linesize[0] * 17);
+        h->edge_emu_buffer = av_mallocz(pic->f->linesize[0] * 17);
         if (!h->edge_emu_buffer)
             return AVERROR(ENOMEM);
     }
 
-    h->linesize   = pic->f.linesize[0];
-    h->uvlinesize = pic->f.linesize[1];
+    h->linesize   = pic->f->linesize[0];
+    h->uvlinesize = pic->f->linesize[1];
 
     return 0;
 fail:
@@ -1105,8 +1105,8 @@ static int svq3_decode_frame(AVCodecContext *avctx, void *data,
 
     /* special case for last picture */
     if (buf_size == 0) {
-        if (s->next_pic->f.data[0] && !h->low_delay && !s->last_frame_output) {
-            ret = av_frame_ref(data, &s->next_pic->f);
+        if (s->next_pic->f->data[0] && !h->low_delay && !s->last_frame_output) {
+            ret = av_frame_ref(data, s->next_pic->f);
             if (ret < 0)
                 return ret;
             s->last_frame_output = 1;
@@ -1127,20 +1127,20 @@ static int svq3_decode_frame(AVCodecContext *avctx, void *data,
     if (h->pict_type != AV_PICTURE_TYPE_B)
         FFSWAP(H264Picture*, s->next_pic, s->last_pic);
 
-    av_frame_unref(&s->cur_pic->f);
+    av_frame_unref(s->cur_pic->f);
 
     /* for skipping the frame */
-    s->cur_pic->f.pict_type = h->pict_type;
-    s->cur_pic->f.key_frame = (h->pict_type == AV_PICTURE_TYPE_I);
+    s->cur_pic->f->pict_type = h->pict_type;
+    s->cur_pic->f->key_frame = (h->pict_type == AV_PICTURE_TYPE_I);
 
     ret = get_buffer(avctx, s->cur_pic);
     if (ret < 0)
         return ret;
 
     h->cur_pic_ptr = s->cur_pic;
-    av_frame_unref(&h->cur_pic.f);
+    av_frame_unref(h->cur_pic.f);
     h->cur_pic     = *s->cur_pic;
-    ret = av_frame_ref(&h->cur_pic.f, &s->cur_pic->f);
+    ret = av_frame_ref(h->cur_pic.f, s->cur_pic->f);
     if (ret < 0)
         return ret;
 
@@ -1156,28 +1156,28 @@ static int svq3_decode_frame(AVCodecContext *avctx, void *data,
     }
 
     if (h->pict_type != AV_PICTURE_TYPE_I) {
-        if (!s->last_pic->f.data[0]) {
+        if (!s->last_pic->f->data[0]) {
             av_log(avctx, AV_LOG_ERROR, "Missing reference frame.\n");
             ret = get_buffer(avctx, s->last_pic);
             if (ret < 0)
                 return ret;
-            memset(s->last_pic->f.data[0], 0, avctx->height * s->last_pic->f.linesize[0]);
-            memset(s->last_pic->f.data[1], 0x80, (avctx->height / 2) *
-                   s->last_pic->f.linesize[1]);
-            memset(s->last_pic->f.data[2], 0x80, (avctx->height / 2) *
-                   s->last_pic->f.linesize[2]);
+            memset(s->last_pic->f->data[0], 0, avctx->height * s->last_pic->f->linesize[0]);
+            memset(s->last_pic->f->data[1], 0x80, (avctx->height / 2) *
+                   s->last_pic->f->linesize[1]);
+            memset(s->last_pic->f->data[2], 0x80, (avctx->height / 2) *
+                   s->last_pic->f->linesize[2]);
         }
 
-        if (h->pict_type == AV_PICTURE_TYPE_B && !s->next_pic->f.data[0]) {
+        if (h->pict_type == AV_PICTURE_TYPE_B && !s->next_pic->f->data[0]) {
             av_log(avctx, AV_LOG_ERROR, "Missing reference frame.\n");
             ret = get_buffer(avctx, s->next_pic);
             if (ret < 0)
                 return ret;
-            memset(s->next_pic->f.data[0], 0, avctx->height * s->next_pic->f.linesize[0]);
-            memset(s->next_pic->f.data[1], 0x80, (avctx->height / 2) *
-                   s->next_pic->f.linesize[1]);
-            memset(s->next_pic->f.data[2], 0x80, (avctx->height / 2) *
-                   s->next_pic->f.linesize[2]);
+            memset(s->next_pic->f->data[0], 0, avctx->height * s->next_pic->f->linesize[0]);
+            memset(s->next_pic->f->data[1], 0x80, (avctx->height / 2) *
+                   s->next_pic->f->linesize[1]);
+            memset(s->next_pic->f->data[2], 0x80, (avctx->height / 2) *
+                   s->next_pic->f->linesize[2]);
         }
     }
 
@@ -1267,26 +1267,26 @@ static int svq3_decode_frame(AVCodecContext *avctx, void *data,
                     (h->pict_type == AV_PICTURE_TYPE_P && mb_type < 8) ? (mb_type - 1) : -1;
         }
 
-        ff_draw_horiz_band(avctx, &s->cur_pic->f, &s->last_pic->f,
+        ff_draw_horiz_band(avctx, s->cur_pic->f, s->last_pic->f,
                            16 * h->mb_y, 16, h->picture_structure, 0,
                            h->low_delay);
     }
 
     if (h->pict_type == AV_PICTURE_TYPE_B || h->low_delay)
-        ret = av_frame_ref(data, &s->cur_pic->f);
-    else if (s->last_pic->f.data[0])
-        ret = av_frame_ref(data, &s->last_pic->f);
+        ret = av_frame_ref(data, s->cur_pic->f);
+    else if (s->last_pic->f->data[0])
+        ret = av_frame_ref(data, s->last_pic->f);
     if (ret < 0)
         return ret;
 
     /* Do not output the last pic after seeking. */
-    if (s->last_pic->f.data[0] || h->low_delay)
+    if (s->last_pic->f->data[0] || h->low_delay)
         *got_frame = 1;
 
     if (h->pict_type != AV_PICTURE_TYPE_B) {
         FFSWAP(H264Picture*, s->cur_pic, s->next_pic);
     } else {
-        av_frame_unref(&s->cur_pic->f);
+        av_frame_unref(s->cur_pic->f);
     }
 
     return buf_size;
@@ -1304,7 +1304,7 @@ static av_cold int svq3_decode_end(AVCodecContext *avctx)
     av_freep(&s->next_pic);
     av_freep(&s->last_pic);
 
-    av_frame_unref(&h->cur_pic.f);
+    av_frame_unref(h->cur_pic.f);
 
     ff_h264_free_context(h);
 
