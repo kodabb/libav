@@ -1340,9 +1340,14 @@ int ff_h264_alloc_tables(H264Context *h)
         h->DPB = av_mallocz_array(H264_MAX_PICTURE_COUNT, sizeof(*h->DPB));
         if (!h->DPB)
             return AVERROR(ENOMEM);
-        for (i = 0; i < H264_MAX_PICTURE_COUNT; i++)
-            av_frame_unref(h->DPB[i].f);
-        av_frame_unref(h->cur_pic.f);
+        for (i = 0; i < H264_MAX_PICTURE_COUNT; i++) {
+            h->DPB[i].f = av_frame_alloc();
+            if (!h->DPB[i].f)
+                goto fail;
+        }
+        h->cur_pic.f = av_frame_alloc();
+        if (!h->cur_pic.f)
+            goto fail;
     }
 
     return 0;
