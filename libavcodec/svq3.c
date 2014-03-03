@@ -873,6 +873,18 @@ static av_cold int svq3_decode_init(AVCodecContext *avctx)
         av_freep(&s->next_pic);
         return AVERROR(ENOMEM);
     }
+    s->cur_pic->f = av_frame_alloc();
+    s->last_pic->f = av_frame_alloc();
+    s->next_pic->f = av_frame_alloc();
+    if (!s->next_pic->f || !s->last_pic->f || !s->cur_pic->f) {
+        av_frame_free(&s->cur_pic->f);
+        av_frame_free(&s->last_pic->f);
+        av_frame_free(&s->next_pic->f);
+        av_freep(&s->cur_pic);
+        av_freep(&s->last_pic);
+        av_freep(&s->next_pic);
+        return AVERROR(ENOMEM);
+    }
 
     if (ff_h264_decode_init(avctx) < 0)
         return -1;
@@ -1039,7 +1051,7 @@ static void free_picture(AVCodecContext *avctx, H264Picture *pic)
     }
     av_buffer_unref(&pic->mb_type_buf);
 
-    av_frame_unref(pic->f);
+    av_frame_free(&pic->f);
 }
 
 static int get_buffer(AVCodecContext *avctx, H264Picture *pic)
