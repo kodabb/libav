@@ -186,4 +186,11 @@ int ff_set_dimensions(AVCodecContext *s, int width, int height);
 int ff_side_data_update_matrix_encoding(AVFrame *frame,
                                         enum AVMatrixEncoding matrix_encoding);
 
+/**
+ * Draw a horizontal band if supported.
+ */
+void ff_draw_horiz_band(AVCodecContext *avctx,
+                        AVFrame *cur, AVFrame *last,
+                        int y, int h, int picture_structure,
+                        int first_field, int low_delay);
 #endif /* AVCODEC_INTERNAL_H */
