@@ -18,6 +18,11 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
+#include <stdint.h>
+
+#include "libavutil/frame.h"
+
+#include "avcodec.h"
 #include "version.h"
 
 #ifndef AVCODEC_MPEGUTILS_H
@@ -107,5 +112,15 @@
 #define CANDIDATE_MB_TYPE_BIDIR_I    (1 << 11)
 
 #define CANDIDATE_MB_TYPE_DIRECT0    (1 << 12)
+
+
+/**
+ * Draw a horizontal band if supported.
+ *
+ * @param h is the normal height, this will be reduced automatically if needed
+ */
+void ff_draw_horiz_band(AVCodecContext *avctx, AVFrame *cur, AVFrame *last,
+                        int y, int h, int picture_structure, int first_field,
+                        int low_delay);
 
 #endif /* AVCODEC_PICTTYPE_H */
