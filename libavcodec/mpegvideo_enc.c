@@ -245,7 +245,8 @@ av_cold int ff_MPV_encode_init(AVCodecContext *avctx)
         if (avctx->pix_fmt != AV_PIX_FMT_YUVJ420P &&
             avctx->pix_fmt != AV_PIX_FMT_YUVJ422P &&
             ((avctx->pix_fmt != AV_PIX_FMT_YUV420P &&
-              avctx->pix_fmt != AV_PIX_FMT_YUV422P) ||
+              avctx->pix_fmt != AV_PIX_FMT_YUV422P &&
+              avctx->color_range != AVCOL_RANGE_MPEG) ||
              avctx->strict_std_compliance > FF_COMPLIANCE_UNOFFICIAL)) {
             av_log(avctx, AV_LOG_ERROR, "colorspace not supported in jpeg\n");
             return -1;
