@@ -528,7 +528,7 @@ int avcodec_default_get_buffer2(AVCodecContext *avctx, AVFrame *frame, int flags
     if ((ret = update_frame_pool(avctx, frame)) < 0)
         return ret;
 
-#if FF_API_GET_BUFFER
+#if FF_API_GET_BUFFER && FF_API_AVFRAME_LAVC
 FF_DISABLE_DEPRECATION_WARNINGS
     frame->type = FF_BUFFER_TYPE_INTERNAL;
 FF_ENABLE_DEPRECATION_WARNINGS
@@ -640,8 +640,10 @@ FF_DISABLE_DEPRECATION_WARNINGS
         AVBufferRef *dummy_buf = NULL;
         int planes, i, ret;
 
+#if FF_API_AVFRAME_LAVC
         if (flags & AV_GET_BUFFER_FLAG_REF)
             frame->reference    = 1;
+#endif
 
         ret = avctx->get_buffer(avctx, frame);
         if (ret < 0)
