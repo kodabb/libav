@@ -166,6 +166,7 @@ static const enum AVPixelFormat h264_hwaccel_pixfmt_list_420[] = {
     AV_PIX_FMT_NONE
 };
 
+#if FF_API_FULLSCALE_PIXFMT
 static const enum AVPixelFormat h264_hwaccel_pixfmt_list_jpeg_420[] = {
 #if CONFIG_H264_DXVA2_HWACCEL
     AV_PIX_FMT_DXVA2_VLD,
@@ -182,6 +183,7 @@ static const enum AVPixelFormat h264_hwaccel_pixfmt_list_jpeg_420[] = {
     AV_PIX_FMT_YUVJ420P,
     AV_PIX_FMT_NONE
 };
+#endif /* FF_API_FULLSCALE_PIXFMT */
 
 static void h264_er_decode_mb(void *opaque, int ref, int mv_dir, int mv_type,
                               int (*mv)[2][4][2],
@@ -3127,16 +3129,26 @@ static enum AVPixelFormat get_pixel_format(H264Context *h)
             if (h->avctx->colorspace == AVCOL_SPC_RGB) {
                 return AV_PIX_FMT_GBRP;
             } else
+#if FF_API_FULLSCALE_PIXFMT
                 return h->avctx->color_range == AVCOL_RANGE_JPEG ? AV_PIX_FMT_YUVJ444P
                                                                  : AV_PIX_FMT_YUV444P;
+#else
+                return AV_PIX_FMT_YUV444P;
+#endif /* FF_API_FULLSCALE_PIXFMT */
         } else if (CHROMA422(h)) {
+#if FF_API_FULLSCALE_PIXFMT
             return h->avctx->color_range == AVCOL_RANGE_JPEG ? AV_PIX_FMT_YUVJ422P
                                                              : AV_PIX_FMT_YUV422P;
+#else
+            return AV_PIX_FMT_YUV422P;
+#endif /* FF_API_FULLSCALE_PIXFMT */
         } else {
             return h->avctx->get_format(h->avctx, h->avctx->codec->pix_fmts ?
                                         h->avctx->codec->pix_fmts :
+#if FF_API_FULLSCALE_PIXFMT
                                         h->avctx->color_range == AVCOL_RANGE_JPEG ?
                                         h264_hwaccel_pixfmt_list_jpeg_420 :
+#endif /* FF_API_FULLSCALE_PIXFMT */
                                         h264_hwaccel_pixfmt_list_420);
         }
         break;

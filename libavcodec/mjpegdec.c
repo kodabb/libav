@@ -339,7 +339,11 @@ int ff_mjpeg_decode_sof(MJpegDecodeContext *s)
         if (s->rgb)
             s->avctx->pix_fmt = AV_PIX_FMT_BGRA;
         else {
+#if FF_API_FULLSCALE_PIXFMT
             s->avctx->pix_fmt = s->cs_itu601 ? AV_PIX_FMT_YUV444P : AV_PIX_FMT_YUVJ444P;
+#else
+            s->avctx->pix_fmt = AV_PIX_FMT_YUV444P;
+#endif /* FF_API_FULLSCALE_PIXFMT */
             s->avctx->color_range = s->cs_itu601 ? AVCOL_RANGE_MPEG : AVCOL_RANGE_JPEG;
         }
         assert(s->nb_components == 3);
@@ -348,15 +352,27 @@ int ff_mjpeg_decode_sof(MJpegDecodeContext *s)
         s->avctx->pix_fmt = AV_PIX_FMT_GRAY8;
         break;
     case 0x12111100:
+#if FF_API_FULLSCALE_PIXFMT
         s->avctx->pix_fmt = s->cs_itu601 ? AV_PIX_FMT_YUV440P : AV_PIX_FMT_YUVJ440P;
+#else
+        s->avctx->pix_fmt = AV_PIX_FMT_YUV440P;
+#endif /* FF_API_FULLSCALE_PIXFMT */
         s->avctx->color_range = s->cs_itu601 ? AVCOL_RANGE_MPEG : AVCOL_RANGE_JPEG;
         break;
     case 0x21111100:
+#if FF_API_FULLSCALE_PIXFMT
         s->avctx->pix_fmt = s->cs_itu601 ? AV_PIX_FMT_YUV422P : AV_PIX_FMT_YUVJ422P;
+#else
+        s->avctx->pix_fmt = AV_PIX_FMT_YUV422P;
+#endif /* FF_API_FULLSCALE_PIXFMT */
         s->avctx->color_range = s->cs_itu601 ? AVCOL_RANGE_MPEG : AVCOL_RANGE_JPEG;
         break;
     case 0x22111100:
+#if FF_API_FULLSCALE_PIXFMT
         s->avctx->pix_fmt = s->cs_itu601 ? AV_PIX_FMT_YUV420P : AV_PIX_FMT_YUVJ420P;
+#else
+        s->avctx->pix_fmt = AV_PIX_FMT_YUV420P;
+#endif /* FF_API_FULLSCALE_PIXFMT */
         s->avctx->color_range = s->cs_itu601 ? AVCOL_RANGE_MPEG : AVCOL_RANGE_JPEG;
         break;
     default:

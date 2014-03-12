@@ -197,10 +197,12 @@ void avcodec_align_dimensions2(AVCodecContext *s, int *width, int *height,
     case AV_PIX_FMT_GRAY8:
     case AV_PIX_FMT_GRAY16BE:
     case AV_PIX_FMT_GRAY16LE:
+#if FF_API_FULLSCALE_PIXFMT
     case AV_PIX_FMT_YUVJ420P:
     case AV_PIX_FMT_YUVJ422P:
     case AV_PIX_FMT_YUVJ440P:
     case AV_PIX_FMT_YUVJ444P:
+#endif /* FF_API_FULLSCALE_PIXFMT */
     case AV_PIX_FMT_YUVA420P:
     case AV_PIX_FMT_YUVA422P:
     case AV_PIX_FMT_YUVA444P:

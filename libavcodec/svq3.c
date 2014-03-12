@@ -881,7 +881,11 @@ static av_cold int svq3_decode_init(AVCodecContext *avctx)
     h->flags           = avctx->flags;
     h->is_complex      = 1;
     h->picture_structure = PICT_FRAME;
+#if FF_API_FULLSCALE_PIXFMT
     avctx->pix_fmt     = AV_PIX_FMT_YUVJ420P;
+#else
+    avctx->pix_fmt     = AV_PIX_FMT_YUV420P;
+#endif
     avctx->color_range = AVCOL_RANGE_JPEG;
 
     h->chroma_qp[0] = h->chroma_qp[1] = 4;
@@ -1325,8 +1329,10 @@ AVCodec ff_svq3_decoder = {
     .capabilities   = CODEC_CAP_DRAW_HORIZ_BAND |
                       CODEC_CAP_DR1             |
                       CODEC_CAP_DELAY,
+#if FF_API_FULLSCALE_PIXFMT
     .pix_fmts       = (const enum AVPixelFormat[]) { AV_PIX_FMT_YUVJ420P,
                                                      AV_PIX_FMT_NONE},
+#endif
     .pix_fmts_full  = (const enum AVPixelFormat[]) {
         AV_PIX_FMT_YUV420P, AV_PIX_FMT_NONE
     },

@@ -108,10 +108,16 @@ static const struct {
 };
 
 /* [DIRAC_STD] Table 10.2 Supported chroma sampling formats + luma Offset */
+#if FF_API_FULLSCALE_PIXFMT
 static const enum AVPixelFormat dirac_pix_fmt[2][3] = {
     { AV_PIX_FMT_YUV444P,  AV_PIX_FMT_YUV422P,  AV_PIX_FMT_YUV420P  },
     { AV_PIX_FMT_YUVJ444P, AV_PIX_FMT_YUVJ422P, AV_PIX_FMT_YUVJ420P },
 };
+#else
+static const enum AVPixelFormat dirac_pix_fmt[3] = {
+    { AV_PIX_FMT_YUV444P,  AV_PIX_FMT_YUV422P,  AV_PIX_FMT_YUV420P  },
+};
+#endif /* FF_API_FULLSCALE_PIXFMT */
 
 /* [DIRAC_STD] 10.3 Parse Source Parameters.
  * source_parameters(base_video_format) */
@@ -236,7 +242,11 @@ static int parse_source_parameters(AVCodecContext *avctx, GetBitContext *gb,
     if (luma_depth > 8)
         av_log(avctx, AV_LOG_WARNING, "Bitdepth greater than 8");
 
+#if FF_API_FULLSCALE_PIXFMT
     avctx->pix_fmt = dirac_pix_fmt[!luma_offset][source->chroma_format];
+#else
+    avctx->pix_fmt = dirac_pix_fmt[source->chroma_format];
+#endif /* FF_API_FULLSCALE_PIXFMT */
 
     /* [DIRAC_STD] 10.3.9 Colour specification. colour_spec(video_params) */
     if (get_bits1(gb)) { /* [DIRAC_STD] custom_colour_spec_flag */

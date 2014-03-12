@@ -242,8 +242,11 @@ av_cold int ff_MPV_encode_init(AVCodecContext *avctx)
         }
         break;
     case AV_CODEC_ID_MJPEG:
-        if (avctx->pix_fmt != AV_PIX_FMT_YUVJ420P &&
+        if (
+#if FF_API_FULLSCALE_PIXFMT
+            avctx->pix_fmt != AV_PIX_FMT_YUVJ420P &&
             avctx->pix_fmt != AV_PIX_FMT_YUVJ422P &&
+#endif /* FF_API_FULLSCALE_PIXFMT */
             ((avctx->pix_fmt != AV_PIX_FMT_YUV420P &&
               avctx->pix_fmt != AV_PIX_FMT_YUV422P &&
               avctx->color_range != AVCOL_RANGE_MPEG) ||
@@ -260,11 +263,15 @@ av_cold int ff_MPV_encode_init(AVCodecContext *avctx)
     }
 
     switch (avctx->pix_fmt) {
+#if FF_API_FULLSCALE_PIXFMT
     case AV_PIX_FMT_YUVJ422P:
+#endif /* FF_API_FULLSCALE_PIXFMT */
     case AV_PIX_FMT_YUV422P:
         s->chroma_format = CHROMA_422;
         break;
+#if FF_API_FULLSCALE_PIXFMT
     case AV_PIX_FMT_YUVJ420P:
+#endif /* FF_API_FULLSCALE_PIXFMT */
     case AV_PIX_FMT_YUV420P:
     default:
         s->chroma_format = CHROMA_420;

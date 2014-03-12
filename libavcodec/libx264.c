@@ -254,7 +254,9 @@ static int convert_pix_fmt(enum AVPixelFormat pix_fmt)
 {
     switch (pix_fmt) {
     case AV_PIX_FMT_YUV420P:
+#if FF_API_FULLSCALE_PIXFMT
     case AV_PIX_FMT_YUVJ420P:
+#endif /* FF_API_FULLSCALE_PIXFMT */
     case AV_PIX_FMT_YUV420P9:
     case AV_PIX_FMT_YUV420P10: return X264_CSP_I420;
     case AV_PIX_FMT_YUV422P:
@@ -454,8 +456,12 @@ static av_cold int X264_init(AVCodecContext *avctx)
 
     x4->params.i_slice_count  = avctx->slices;
 
+#if FF_API_FULLSCALE_PIXFMT
     x4->params.vui.b_fullrange = avctx->pix_fmt == AV_PIX_FMT_YUVJ420P ||
                                  avctx->color_range == AVCOL_RANGE_JPEG;
+#else
+    x4->params.vui.b_fullrange = avctx->color_range == AVCOL_RANGE_JPEG;
+#endif /* FF_API_FULLSCALE_PIXFMT */
 
     if (avctx->flags & CODEC_FLAG_GLOBAL_HEADER)
         x4->params.b_repeat_headers = 0;
@@ -520,7 +526,9 @@ static av_cold int X264_init(AVCodecContext *avctx)
 
 static const enum AVPixelFormat pix_fmts_8bit[] = {
     AV_PIX_FMT_YUV420P,
+#if FF_API_FULLSCALE_PIXFMT
     AV_PIX_FMT_YUVJ420P,
+#endif /* FF_API_FULLSCALE_PIXFMT */
     AV_PIX_FMT_YUV422P,
     AV_PIX_FMT_YUV444P,
     AV_PIX_FMT_NV12,

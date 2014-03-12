@@ -264,6 +264,7 @@ const AVPixFmtDescriptor av_pix_fmt_descriptors[AV_PIX_FMT_NB] = {
         },
         .flags = AV_PIX_FMT_FLAG_PAL,
     },
+#if FF_API_FULLSCALE_PIXFMT
     [AV_PIX_FMT_YUVJ420P] = {
         .name = "yuvj420p",
         .nb_components = 3,
@@ -300,6 +301,7 @@ const AVPixFmtDescriptor av_pix_fmt_descriptors[AV_PIX_FMT_NB] = {
         },
         .flags = AV_PIX_FMT_FLAG_PLANAR,
     },
+#endif /* FF_API_FULLSCALE_PIXFMT */
 #if FF_API_XVMC
     [AV_PIX_FMT_XVMC_MPEG2_MC] = {
         .name = "xvmcmc",
@@ -511,6 +513,7 @@ const AVPixFmtDescriptor av_pix_fmt_descriptors[AV_PIX_FMT_NB] = {
         },
         .flags = AV_PIX_FMT_FLAG_PLANAR,
     },
+#if FF_API_FULLSCALE_PIXFMT
     [AV_PIX_FMT_YUVJ440P] = {
         .name = "yuvj440p",
         .nb_components = 3,
@@ -523,6 +526,7 @@ const AVPixFmtDescriptor av_pix_fmt_descriptors[AV_PIX_FMT_NB] = {
         },
         .flags = AV_PIX_FMT_FLAG_PLANAR,
     },
+#endif /* FF_API_FULLSCALE_PIXFMT */
     [AV_PIX_FMT_YUVA420P] = {
         .name = "yuva420p",
         .nb_components = 4,

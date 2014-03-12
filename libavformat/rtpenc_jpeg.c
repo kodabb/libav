@@ -22,6 +22,7 @@
 #include "libavcodec/bytestream.h"
 #include "libavcodec/mjpeg.h"
 #include "libavutil/intreadwrite.h"
+#include "libavutil/version.h"
 #include "rtpenc.h"
 
 void ff_rtp_send_jpeg(AVFormatContext *s1, const uint8_t *buf, int size)
@@ -29,7 +30,7 @@ void ff_rtp_send_jpeg(AVFormatContext *s1, const uint8_t *buf, int size)
     RTPMuxContext *s = s1->priv_data;
     const uint8_t *qtables = NULL;
     int nb_qtables = 0;
-    uint8_t type = 1; /* default pixel format is AV_PIX_FMT_YUVJ420P */
+    uint8_t type = 1; /* default pixel format is AV_PIX_FMT_YUV420P full range */
     uint8_t w, h;
     uint8_t *p;
     int off = 0; /* fragment offset of the current JPEG frame */
@@ -44,9 +45,19 @@ void ff_rtp_send_jpeg(AVFormatContext *s1, const uint8_t *buf, int size)
     h = s1->streams[0]->codec->height >> 3;
 
     /* check if pixel format is not the normal 420 case */
+#if FF_API_FULLSCALE_PIXFMT
     if (s1->streams[0]->codec->pix_fmt == AV_PIX_FMT_YUVJ422P) {
+#else
+    if (s1->streams[0]->codec->pix_fmt == AV_PIX_FMT_YUV422P &&
+        s1->streams[0]->codec->color_range == AVCOL_RANGE_JPEG) {
+#endif /* FF_API_FULLSCALE_PIXFMT */
         type = 0;
+#if FF_API_FULLSCALE_PIXFMT
     } else if (s1->streams[0]->codec->pix_fmt == AV_PIX_FMT_YUVJ420P) {
+#else
+    } else if (s1->streams[0]->codec->pix_fmt == AV_PIX_FMT_YUV420P &&
+        s1->streams[0]->codec->color_range == AVCOL_RANGE_JPEG) {
+#endif /* FF_API_FULLSCALE_PIXFMT */
         type = 1;
     } else {
         av_log(s1, AV_LOG_ERROR, "Unsupported pixel format\n");

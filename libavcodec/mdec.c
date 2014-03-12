@@ -218,7 +218,11 @@ static av_cold int decode_init(AVCodecContext *avctx)
 
     if (avctx->idct_algo == FF_IDCT_AUTO)
         avctx->idct_algo = FF_IDCT_SIMPLE;
+#if FF_API_FULLSCALE_PIXFMT
     avctx->pix_fmt  = AV_PIX_FMT_YUVJ420P;
+#else
+    avctx->pix_fmt  = AV_PIX_FMT_YUV420P;
+#endif /* FF_API_FULLSCALE_PIXFMT */
     avctx->color_range = AVCOL_RANGE_JPEG;
 
     return 0;

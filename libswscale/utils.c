@@ -89,9 +89,11 @@ static const FormatEntry format_entries[AV_PIX_FMT_NB] = {
     [AV_PIX_FMT_MONOWHITE]   = { 1, 1 },
     [AV_PIX_FMT_MONOBLACK]   = { 1, 1 },
     [AV_PIX_FMT_PAL8]        = { 1, 0 },
+#if FF_API_FULLSCALE_PIXFMT
     [AV_PIX_FMT_YUVJ420P]    = { 1, 1 },
     [AV_PIX_FMT_YUVJ422P]    = { 1, 1 },
     [AV_PIX_FMT_YUVJ444P]    = { 1, 1 },
+#endif /* FF_API_FULLSCALE_PIXFMT */
     [AV_PIX_FMT_UYVY422]     = { 1, 1 },
     [AV_PIX_FMT_UYYVYY411]   = { 0, 0 },
     [AV_PIX_FMT_BGR8]        = { 1, 1 },
@@ -109,7 +111,9 @@ static const FormatEntry format_entries[AV_PIX_FMT_NB] = {
     [AV_PIX_FMT_GRAY16BE]    = { 1, 1 },
     [AV_PIX_FMT_GRAY16LE]    = { 1, 1 },
     [AV_PIX_FMT_YUV440P]     = { 1, 1 },
+#if FF_API_FULLSCALE_PIXFMT
     [AV_PIX_FMT_YUVJ440P]    = { 1, 1 },
+#endif /* FF_API_FULLSCALE_PIXFMT */
     [AV_PIX_FMT_YUVA420P]    = { 1, 1 },
     [AV_PIX_FMT_YUVA422P]    = { 1, 1 },
     [AV_PIX_FMT_YUVA444P]    = { 1, 1 },
@@ -837,6 +841,7 @@ int sws_getColorspaceDetails(struct SwsContext *c, int **inv_table,
 static int handle_jpeg(enum AVPixelFormat *format)
 {
     switch (*format) {
+#if FF_API_FULLSCALE_PIXFMT
     case AV_PIX_FMT_YUVJ420P:
         *format = AV_PIX_FMT_YUV420P;
         return 1;
@@ -849,6 +854,7 @@ static int handle_jpeg(enum AVPixelFormat *format)
     case AV_PIX_FMT_YUVJ440P:
         *format = AV_PIX_FMT_YUV440P;
         return 1;
+#endif /* FF_API_FULLSCALE_PIXFMT */
     default:
         return 0;
     }

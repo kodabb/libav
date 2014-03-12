@@ -47,10 +47,13 @@ typedef struct {
 static int query_formats(AVFilterContext *ctx)
 {
     static const enum AVPixelFormat pix_fmts[] = {
-        AV_PIX_FMT_YUV420P, AV_PIX_FMT_YUVJ420P,
-        AV_PIX_FMT_YUV422P, AV_PIX_FMT_YUVJ422P,
-        AV_PIX_FMT_YUV444P, AV_PIX_FMT_YUVJ444P,
-        AV_PIX_FMT_YUV411P, AV_PIX_FMT_GRAY8,
+        AV_PIX_FMT_YUV420P, AV_PIX_FMT_YUV422P,
+        AV_PIX_FMT_YUV444P, AV_PIX_FMT_YUV411P,
+        AV_PIX_FMT_GRAY8,
+#if FF_API_FULLSCALE_PIXFMT
+        AV_PIX_FMT_YUVJ420P, AV_PIX_FMT_YUVJ422P,
+        AV_PIX_FMT_YUVJ444P,
+#endif /* FF_API_FULLSCALE_PIXFMT */
         AV_PIX_FMT_NV12,    AV_PIX_FMT_NV21,
         AV_PIX_FMT_NONE
     };

@@ -170,7 +170,11 @@ static int decode_frame(AVCodecContext *avctx,
     if (header_size == 8)
         buf += 4;
 
+#if FF_API_FULLSCALE_PIXFMT
     pix_fmt = version & 1 ? AV_PIX_FMT_BGR24 : AV_PIX_FMT_YUVJ420P;
+#else
+    pix_fmt = version & 1 ? AV_PIX_FMT_BGR24 : AV_PIX_FMT_YUV420P;
+#endif /* FF_API_FULLSCALE_PIXFMT */
     if (avctx->pix_fmt != pix_fmt && f->data[0]) {
         av_frame_unref(f);
     }

@@ -264,10 +264,15 @@ static av_cold int ljpeg_encode_init(AVCodecContext *avctx)
     LJpegEncContext *s = avctx->priv_data;
     int chroma_v_shift, chroma_h_shift;
 
-    if ((avctx->pix_fmt == AV_PIX_FMT_YUV420P ||
+    if (
+#if FF_API_FULLSCALE_PIXFMT
+        (avctx->pix_fmt == AV_PIX_FMT_YUV420P ||
          avctx->pix_fmt == AV_PIX_FMT_YUV422P ||
          avctx->pix_fmt == AV_PIX_FMT_YUV444P ||
          avctx->color_range == AVCOL_RANGE_MPEG) &&
+#else
+        avctx->color_range == AVCOL_RANGE_MPEG &&
+#endif /* FF_API_FULLSCALE_PIXFMT */
         avctx->strict_std_compliance > FF_COMPLIANCE_UNOFFICIAL) {
         av_log(avctx, AV_LOG_ERROR,
                "Limited range YUV is non-standard, set strict_std_compliance to "
@@ -331,6 +336,11 @@ AVCodec ff_ljpeg_encoder = {
                                                     AV_PIX_FMT_YUV420P,
                                                     AV_PIX_FMT_YUV422P,
                                                     AV_PIX_FMT_YUV444P,
+#if FF_API_FULLSCALE_PIXFMT
+                                                    AV_PIX_FMT_YUVJ420P,
+                                                    AV_PIX_FMT_YUVJ422P,
+                                                    AV_PIX_FMT_YUVJ444P,
+#endif /* FF_API_FULLSCALE_PIXFMT */
                                                     AV_PIX_FMT_NONE },
     .pix_fmts_full  = (const enum AVPixelFormat[]) {
         AV_PIX_FMT_YUV420P, AV_PIX_FMT_YUV422P, AV_PIX_FMT_YUV444P, AV_PIX_FMT_NONE,

@@ -464,9 +464,11 @@ int avpicture_deinterlace(AVPicture *dst, const AVPicture *src,
     int i;
 
     if (pix_fmt != AV_PIX_FMT_YUV420P &&
-        pix_fmt != AV_PIX_FMT_YUVJ420P &&
         pix_fmt != AV_PIX_FMT_YUV422P &&
+#if FF_API_FULLSCALE_PIXFMT
+        pix_fmt != AV_PIX_FMT_YUVJ420P &&
         pix_fmt != AV_PIX_FMT_YUVJ422P &&
+#endif /* FF_API_FULLSCALE_PIXFMT */
         pix_fmt != AV_PIX_FMT_YUV444P &&
         pix_fmt != AV_PIX_FMT_YUV411P &&
         pix_fmt != AV_PIX_FMT_GRAY8)
@@ -477,13 +479,17 @@ int avpicture_deinterlace(AVPicture *dst, const AVPicture *src,
     for(i=0;i<3;i++) {
         if (i == 1) {
             switch(pix_fmt) {
+#if FF_API_FULLSCALE_PIXFMT
             case AV_PIX_FMT_YUVJ420P:
+#endif /* FF_API_FULLSCALE_PIXFMT */
             case AV_PIX_FMT_YUV420P:
                 width >>= 1;
                 height >>= 1;
                 break;
             case AV_PIX_FMT_YUV422P:
+#if FF_API_FULLSCALE_PIXFMT
             case AV_PIX_FMT_YUVJ422P:
+#endif /* FF_API_FULLSCALE_PIXFMT */
                 width >>= 1;
                 break;
             case AV_PIX_FMT_YUV411P:
