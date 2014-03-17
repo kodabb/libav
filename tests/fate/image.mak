@@ -1,3 +1,18 @@
+FATE_SAMPLES_AVCONV-$(call DEMDEC, IMAGE2, BRENDER_PIX) += fate-brenderpix-24
+fate-brenderpix-24: CMD = framecrc -i $(TARGET_SAMPLES)/brenderpix/sbwheel.pix
+
+FATE_SAMPLES_AVCONV-$(call DEMDEC, IMAGE2, BRENDER_PIX) += fate-brenderpix-565
+fate-brenderpix-565: CMD = framecrc -i $(TARGET_SAMPLES)/brenderpix/maximafront.pix
+
+FATE_SAMPLES_AVCONV-$(call DEMDEC, IMAGE2, BRENDER_PIX) += fate-brenderpix-defpal
+fate-brenderpix-defpal: CMD = framecrc -i $(TARGET_SAMPLES)/brenderpix/rivrock1.pix
+
+FATE_SAMPLES_AVCONV-$(call DEMDEC, IMAGE2, BRENDER_PIX) += fate-brenderpix-intpal
+fate-brenderpix-intpal: CMD = framecrc -i $(TARGET_SAMPLES)/brenderpix/testtex.pix
+
+FATE_SAMPLES_AVCONV-$(call DEMDEC, IMAGE2, BRENDER_PIX) += fate-brenderpix-y400a
+fate-brenderpix-y400a: CMD = framecrc -i $(TARGET_SAMPLES)/brenderpix/gears.pix
+
 FATE_SAMPLES_AVCONV-$(call DEMDEC, IMAGE2, DPX) += fate-dpx
 fate-dpx: CMD = framecrc -i $(TARGET_SAMPLES)/dpx/lighthouse_rgb48.dpx
 
