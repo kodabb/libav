@@ -13,6 +13,10 @@ libavutil:     2013-12-xx
 
 API changes, most recent first:
 
+2014-xx-xx - xxxxxxx - lavu 53.07.0 - pixmodel.h
+  Move all color-related enums (AVColorPrimaries, AVColorSpace, AVColorRange,
+  and AVChromaLocation) inside lavu, and introduce a new type containing them.
+
 2014-xx-xx - xxxxxxx - lavu 53.06.0 - pixfmt.h
   Add RGBA64 pixel format and variants.
 

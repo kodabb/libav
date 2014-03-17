@@ -38,6 +38,7 @@ HEADERS = adler32.h                                                     \
           parseutils.h                                                  \
           pixdesc.h                                                     \
           pixfmt.h                                                      \
+          pixmodel.h                                                    \
           random_seed.h                                                 \
           rational.h                                                    \
           samplefmt.h                                                   \

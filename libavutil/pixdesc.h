@@ -53,6 +53,7 @@ typedef struct AVComponentDescriptor{
  * @note This is separate of the colorspace (RGB, YCbCr, YPbPr, JPEG-style YUV
  *       and all the YUV variants) AVPixFmtDescriptor just stores how values
  *       are stored not what these values represent.
+ * @see AVPixFmtModel
  */
 typedef struct AVPixFmtDescriptor{
     const char *name;
