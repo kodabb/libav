@@ -1,3 +1,6 @@
+FATE_SAMPLES_AVCONV-$(call PARSERDEMDEC, BMP, IMAGE2PIPE, BMP) += fate-bmpparser
+fate-bmpparser: CMD = framecrc -f image2pipe -i $(TARGET_SAMPLES)/bmp/libav_4x_concat.bmp -pix_fmt rgb24
+
 FATE_SAMPLES_AVCONV-$(call DEMDEC, IMAGE2, DPX) += fate-dpx
 fate-dpx: CMD = framecrc -i $(TARGET_SAMPLES)/dpx/lighthouse_rgb48.dpx
 
