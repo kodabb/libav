@@ -1699,7 +1699,7 @@ out:
         if (avctx->flags2 & CODEC_FLAG2_CHUNKS)
             decode_postinit(h, 1);
 
-        field_end(h, 0);
+        ff_h264_field_end(h, 0);
 
         *got_frame = 0;
         if (h->next_output_pic && ((avctx->flags & CODEC_FLAG_OUTPUT_CORRUPT) ||

@@ -851,7 +851,7 @@ int ff_h264_decode_slice_header(H264Context *h, H264Context *h0)
 
     if (first_mb_in_slice == 0) { // FIXME better field boundary detection
         if (h0->current_slice && h->cur_pic_ptr && FIELD_PICTURE(h)) {
-            field_end(h, 1);
+            ff_h264_field_end(h, 1);
         }
 
         h0->current_slice = 0;
