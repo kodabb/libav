@@ -1020,9 +1020,115 @@ static av_always_inline int get_dct8x8_allowed(H264Context *h)
                   0x0001000100010001ULL));
 }
 
+#if CONFIG_ERROR_RESILIENCE
+static void h264_set_erpic(ERPicture *dst, H264Picture *src)
+{
+    int i;
+    if (!src)
+        return;
+
+    dst->f = &src->f;
+    dst->tf = &src->tf;
+
+    for (i = 0; i < 2; i++) {
+        dst->motion_val[i] = src->motion_val[i];
+        dst->ref_index[i] = src->ref_index[i];
+    }
+
+    dst->mb_type = src->mb_type;
+    dst->field_picture = src->field_picture;
+}
+#endif /* CONFIG_ERROR_RESILIENCE */
+
+static inline int field_end(H264Context *h, int in_setup)
+{
+    AVCodecContext *const avctx = h->avctx;
+    int err = 0;
+    h->mb_y = 0;
+
+    if (!in_setup && !h->droppable)
+        ff_thread_report_progress(&h->cur_pic_ptr->tf, INT_MAX,
+                                  h->picture_structure == PICT_BOTTOM_FIELD);
+
+    if (in_setup || !(avctx->active_thread_type & FF_THREAD_FRAME)) {
+        if (!h->droppable) {
+            err = ff_h264_execute_ref_pic_marking(h, h->mmco, h->mmco_index);
+            h->prev_poc_msb = h->poc_msb;
+            h->prev_poc_lsb = h->poc_lsb;
+        }
+        h->prev_frame_num_offset = h->frame_num_offset;
+        h->prev_frame_num        = h->frame_num;
+        h->outputed_poc          = h->next_outputed_poc;
+    }
+
+    if (avctx->hwaccel) {
+        if (avctx->hwaccel->end_frame(avctx) < 0)
+            av_log(avctx, AV_LOG_ERROR,
+                   "hardware accelerator failed to decode picture\n");
+    }
+
+    /*
+     * FIXME: Error handling code does not seem to support interlaced
+     * when slices span multiple rows
+     * The ff_er_add_slice calls don't work right for bottom
+     * fields; they cause massive erroneous error concealing
+     * Error marking covers both fields (top and bottom).
+     * This causes a mismatched s->error_count
+     * and a bad error table. Further, the error count goes to
+     * INT_MAX when called for bottom field, because mb_y is
+     * past end by one (callers fault) and resync_mb_y != 0
+     * causes problems for the first MB line, too.
+     */
+    if (CONFIG_ERROR_RESILIENCE && !FIELD_PICTURE(h)) {
+        h264_set_erpic(&h->er.cur_pic, h->cur_pic_ptr);
+        h264_set_erpic(&h->er.last_pic,
+                       h->ref_count[0] ? &h->ref_list[0][0] : NULL);
+        h264_set_erpic(&h->er.next_pic,
+                       h->ref_count[1] ? &h->ref_list[1][0] : NULL);
+        ff_er_frame_end(&h->er);
+    }
+    emms_c();
+
+    h->current_slice = 0;
+
+    return err;
+}
+
+int ff_h264_ref_picture(H264Context *h, H264Picture *dst, H264Picture *src);
+
+void ff_h264_unref_picture(H264Context *h, H264Picture *pic);
+
+static inline void release_unused_pictures(H264Context *h, int remove_current)
+{
+    int i;
+
+    /* release non reference frames */
+    for (i = 0; i < H264_MAX_PICTURE_COUNT; i++) {
+        if (h->DPB[i].f.buf[0] && !h->DPB[i].reference &&
+            (remove_current || &h->DPB[i] != h->cur_pic_ptr)) {
+            ff_h264_unref_picture(h, &h->DPB[i]);
+        }
+    }
+}
+
+int ff_h264_context_init(H264Context *h);
+int ff_h264_set_parameter_from_sps(H264Context *h);
+
 void ff_h264_draw_horiz_band(H264Context *h, int y, int height);
 int ff_init_poc(H264Context *h, int pic_field_poc[2], int *pic_poc);
 int ff_pred_weight_table(H264Context *h);
 int ff_set_ref_count(H264Context *h);
+
+int ff_h264_slice_header_init(H264Context *, int);
+int ff_h264_decode_slice_header(H264Context *h, H264Context *h0);
+int ff_h264_execute_decode_slices(H264Context *h, unsigned context_count);
+
+void ff_h264_flush_change(H264Context *h);
+
+int ff_h264_alloc_scratch_buffers(H264Context *h, int linesize);
+
+void ff_h264_free_tables(H264Context *h, int free_rbsp);
+
+void ff_h264_init_dequant_tables(H264Context *h);
 
 #endif /* AVCODEC_H264_H */
