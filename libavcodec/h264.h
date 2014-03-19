@@ -1095,21 +1095,7 @@ static inline int field_end(H264Context *h, int in_setup)
 }
 
 int ff_h264_ref_picture(H264Context *h, H264Picture *dst, H264Picture *src);
-
 void ff_h264_unref_picture(H264Context *h, H264Picture *pic);
-
-static inline void release_unused_pictures(H264Context *h, int remove_current)
-{
-    int i;
-
-    /* release non reference frames */
-    for (i = 0; i < H264_MAX_PICTURE_COUNT; i++) {
-        if (h->DPB[i].f.buf[0] && !h->DPB[i].reference &&
-            (remove_current || &h->DPB[i] != h->cur_pic_ptr)) {
-            ff_h264_unref_picture(h, &h->DPB[i]);
-        }
-    }
-}
 
 int ff_h264_context_init(H264Context *h);
 int ff_h264_set_parameter_from_sps(H264Context *h);

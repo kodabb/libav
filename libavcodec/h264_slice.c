@@ -501,11 +501,11 @@ static int find_unused_picture(H264Context *h)
 {
     int i;
 
-    for (i = 0; i < MAX_PICTURE_COUNT; i++) {
+    for (i = 0; i < H264_MAX_PICTURE_COUNT; i++) {
         if (pic_is_unused(h, &h->DPB[i]))
             break;
     }
-    if (i == MAX_PICTURE_COUNT)
+    if (i == H264_MAX_PICTURE_COUNT)
         return AVERROR_INVALIDDATA;
 
     if (h->DPB[i].needs_realloc) {
@@ -597,6 +597,19 @@ static int alloc_picture(H264Context *h, H264Picture *pic)
 fail:
     ff_h264_unref_picture(h, pic);
     return (ret < 0) ? ret : AVERROR(ENOMEM);
+}
+
+static void release_unused_pictures(H264Context *h, int remove_current)
+{
+    int i;
+
+    /* release non reference frames */
+    for (i = 0; i < MAX_PICTURE_COUNT; i++) {
+        if (h->DPB[i].f.buf[0] && !h->DPB[i].reference &&
+            (remove_current || &h->DPB[i] != h->cur_pic_ptr)) {
+            ff_h264_unref_picture(h, &h->DPB[i]);
+        }
+    }
 }
 
 static int h264_frame_start(H264Context *h)
