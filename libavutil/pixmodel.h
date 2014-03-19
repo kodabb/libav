@@ -126,4 +126,21 @@ typedef struct AVPixFmtModel {
     enum AVChromaLocation chroma_location;
 } AVPixFmtModel;
 
+/**
+ * Allocate an AVPixFmtModel structure and set its fields to default values.
+ * The resulting struct can be freed using av_freep().
+ *
+ * @return An AVPixFmtModel filled with default values or NULL on failure.
+ */
+AVPixFmtModel *av_pixfmtmodel_alloc(void);
+
+/**
+ * Allocate a complete AVFrameSideData and add it to the frame.
+ *
+ * @param frame The frame which side data is added to.
+ *
+ * @return The AVPixFmtModel structure to be filled by caller.
+ */
+AVPixFmtModel *av_pixfmtmodel_create_side_data(AVFrame *frame);
+
 #endif /* AVUTIL_PIXMODEL_H */

@@ -13,6 +13,10 @@ libavutil:     2013-12-xx
 
 API changes, most recent first:
 
+2014-xx-xx - xxxxxxx - lavu 53.08.0 - frame.h
+  Add AV_FRAME_DATA_COLOR value to the AVFrameSideDataType enum and pixmodel.h
+  API, that unquely convey colors representation for the frame pixel format.
+
 2014-xx-xx - xxxxxxx - lavu 53.07.0 - pixmodel.h
   Move all color-related enums (AVColorPrimaries, AVColorSpace, AVColorRange,
   and AVChromaLocation) inside lavu, and introduce a new type containing them.

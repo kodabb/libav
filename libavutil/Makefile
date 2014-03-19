@@ -91,6 +91,7 @@ OBJS = adler32.o                                                        \
        opt.o                                                            \
        parseutils.o                                                     \
        pixdesc.o                                                        \
+       pixmodel.o                                                       \
        random_seed.o                                                    \
        rational.o                                                       \
        rc4.o                                                            \

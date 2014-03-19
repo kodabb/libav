@@ -69,6 +69,11 @@ enum AVFrameSideDataType {
      * The data is the AVDownmixInfo struct defined in libavutil/downmix_info.h.
      */
     AV_FRAME_DATA_DOWNMIX_INFO,
+    /**
+     * Interpretation of the current frame pixel format.
+     * The data is the AVPixFmtModel struct defined in libavutil/pixmodel.h.
+     */
+    AV_FRAME_DATA_COLOR,
 };
 
 typedef struct AVFrameSideData {
