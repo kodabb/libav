@@ -1,3 +1,9 @@
+FATE_SAMPLES_AVCONV-$(call DEMDEC, IMAGE2, ALIAS_PIX) += fate-aliaspix-bgr
+fate-aliaspix-bgr: CMD = framecrc -i $(TARGET_SAMPLES)/aliaspix/first.pix -pix_fmt bgr24
+
+FATE_SAMPLES_AVCONV-$(call DEMDEC, IMAGE2, ALIAS_PIX) += fate-aliaspix-gray
+fate-aliaspix-gray: CMD = framecrc -i $(TARGET_SAMPLES)/aliaspix/firstgray.pix -pix_fmt gray
+
 FATE_SAMPLES_AVCONV-$(call DEMDEC, IMAGE2, DPX) += fate-dpx
 fate-dpx: CMD = framecrc -i $(TARGET_SAMPLES)/dpx/lighthouse_rgb48.dpx
 
