@@ -2720,6 +2720,7 @@ typedef struct AVCodec {
 #endif
     const AVClass *priv_class;              ///< AVClass for the private context
     const AVProfile *profiles;              ///< array of recognized profiles, or NULL if unknown, array is terminated by {FF_PROFILE_UNKNOWN}
+    const enum AVPixelFormat *pix_fmts_full; ///< array of supported pixel formats to be interpreted as full range, or NULL if unknown, array is terminated by -1
 
     /*****************************************************************
      * No fields below this line are part of the public API. They

@@ -332,4 +332,8 @@ AVCodec ff_ljpeg_encoder = {
                                                     AV_PIX_FMT_YUV422P,
                                                     AV_PIX_FMT_YUV444P,
                                                     AV_PIX_FMT_NONE },
+    .pix_fmts_full  = (const enum AVPixelFormat[]) {
+        AV_PIX_FMT_YUV420P, AV_PIX_FMT_YUV422P, AV_PIX_FMT_YUV444P, AV_PIX_FMT_NONE,
+    }
+
 };
