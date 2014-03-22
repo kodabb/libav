@@ -5,6 +5,7 @@ version <next>:
 - libx265 encoder
 - compand audio filter
 - shuffleplanes filter
+- XBM decoder
 
 
 version 10:
