@@ -134,7 +134,7 @@ static int pix_decode_frame(AVCodecContext *avctx, void *data, int *got_frame,
 {
     AVFrame *frame = data;
 
-    int ret;
+    int ret, i;
     GetByteContext gb;
 
     unsigned int bytes_pp;
@@ -270,6 +270,11 @@ static int pix_decode_frame(AVCodecContext *avctx, void *data, int *got_frame,
                         avpkt->data + bytestream2_tell(&gb),
                         bytes_per_scanline,
                         bytes_per_scanline, hdr.height);
+
+    // make alpha opaque for XRGB
+    if (hdr.format == 7)
+        for (i = 0; i < frame->linesize[0]; i += 4)
+            frame->data[i] = 0xFF;
 
     frame->pict_type = AV_PICTURE_TYPE_I;
     frame->key_frame = 1;
