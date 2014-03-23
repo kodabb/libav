@@ -991,7 +991,7 @@ static int decode_header(EXRContext *s)
                     av_log(s->avctx, AV_LOG_WARNING,
                            "Unsupported channel %.256s.\n", ch_gb.buffer);
 
-                // skip any number of 0 until you get to the pixel type
+                /* skip until you get a 0 */
                 while (bytestream2_get_bytes_left(&ch_gb) > 0 &&
                        bytestream2_get_byte(&ch_gb))
                     continue;
@@ -1009,7 +1009,6 @@ static int decode_header(EXRContext *s)
                     return AVERROR_PATCHWELCOME;
                 }
 
-                /* moar skipping */
                 bytestream2_skip(&ch_gb, 4);
                 xsub = bytestream2_get_le32(&ch_gb);
                 ysub = bytestream2_get_le32(&ch_gb);
