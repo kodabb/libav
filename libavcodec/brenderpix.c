@@ -134,7 +134,7 @@ static int pix_decode_frame(AVCodecContext *avctx, void *data, int *got_frame,
 {
     AVFrame *frame = data;
 
-    int ret, i;
+    int ret, i, j;
     GetByteContext gb;
 
     unsigned int bytes_pp;
@@ -215,7 +215,6 @@ static int pix_decode_frame(AVCodecContext *avctx, void *data, int *got_frame,
         /* read palette data from data[1] */
         PixHeader palhdr;
         uint32_t *pal_out = (uint32_t *)frame->data[1];
-        int i;
 
         ret = pix_decode_header(&palhdr, &gb);
         if (ret < 0) {
@@ -273,8 +272,9 @@ static int pix_decode_frame(AVCodecContext *avctx, void *data, int *got_frame,
 
     // make alpha opaque for XRGB
     if (hdr.format == 7)
-        for (i = 0; i < frame->linesize[0]; i += 4)
-            frame->data[i] = 0xFF;
+        for (j = 0; j < frame->height; j++)
+            for (i = 0; i < frame->linesize[0]; i += 4)
+                frame->data[j * frame->linesize[0] + i] = 0xFF;
 
     frame->pict_type = AV_PICTURE_TYPE_I;
     frame->key_frame = 1;
