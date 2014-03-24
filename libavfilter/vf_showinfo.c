@@ -25,6 +25,7 @@
 #include <inttypes.h>
 
 #include "libavutil/adler32.h"
+#include "libavutil/display.h"
 #include "libavutil/imgutils.h"
 #include "libavutil/internal.h"
 #include "libavutil/pixdesc.h"
@@ -116,6 +117,11 @@ static int filter_frame(AVFilterLink *inlink, AVFrame *frame)
             break;
         case AV_FRAME_DATA_STEREO3D:
             dump_stereo3d(ctx, sd);
+            break;
+        case AV_FRAME_DATA_DISPLAYMATRIX:
+            av_log(ctx, AV_LOG_INFO, "displaymatrix: ");
+            av_log(ctx, AV_LOG_INFO, "rotation of %d degrees",
+                   av_display_rotation_angle(sd->data));
             break;
         default:
             av_log(ctx, AV_LOG_WARNING, "unknown side data type %d (%d bytes)",
