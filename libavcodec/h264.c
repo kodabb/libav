@@ -27,6 +27,7 @@
 
 #include "libavutil/avassert.h"
 #include "libavutil/imgutils.h"
+#include "libavutil/opt.h"
 #include "libavutil/stereo3d.h"
 #include "libavutil/timer.h"
 #include "internal.h"
@@ -820,6 +821,11 @@ static void decode_postinit(H264Context *h, int setup_finished)
 
         if (h->content_interpretation_type == 2)
             stereo->flags = AV_STEREO3D_FLAG_INVERT;
+    } else if (h->is_mvc && h->ssps.num_views == 2) {
+        AVStereo3D *stereo = av_stereo3d_create_side_data(&cur->f);
+        if (!stereo)
+            return;
+        stereo->type = AV_STEREO3D_MULTIVIEW;
     }
 
     // FIXME do something with unavailable reference frames
@@ -1431,7 +1437,16 @@ again:
                 }
                 idr(h); // FIXME ensure we don't lose some frames if there is reordering
             case NAL_SLICE:
+            case NAL_EXT_SLICE:
                 init_get_bits(&hx->gb, ptr, bit_length);
+                if (h->nal_unit_type == NAL_EXT_SLICE) {
+                    init_get_bits(&h->gb, ptr, bit_length);
+                    ff_mvc_decode_nal_header(h);
+                    av_log(avctx, AV_LOG_WARNING, "view_id in header: %d/%d\n",
+                           h->view_id, h->voidx);
+                    hx = h->mvc_context[h->voidx];
+                    hx->gb = h->gb;
+                }
                 hx->intra_gb_ptr      =
                 hx->inter_gb_ptr      = &hx->gb;
                 hx->data_partitioning = 0;
@@ -1548,9 +1563,21 @@ again:
                     goto end;
 
                 break;
+            case NAL_SUB_SPS:
+                init_get_bits(&h->gb, ptr, bit_length);
+                ff_mvc_decode_subset_sequence_parameter_set(h);
+
+                ret = ff_h264_set_parameter_from_sps(h);
+                if (ret < 0)
+                    goto end;
+                break;
             case NAL_PPS:
                 init_get_bits(&h->gb, ptr, bit_length);
                 ff_h264_decode_picture_parameter_set(h, bit_length);
+                break;
+            case NAL_PREFIX:
+                init_get_bits(&h->gb, ptr, bit_length);
+                ff_mvc_decode_nal_header(h);
                 break;
             case NAL_AUD:
             case NAL_END_SEQUENCE:
@@ -1760,12 +1787,29 @@ static const AVProfile profiles[] = {
     { FF_PROFILE_H264_HIGH_444_PREDICTIVE,  "High 4:4:4 Predictive" },
     { FF_PROFILE_H264_HIGH_444_INTRA,       "High 4:4:4 Intra"      },
     { FF_PROFILE_H264_CAVLC_444,            "CAVLC 4:4:4"           },
+    { FF_PROFILE_MVC_MULTIVIEW_HIGH,        "Multiview High"        },
+    { FF_PROFILE_MVC_STEREO_HIGH,           "Stereo High"           },
     { FF_PROFILE_UNKNOWN },
+};
+
+#define OFFSET(x) offsetof(H264Context, x)
+#define PAR (AV_OPT_FLAG_DECODING_PARAM | AV_OPT_FLAG_VIDEO_PARAM)
+static const AVOption options[] = {
+    { "layer-max", "Decode up to layer #", OFFSET(layer_max),
+        AV_OPT_TYPE_INT, {.i64 = 0}, 0, INT_MAX, PAR },
+    { NULL },
+};
+
+static const AVClass h264_decoder_class = {
+    .class_name = "H264 decoder",
+    .item_name  = av_default_item_name,
+    .option     = options,
+    .version    = LIBAVUTIL_VERSION_INT,
 };
 
 AVCodec ff_h264_decoder = {
     .name                  = "h264",
-    .long_name             = NULL_IF_CONFIG_SMALL("H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10"),
+    .long_name             = NULL_IF_CONFIG_SMALL("H.264 / AVC / MPEG-4 part 10 / MVC"),
     .type                  = AVMEDIA_TYPE_VIDEO,
     .id                    = AV_CODEC_ID_H264,
     .priv_data_size        = sizeof(H264Context),

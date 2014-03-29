@@ -60,12 +60,15 @@ static int h264_find_frame_end(H264Context *h, const uint8_t *buf,
                 state >>= 1;           // 2->1, 1->0, 0->0
         } else if (state <= 5) {
             int nalu_type = buf[i] & 0x1F;
+            // any extradata the frame might start with
             if (nalu_type == NAL_SEI || nalu_type == NAL_SPS ||
-                nalu_type == NAL_PPS || nalu_type == NAL_AUD) {
+                nalu_type == NAL_PPS || nalu_type == NAL_AUD ||
+                nalu_type == NAL_PREFIX) {
                 if (pc->frame_start_found) {
                     i++;
                     goto found;
                 }
+            // video slices only
             } else if (nalu_type == NAL_SLICE || nalu_type == NAL_DPA ||
                        nalu_type == NAL_IDR_SLICE) {
                 if (pc->frame_start_found) {
@@ -179,6 +182,7 @@ static inline int parse_nal_units(AVCodecParserContext *s,
     int state = -1, got_reset = 0;
     const uint8_t *ptr;
     int field_poc[2];
+    const uint8_t *start = buf;
 
     /* set some sane default values */
     s->pict_type         = AV_PICTURE_TYPE_I;
@@ -205,16 +209,25 @@ static inline int parse_nal_units(AVCodecParserContext *s,
             if ((state & 0x1f) == NAL_IDR_SLICE || ((state >> 5) & 0x3) == 0) {
                 /* IDR or disposable slice
                  * No need to decode many bytes because MMCOs shall not be present. */
-                if (src_length > 60)
+                if (src_length > 60 && !h->is_mvc)
                     src_length = 60;
             } else {
                 /* To decode up to MMCOs */
-                if (src_length > 1000)
+                if (src_length > 1000 && !h->is_mvc)
                     src_length = 1000;
             }
             break;
         }
         ptr = ff_h264_decode_nal(h, buf, &dst_length, &consumed, src_length);
+        av_log(NULL, AV_LOG_ERROR,
+               "NAL: %d/%d buf start %d end %d ptr %p src %d consumed %d\n",
+               h->nal_unit_type,
+               h->avctx->frame_number,
+               buf - start,
+               dst_length,
+               ptr,
+               src_length, consumed);
+
         if (ptr == NULL || dst_length < 0)
             break;
 
@@ -229,6 +242,12 @@ static inline int parse_nal_units(AVCodecParserContext *s,
         case NAL_SEI:
             ff_h264_decode_sei(h);
             break;
+        case NAL_PREFIX:
+            ff_mvc_decode_nal_header(h);
+            break;
+        case NAL_SUB_SPS:
+            ff_mvc_decode_subset_sequence_parameter_set(h);
+            break;
         case NAL_IDR_SLICE:
             s->key_frame = 1;
 
@@ -238,6 +257,9 @@ static inline int parse_nal_units(AVCodecParserContext *s,
             h->prev_poc_lsb          = 0;
         /* fall through */
         case NAL_SLICE:
+        case NAL_EXT_SLICE:
+            if (h->nal_unit_type == NAL_EXT_SLICE)
+                ff_mvc_decode_nal_header(h);
             get_ue_golomb(&h->gb);  // skip first_mb_in_slice
             slice_type   = get_ue_golomb_31(&h->gb);
             s->pict_type = golomb_to_pict_type[slice_type % 5];
@@ -257,12 +279,12 @@ static inline int parse_nal_units(AVCodecParserContext *s,
                 return -1;
             }
             h->pps = *h->pps_buffers[pps_id];
-            if (!h->sps_buffers[h->pps.sps_id]) {
+            if (!ff_mvc_get_sps(h, h->pps.sps_id)) {
                 av_log(h->avctx, AV_LOG_ERROR,
                        "non-existing SPS %u referenced\n", h->pps.sps_id);
                 return -1;
             }
-            h->sps       = *h->sps_buffers[h->pps.sps_id];
+            h->sps       = *ff_mvc_get_sps(h, h->pps.sps_id);
             h->frame_num = get_bits(&h->gb, h->sps.log2_max_frame_num);
 
             avctx->profile = ff_h264_get_profile(&h->sps);
@@ -387,7 +409,8 @@ static inline int parse_nal_units(AVCodecParserContext *s,
                 s->field_order = AV_FIELD_UNKNOWN;
             }
 
-            return 0; /* no need to evaluate the rest */
+            if (!h->is_mvc || h->view_id > 0) // TODO exit when you have all th
+                return 0; /* no need to evaluate the rest */
         }
         buf += consumed;
     }

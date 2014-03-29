@@ -105,7 +105,7 @@ static const uint8_t default_scaling8[2][64] = {
       24, 25, 27, 28, 30, 32, 33, 35 }
 };
 
-static inline int decode_hrd_parameters(H264Context *h, SPS *sps)
+int ff_decode_hrd_parameters(H264Context *h, SPS *sps)
 {
     int cpb_count, i;
     cpb_count = get_ue_golomb_31(&h->gb) + 1;
@@ -197,11 +197,11 @@ static inline int decode_vui_parameters(H264Context *h, SPS *sps)
 
     sps->nal_hrd_parameters_present_flag = get_bits1(&h->gb);
     if (sps->nal_hrd_parameters_present_flag)
-        if (decode_hrd_parameters(h, sps) < 0)
+        if (ff_decode_hrd_parameters(h, sps) < 0)
             return AVERROR_INVALIDDATA;
     sps->vcl_hrd_parameters_present_flag = get_bits1(&h->gb);
     if (sps->vcl_hrd_parameters_present_flag)
-        if (decode_hrd_parameters(h, sps) < 0)
+        if (ff_decode_hrd_parameters(h, sps) < 0)
             return AVERROR_INVALIDDATA;
     if (sps->nal_hrd_parameters_present_flag ||
         sps->vcl_hrd_parameters_present_flag)
@@ -402,10 +402,9 @@ int ff_h264_decode_seq_parameter_set(H264Context *h)
     }
 
     sps->ref_frame_count = get_ue_golomb_31(&h->gb);
-    if (sps->ref_frame_count > H264_MAX_PICTURE_COUNT - 2 ||
-        sps->ref_frame_count >= 32U) {
+    if (sps->ref_frame_count > H264_MAX_PICTURE_COUNT - 2) {
         av_log(h->avctx, AV_LOG_ERROR,
-               "too many reference frames %d\n", sps->ref_frame_count);
+               "too many reference frames (%d)\n" , sps->ref_frame_count);
         goto fail;
     }
     sps->gaps_in_frame_num_allowed_flag = get_bits1(&h->gb);
@@ -511,9 +510,19 @@ int ff_h264_decode_seq_parameter_set(H264Context *h)
     }
     sps->new = 1;
 
-    av_free(h->sps_buffers[sps_id]);
-    h->sps_buffers[sps_id] = sps;
-    h->sps                 = *sps;
+    if (h->nal_unit_type == NAL_SUB_SPS) {
+        sps->is_sub_sps = 1;
+        av_free(h->ssps_buffers[sps_id]);
+        h->ssps_buffers[sps_id] = sps;
+        h->ssps                 = *sps;
+        h->is_mvc               = 1;
+        av_log(NULL, AV_LOG_ERROR, "Setting ssps[%d] %p\n",
+               sps_id, sps);
+    } else {
+        av_free(h->sps_buffers[sps_id]);
+        h->sps_buffers[sps_id] = sps;
+        h->sps                 = *sps;
+    }
 
     return 0;
 
@@ -534,6 +543,7 @@ static void build_qp_table(PPS *pps, int t, int index, const int depth)
 int ff_h264_decode_picture_parameter_set(H264Context *h, int bit_length)
 {
     unsigned int pps_id = get_ue_golomb(&h->gb);
+    SPS *sps;
     PPS *pps;
     const int qp_bd_offset = 6 * (h->sps.bit_depth_luma - 8);
     int bits_left;
@@ -552,9 +562,14 @@ int ff_h264_decode_picture_parameter_set(H264Context *h, int bit_length)
     if (!pps)
         return AVERROR(ENOMEM);
     pps->sps_id = get_ue_golomb_31(&h->gb);
-    if ((unsigned)pps->sps_id >= MAX_SPS_COUNT ||
-        h->sps_buffers[pps->sps_id] == NULL) {
-        av_log(h->avctx, AV_LOG_ERROR, "sps_id %u out of range\n", pps->sps_id);
+    if ((unsigned) pps->sps_id >= MAX_SPS_COUNT) {
+        av_log(h->avctx, AV_LOG_ERROR, "sps_id %d out of range\n", pps->sps_id);
+        goto fail;
+    }
+
+    sps = ff_mvc_get_sps(h, pps->sps_id);
+    if (!sps) {
+        av_log(h->avctx, AV_LOG_ERROR, "sps_id %d out of range\n", pps->sps_id);
         goto fail;
     }
 
@@ -615,16 +630,16 @@ int ff_h264_decode_picture_parameter_set(H264Context *h, int bit_length)
     pps->transform_8x8_mode = 0;
     // contents of sps/pps can change even if id doesn't, so reinit
     h->dequant_coeff_pps = -1;
-    memcpy(pps->scaling_matrix4, h->sps_buffers[pps->sps_id]->scaling_matrix4,
+    memcpy(pps->scaling_matrix4, sps->scaling_matrix4,
            sizeof(pps->scaling_matrix4));
-    memcpy(pps->scaling_matrix8, h->sps_buffers[pps->sps_id]->scaling_matrix8,
+    memcpy(pps->scaling_matrix8, sps->scaling_matrix8,
            sizeof(pps->scaling_matrix8));
 
     bits_left = bit_length - get_bits_count(&h->gb);
     if (bits_left && (bits_left > 8 ||
                       show_bits(&h->gb, bits_left) != 1 << (bits_left - 1))) {
         pps->transform_8x8_mode = get_bits1(&h->gb);
-        decode_scaling_matrices(h, h->sps_buffers[pps->sps_id], pps, 0,
+        decode_scaling_matrices(h, sps, pps, 0,
                                 pps->scaling_matrix4, pps->scaling_matrix8);
         // second_chroma_qp_index_offset
         pps->chroma_qp_index_offset[1] = get_se_golomb(&h->gb);

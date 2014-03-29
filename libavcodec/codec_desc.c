@@ -199,7 +199,7 @@ static const AVCodecDescriptor codec_descriptors[] = {
         .id        = AV_CODEC_ID_H264,
         .type      = AVMEDIA_TYPE_VIDEO,
         .name      = "h264",
-        .long_name = NULL_IF_CONFIG_SMALL("H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10"),
+        .long_name = NULL_IF_CONFIG_SMALL("H.264 / AVC / MPEG-4 part 10 / MVC"),
         .props     = AV_CODEC_PROP_LOSSY | AV_CODEC_PROP_LOSSLESS,
     },
     {

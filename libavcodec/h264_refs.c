@@ -292,6 +292,11 @@ int ff_h264_decode_ref_pic_list_reordering(H264Context *h)
                     }
                     break;
                 }
+                case 4:
+                case 5: {
+                    // TODO whatever
+                    get_ue_golomb(&h->gb); // abs_diff_view_idx_minus1
+                }
                 default:
                     av_log(h->avctx, AV_LOG_ERROR,
                            "illegal modification_of_pic_nums_idc %u\n",

@@ -42,7 +42,7 @@
 #include "rectangle.h"
 #include "videodsp.h"
 
-#define H264_MAX_PICTURE_COUNT 32
+#define H264_MAX_PICTURE_COUNT 32 * 2 * 8 // TODO: dynamic allocation
 #define H264_MAX_THREADS       16
 
 #define MAX_SPS_COUNT          32
@@ -118,7 +118,11 @@ enum {
     NAL_END_STREAM      = 11,
     NAL_FILLER_DATA     = 12,
     NAL_SPS_EXT         = 13,
+    NAL_PREFIX          = 14,
+    NAL_SUB_SPS         = 15,
     NAL_AUXILIARY_SLICE = 19,
+    NAL_EXT_SLICE       = 20,
+
     NAL_FF_IGNORE       = 0xff0f001,
 };
 
@@ -209,6 +213,17 @@ typedef struct SPS {
     int residual_color_transform_flag;    ///< residual_colour_transform_flag
     int constraint_set_flags;             ///< constraint_set[0-3]_flag
     int new;                              ///< flag to keep track if the decoder context needs re-init due to changed SPS
+
+#define MAX_VIEW_COUNT 3
+    int is_sub_sps;
+    int num_views;
+    int num_level_values_signalled;
+    int num_anchor_refs[2][MAX_VIEW_COUNT];
+    int num_non_anchor_refs_lX[2][MAX_VIEW_COUNT];
+    int anchor_ref[2][MAX_VIEW_COUNT][16];
+    int non_anchor_ref_lX[2][MAX_VIEW_COUNT][16];
+    int view_id[MAX_VIEW_COUNT];
+    int inter_layer_deblocking_filter_control_present_flag;
 } SPS;
 
 /**
@@ -398,6 +413,7 @@ typedef struct H264Context {
 
     SPS sps; ///< current sps
     PPS pps; ///< current pps
+    SPS ssps; ///< current ssps (may be not active)
 
     uint32_t dequant4_buffer[6][QP_MAX_NUM + 1][16]; // FIXME should these be moved down?
     uint32_t dequant8_buffer[6][QP_MAX_NUM + 1][64];
@@ -529,6 +545,7 @@ typedef struct H264Context {
 
     SPS *sps_buffers[MAX_SPS_COUNT];
     PPS *pps_buffers[MAX_PPS_COUNT];
+    SPS *ssps_buffers[MAX_SPS_COUNT];
 
     int dequant_coeff_pps;      ///< reinit tables when pps changes
 
@@ -699,6 +716,27 @@ typedef struct H264Context {
     /* Motion Estimation */
     qpel_mc_func (*qpel_put)[16];
     qpel_mc_func (*qpel_avg)[16];
+
+    int non_idr_flag;
+    int priority_id;
+    int view_id;
+    int temporal_id;
+    int anchor_pic_flag;
+    int inter_view_flag;
+
+    int is_mvc;
+
+    int voidx;
+    int voidx_list[1024];
+    //struct H264Context *layer;
+
+    int layer_max;
+
+    /**
+     * @name Members for extra layers decoding
+     * @{
+     */
+    struct H264Context *mvc_context[MAX_VIEW_COUNT];
 } H264Context;
 
 extern const uint8_t ff_h264_chroma_qp[3][QP_MAX_NUM + 1]; ///< One chroma qp table for each supported bit depth (8, 9, 10).
@@ -1043,5 +1081,18 @@ int ff_h264_update_thread_context(AVCodecContext *dst,
 void ff_h264_flush_change(H264Context *h);
 
 void ff_h264_free_tables(H264Context *h, int free_rbsp);
+
+int ff_mvc_decode_subset_sequence_parameter_set(H264Context *h);
+
+int ff_decode_hrd_parameters(H264Context *h, SPS *sps);
+int ff_mvc_id_to_voidx(H264Context *h, int i);
+
+SPS *ff_mvc_get_sps(H264Context *h, unsigned int id);
+SPS *ff_mvc_get_active_sps(H264Context *h, unsigned int id);
+
+int ff_mvc_set_active_sps(H264Context *h, unsigned int id);
+int ff_mvc_set_active_pps(H264Context *h, PPS *pps);
+
+int ff_mvc_decode_nal_header(H264Context *h);
 
 #endif /* AVCODEC_H264_H */

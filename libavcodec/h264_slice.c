@@ -1095,6 +1095,57 @@ static int h264_slice_header_init(H264Context *h, int reinit)
         return ret;
     }
 
+///////////////////////////////////////////////////////////////////
+    h->mvc_context[0] = h;
+    for (i = 1; i < MAX_VIEW_COUNT; i++) {
+        H264Context *c = h->mvc_context[i] = av_mallocz(sizeof(H264Context));
+        if (!c)
+            return AVERROR(ENOMEM);
+        c->avctx             = h->avctx;
+        c->dsp               = h->dsp;
+        c->vdsp              = h->vdsp;
+        c->h264dsp           = h->h264dsp;
+        c->h264qpel          = h->h264qpel;
+        c->h264chroma        = h->h264chroma;
+        c->sps               = h->sps;
+        c->pps               = h->pps;
+        c->pixel_shift       = h->pixel_shift;
+        c->width             = h->width;
+        c->height            = h->height;
+        c->linesize          = h->linesize;
+        c->uvlinesize        = h->uvlinesize;
+        c->chroma_x_shift    = h->chroma_x_shift;
+        c->chroma_y_shift    = h->chroma_y_shift;
+        c->qscale            = h->qscale;
+        c->droppable         = h->droppable;
+        c->data_partitioning = h->data_partitioning;
+        c->low_delay         = h->low_delay;
+        c->mb_width          = h->mb_width;
+        c->mb_height         = h->mb_height;
+        c->mb_stride         = h->mb_stride;
+        c->mb_num            = h->mb_num;
+        c->flags             = h->flags;
+        c->droppable         = h->droppable;
+        c->data_partitioning = h->data_partitioning;
+        c->low_delay         = h->low_delay;
+        c->mb_width          = h->mb_width;
+        c->mb_height         = h->mb_height;
+        c->mb_stride         = h->mb_stride;
+        c->mb_num            = h->mb_num;
+        c->flags             = h->flags;
+        c->workaround_bugs   = h->workaround_bugs;
+        c->pict_type         = h->pict_type;
+
+        init_scan_tables(c);
+        // 0 is the slice offset normally, in this case we clone the same table
+        clone_tables(c, h, 0);
+
+        ff_h264_context_init(c);
+
+        c->context_initialized = 1;
+    }
+/////////////////////////////////////////////////////////////////////
+
     if (nb_slices > H264_MAX_THREADS || (nb_slices > h->mb_height && h->mb_height)) {
         int max_slices;
         if (h->mb_height)
@@ -1183,6 +1234,7 @@ int ff_h264_decode_slice_header(H264Context *h, H264Context *h0)
     int last_pic_structure, last_pic_droppable;
     int needs_reinit = 0;
     int field_pic_flag, bottom_field_flag;
+    SPS *sps;
 
     h->qpel_put = h->h264qpel.put_h264_qpel_pixels_tab;
     h->qpel_avg = h->h264qpel.avg_h264_qpel_pixels_tab;
@@ -1247,18 +1299,23 @@ int ff_h264_decode_slice_header(H264Context *h, H264Context *h0)
     }
     h->pps = *h0->pps_buffers[pps_id];
 
-    if (!h0->sps_buffers[h->pps.sps_id]) {
+    if (!ff_mvc_get_sps(h0, h->pps.sps_id)) {
         av_log(h->avctx, AV_LOG_ERROR,
                "non-existing SPS %u referenced\n",
                h->pps.sps_id);
         return AVERROR_INVALIDDATA;
     }
 
-    if (h->pps.sps_id != h->sps.sps_id ||
-        h0->sps_buffers[h->pps.sps_id]->new) {
-        h0->sps_buffers[h->pps.sps_id]->new = 0;
+//    ff_mvc_set_active_pps(h, &h->pps);
+    ff_mvc_set_active_sps(h0, h->pps.sps_id);
+    sps = ff_mvc_get_sps(h0, h->pps.sps_id);
 
-        h->sps = *h0->sps_buffers[h->pps.sps_id];
+    if (h->pps.sps_id != h->sps.sps_id ||
+        sps->new) {
+        sps->new = 0;
+
+        h->sps        = *sps;
+        h->sps.sps_id = h->pps.sps_id;
 
         if (h->bit_depth_luma    != h->sps.bit_depth_luma ||
             h->chroma_format_idc != h->sps.chroma_format_idc) {
@@ -2183,6 +2240,12 @@ static int decode_slice(struct AVCodecContext *avctx, void *arg)
     H264Context *h = *(void **)arg;
     int lf_x_start = h->mb_x;
 
+    av_log(avctx, AV_LOG_WARNING, "view_id: %d\n", h->view_id);
+    if (h->view_id != 0) {
+        av_log(avctx, AV_LOG_ERROR, "early returning from decode_slice\n");
+        return 0;
+    }
+
     h->mb_skip_run = -1;
 
     h->is_complex = FRAME_MBAFF(h) || h->picture_structure != PICT_FRAME ||
@@ -2359,7 +2422,8 @@ int ff_h264_execute_decode_slices(H264Context *h, unsigned context_count)
 
     if (h->avctx->hwaccel)
         return 0;
-    if (context_count == 1) {
+// slice threading is disabled for MVC
+    if (context_count == 1 || h->is_mvc) {
         return decode_slice(avctx, &h);
     } else {
         for (i = 1; i < context_count; i++) {
