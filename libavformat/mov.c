@@ -36,6 +36,8 @@
 #include "libavutil/mathematics.h"
 #include "libavutil/avstring.h"
 #include "libavutil/dict.h"
+#include "libavutil/display.h"
+
 #include "libavcodec/ac3tab.h"
 #include "avformat.h"
 #include "internal.h"
@@ -2339,7 +2341,7 @@ static int mov_read_tkhd(MOVContext *c, AVIOContext *pb, MOVAtom atom)
     int width;
     int height;
     int64_t disp_transform[2];
-    int display_matrix[3][2];
+    int display_matrix[3][3];
     AVStream *st;
     MOVStreamContext *sc;
     int version;
@@ -2376,17 +2378,29 @@ static int mov_read_tkhd(MOVContext *c, AVIOContext *pb, MOVAtom atom)
 
     //read in the display matrix (outlined in ISO 14496-12, Section 6.2.2)
     // they're kept in fixed point format through all calculations
-    // ignore u,v,z b/c we don't need the scale factor to calc aspect ratio
+    // save u,v,z to store the whole matrix in the AV_PKT_DATA_DISPLAYMATRIX
+    // side data, but the scale factor is not needed to calculate aspect ratio
     for (i = 0; i < 3; i++) {
         display_matrix[i][0] = avio_rb32(pb);   // 16.16 fixed point
         display_matrix[i][1] = avio_rb32(pb);   // 16.16 fixed point
-        avio_rb32(pb);           // 2.30 fixed point (not used)
+        display_matrix[i][2] = avio_rb32(pb);   //  2.30 fixed point
     }
 
     width = avio_rb32(pb);       // 16.16 fixed point track width
     height = avio_rb32(pb);      // 16.16 fixed point track height
     sc->width = width >> 16;
     sc->height = height >> 16;
+
+    // save the matrix when it is not the default identity
+    if (display_matrix[0][0] != (1 << 16) ||
+        display_matrix[1][1] != (1 << 16) ||
+        display_matrix[2][2] != (1 << 30) ||
+        display_matrix[0][1] || display_matrix[0][2] ||
+        display_matrix[1][0] || display_matrix[1][2] ||
+        display_matrix[2][0] || display_matrix[2][1]) {
+        sc->matrix_present = 1;
+        memcpy(sc->display_matrix, display_matrix, sizeof(int) * 3 * 3);
+    }
 
     // transform the display width/height according to the matrix
     // skip this if the display matrix is the default identity matrix
@@ -3128,6 +3142,27 @@ static int mov_read_packet(AVFormatContext *s, AVPacket *pkt)
                 memcpy(pal, sc->palette, AVPALETTE_SIZE);
                 sc->has_palette = 0;
             }
+        }
+        if (sc->matrix_present) {
+            AVPacketSideData *sd, *tmp;
+
+            tmp = av_realloc_array(st->side_data,
+                                   st->nb_side_data + 1, sizeof(*tmp));
+            if (!tmp)
+                return AVERROR(ENOMEM);
+
+            st->side_data = tmp;
+            st->nb_side_data++;
+
+            sd = &st->side_data[st->nb_side_data - 1];
+            sd->type = AV_PKT_DATA_DISPLAYMATRIX;
+            sd->size = sizeof(int32_t) * 3 * 3;
+            sd->data = av_display_matrix_to_data(sc->display_matrix);
+
+            if (!sd->data)
+                return AVERROR(ENOMEM);
+
+            sc->matrix_present = 0;
         }
 #if CONFIG_DV_DEMUXER
         if (mov->dv_demux && sc->dv_audio_container) {
