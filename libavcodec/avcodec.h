@@ -940,6 +940,25 @@ enum AVPacketSideDataType {
      * ReplayGain information in form of the AVReplayGain struct.
      */
     AV_PKT_DATA_REPLAYGAIN,
+
+    /**
+     * This side data contains a 3x3 matrix describing two dimensional
+     * transformations to be applied on the decoded video.
+     *
+     * Each element is stored as a s32le.
+     * All the values in a matrix are stored as 16.16 fixed-point values,
+     * except for u, v and w, which are stored as 2.30 fixed-point values.
+     *
+     * The matrix has to be used as in the following example:
+     * the point (p, q) is transformed into (p', q') by multiplication.
+     *               | a b u |
+     *   (p, q, 1) * | c d v | = z * (p', q', 1)
+     *               | x y w |
+     *   p' = (a * p + c * q + x) / z;
+     *   q' = (b * p + d * q + y) / z;
+     *   z  = u * p + v * q + w
+     */
+    AV_PKT_DATA_DISPLAYMATRIX,
 };
 
 typedef struct AVPacketSideData {

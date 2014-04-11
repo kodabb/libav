@@ -73,6 +73,11 @@ enum AVFrameSideDataType {
      * ReplayGain information in the form of the AVReplayGain struct.
      */
     AV_FRAME_DATA_REPLAYGAIN,
+    /**
+     * This side data contains a 3x3 matrix describing two dimensional
+     * transformations to be applied on the decoded video.
+     */
+    AV_FRAME_DATA_DISPLAYMATRIX,
 };
 
 typedef struct AVFrameSideData {
