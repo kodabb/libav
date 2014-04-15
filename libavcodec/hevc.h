@@ -861,6 +861,10 @@ typedef struct HEVCContext {
     int frame_packing_arrangement_type;
     int content_interpretation_type;
     int quincunx_subsampling;
+
+    /** display orientation */
+    int sei_display_orientation_present;
+    int sei_anticlockwise_rotation;
 } HEVCContext;
 
 int ff_hevc_decode_short_term_rps(HEVCContext *s, ShortTermRPS *rps,

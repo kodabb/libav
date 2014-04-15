@@ -25,6 +25,7 @@
 
 #include "libavutil/attributes.h"
 #include "libavutil/common.h"
+#include "libavutil/display.h"
 #include "libavutil/internal.h"
 #include "libavutil/md5.h"
 #include "libavutil/opt.h"
@@ -2454,6 +2455,22 @@ static int set_side_data(HEVCContext *s)
 
         if (s->content_interpretation_type == 2)
             stereo->flags = AV_STEREO3D_FLAG_INVERT;
+    }
+
+    if (s->sei_display_orientation_present && s->sei_anticlockwise_rotation) {
+        double angle = s->sei_anticlockwise_rotation * 360 / (1 << 16);
+        AVFrameSideData *rotation = av_frame_new_side_data(out,
+                                                           AV_FRAME_DATA_DISPLAYMATRIX,
+                                                           sizeof(int32_t) * 3 * 3);
+        uint8_t *display_matrix = av_display_angle_to_matrix(angle);
+
+        if (!rotation || !display_matrix) {
+            av_free(rotation);
+            av_free(display_matrix);
+            return AVERROR(ENOMEM);
+        }
+        memcpy(rotation->data, display_matrix, sizeof(int32_t) * 3 * 3);
+        av_free(display_matrix);
     }
 
     return 0;
