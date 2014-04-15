@@ -26,6 +26,7 @@
  */
 
 #include "libavutil/avassert.h"
+#include "libavutil/display.h"
 #include "libavutil/imgutils.h"
 #include "libavutil/stereo3d.h"
 #include "libavutil/timer.h"
@@ -820,6 +821,22 @@ static void decode_postinit(H264Context *h, int setup_finished)
 
         if (h->content_interpretation_type == 2)
             stereo->flags = AV_STEREO3D_FLAG_INVERT;
+    }
+
+    if (h->sei_display_orientation_present && h->sei_anticlockwise_rotation) {
+        double angle = h->sei_anticlockwise_rotation * 360 / (1 << 16);
+        AVFrameSideData *rotation = av_frame_new_side_data(&cur->f,
+                                                           AV_FRAME_DATA_DISPLAYMATRIX,
+                                                           sizeof(int32_t) * 3 * 3);
+        uint8_t *display_matrix = av_display_angle_to_matrix(angle);
+
+        if (!rotation || !display_matrix) {
+            av_free(rotation);
+            av_free(display_matrix);
+            return;
+        }
+        memcpy(rotation->data, display_matrix, sizeof(int32_t) * 3 * 3);
+        av_free(display_matrix);
     }
 
     // FIXME do something with unavailable reference frames
