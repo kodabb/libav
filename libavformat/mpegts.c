@@ -26,7 +26,6 @@
 #include "libavutil/dict.h"
 #include "libavutil/mathematics.h"
 #include "libavutil/opt.h"
-#include "libavcodec/bytestream.h"
 #include "libavcodec/get_bits.h"
 #include "avformat.h"
 #include "mpegts.h"
@@ -1418,7 +1417,7 @@ int ff_parse_mpeg2_descriptor(AVFormatContext *fc, AVStream *st, int stream_type
         }
         break;
     case 0x05: /* registration descriptor */
-        st->codec->codec_tag = bytestream_get_le32(pp);
+        st->codec->codec_tag = AV_RL32(pp);
         av_dlog(fc, "reg_desc=%.4s\n", (char *)&st->codec->codec_tag);
         if (st->codec->codec_id == AV_CODEC_ID_NONE)
             mpegts_find_stream_type(st, st->codec->codec_tag, REGD_types);
@@ -1490,7 +1489,7 @@ static void pmt_cb(MpegTSFilter *filter, const uint8_t *section, int section_len
             mp4_read_iods(ts->stream, p, len, mp4_descr + mp4_descr_count,
                           &mp4_descr_count, MAX_MP4_DESCR_COUNT);
         } else if (tag == 0x05 && len >= 4) { // registration descriptor
-            prog_reg_desc = bytestream_get_le32(&p);
+            prog_reg_desc = AV_RL32(p);
             len -= 4;
         }
         p += len;
