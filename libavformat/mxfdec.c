@@ -47,7 +47,8 @@
 
 #include "libavutil/aes.h"
 #include "libavutil/mathematics.h"
-#include "libavcodec/bytestream.h"
+#include "libavutil/intreadwrite.h"
+
 #include "avformat.h"
 #include "internal.h"
 #include "mxf.h"
@@ -321,11 +322,15 @@ static int mxf_get_d10_aes3_packet(AVIOContext *pb, AVStream *st, AVPacket *pkt,
     buf_ptr = pkt->data + 4; /* skip SMPTE 331M header */
     for (; end_ptr - buf_ptr >= st->codec->channels * 4; ) {
         for (i = 0; i < st->codec->channels; i++) {
-            uint32_t sample = bytestream_get_le32(&buf_ptr);
-            if (st->codec->bits_per_coded_sample == 24)
-                bytestream_put_le24(&data_ptr, (sample >> 4) & 0xffffff);
-            else
-                bytestream_put_le16(&data_ptr, (sample >> 12) & 0xffff);
+            uint32_t sample = AV_RL32(buf_ptr);
+            buf_ptr += 4;
+            if (st->codec->bits_per_coded_sample == 24) {
+                AV_WL24(data_ptr, (sample >> 4) & 0xffffff);
+                data_ptr += 3;
+            } else {
+                AV_WL16(data_ptr, (sample >> 12) & 0xffff);
+                data_ptr += 2;
+            }
         }
         buf_ptr += 32 - st->codec->channels*4; // always 8 channels stored SMPTE 331M
     }
