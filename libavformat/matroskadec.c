@@ -45,7 +45,6 @@
 #include "libavutil/intreadwrite.h"
 #include "libavutil/lzo.h"
 
-#include "libavcodec/bytestream.h"
 #include "libavcodec/mpeg4audio.h"
 
 #include "avformat.h"
@@ -2184,8 +2183,10 @@ static int matroska_parse_frame(MatroskaDemuxContext *matroska,
 
     if (st->codec->codec_id == AV_CODEC_ID_PRORES) {
         uint8_t *buf = pkt->data;
-        bytestream_put_be32(&buf, pkt_size);
-        bytestream_put_be32(&buf, MKBETAG('i', 'c', 'p', 'f'));
+        AV_WB32(buf, pkt_size);
+        buf += 4;
+        AV_WB32(buf, MKBETAG('i', 'c', 'p', 'f'));
+        buf += 4;
     }
 
     memcpy(pkt->data + offset, pkt_data, pkt_size);
