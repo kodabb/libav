@@ -33,6 +33,7 @@
 #include "get_bits.h"
 #include "internal.h"
 #include "libavutil/crc.h"
+#include "libavutil/intreadwrite.h"
 
 #define FORMAT_SIMPLE    1
 #define FORMAT_ENCRYPTED 2

@@ -25,6 +25,8 @@
  */
 
 #include "libavutil/attributes.h"
+#include "libavutil/intreadwrite.h"
+
 #include "avcodec.h"
 #include "bytestream.h"
 #include "internal.h"

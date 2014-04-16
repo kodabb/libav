@@ -23,6 +23,8 @@
 #include "libavutil/intmath.h"
 #include "libavutil/md5.h"
 #include "libavutil/opt.h"
+#include "libavutil/intreadwrite.h"
+
 #include "avcodec.h"
 #include "dsputil.h"
 #include "get_bits.h"

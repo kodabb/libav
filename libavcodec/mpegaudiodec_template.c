@@ -28,6 +28,8 @@
 #include "libavutil/avassert.h"
 #include "libavutil/channel_layout.h"
 #include "libavutil/float_dsp.h"
+#include "libavutil/intreadwrite.h"
+
 #include "avcodec.h"
 #include "get_bits.h"
 #include "internal.h"

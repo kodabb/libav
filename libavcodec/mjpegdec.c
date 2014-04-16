@@ -34,6 +34,8 @@
 
 #include "libavutil/imgutils.h"
 #include "libavutil/opt.h"
+#include "libavutil/intreadwrite.h"
+
 #include "avcodec.h"
 #include "internal.h"
 #include "mjpeg.h"

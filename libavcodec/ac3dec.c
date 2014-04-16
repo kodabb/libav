@@ -33,6 +33,8 @@
 #include "libavutil/crc.h"
 #include "libavutil/downmix_info.h"
 #include "libavutil/opt.h"
+#include "libavutil/intreadwrite.h"
+
 #include "internal.h"
 #include "aac_ac3_parser.h"
 #include "ac3_parser.h"

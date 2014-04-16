@@ -29,6 +29,8 @@
 #include "libavutil/channel_layout.h"
 #include "libavutil/crc.h"
 #include "libavutil/internal.h"
+#include "libavutil/intreadwrite.h"
+
 #include "get_bits.h"
 #include "parser.h"
 #include "mlp_parser.h"

@@ -21,6 +21,8 @@
  */
 
 #include "libavutil/channel_layout.h"
+#include "libavutil/intreadwrite.h"
+
 #include "parser.h"
 #include "ac3_parser.h"
 #include "aac_ac3_parser.h"

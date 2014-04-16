@@ -24,6 +24,8 @@
  * Sunplus JPEG decoder (SP5X).
  */
 
+#include "libavutil/intreadwrite.h"
+
 #include "avcodec.h"
 #include "mjpeg.h"
 #include "mjpegdec.h"

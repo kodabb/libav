@@ -31,6 +31,7 @@
 #include "bytestream.h"
 #include "internal.h"
 #include "libavutil/common.h"
+#include "libavutil/intreadwrite.h"
 
 #define KMVC_KEYFRAME 0x80
 #define KMVC_PALETTE  0x40

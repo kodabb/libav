@@ -32,6 +32,8 @@
 #include "libavutil/imgutils.h"
 #include "libavutil/internal.h"
 #include "libavutil/timer.h"
+#include "libavutil/intreadwrite.h"
+
 #include "avcodec.h"
 #include "dsputil.h"
 #include "internal.h"

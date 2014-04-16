@@ -28,6 +28,8 @@
  * bitstream api.
  */
 
+#include "libavutil/intreadwrite.h"
+
 #include "avcodec.h"
 #include "mathops.h"
 #include "get_bits.h"

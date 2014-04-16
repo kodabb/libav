@@ -28,6 +28,8 @@
  * http://wiki.multimedia.cx/index.php?title=Electronic_Arts_TGV
  */
 
+#include "libavutil/intreadwrite.h"
+
 #include "avcodec.h"
 #define BITSTREAM_READER_LE
 #include "get_bits.h"

@@ -24,6 +24,8 @@
 #include <string.h>
 
 #include "libavutil/internal.h"
+#include "libavutil/intreadwrite.h"
+
 #include "avcodec.h"
 #include "dsputil.h"
 #include "h261.h"

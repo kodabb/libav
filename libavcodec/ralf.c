@@ -28,6 +28,8 @@
 
 #include "libavutil/attributes.h"
 #include "libavutil/channel_layout.h"
+#include "libavutil/intreadwrite.h"
+
 #include "avcodec.h"
 #include "get_bits.h"
 #include "golomb.h"

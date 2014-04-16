@@ -32,6 +32,7 @@
 
 #include <assert.h>
 
+#include "libavutil/intreadwrite.h"
 #include "libavutil/pixdesc.h"
 
 #include "avcodec.h"

@@ -25,6 +25,7 @@
  */
 
 #include "libavutil/internal.h"
+#include "libavutil/intreadwrite.h"
 
 #include "avcodec.h"
 #include "error_resilience.h"

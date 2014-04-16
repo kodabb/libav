@@ -23,6 +23,8 @@
  */
 
 #include "libavutil/imgutils.h"
+#include "libavutil/intreadwrite.h"
+
 #include "avcodec.h"
 #include "bytestream.h"
 #include "internal.h"

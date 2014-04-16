@@ -26,6 +26,8 @@
  * @see http://wiki.multimedia.cx/index.php?title=Electronic_Arts_TQI
  */
 
+#include "libavutil/intreadwrite.h"
+
 #include "avcodec.h"
 #include "get_bits.h"
 #include "aandcttab.h"

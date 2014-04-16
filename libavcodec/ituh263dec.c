@@ -32,6 +32,8 @@
 #include "libavutil/attributes.h"
 #include "libavutil/internal.h"
 #include "libavutil/mathematics.h"
+#include "libavutil/intreadwrite.h"
+
 #include "avcodec.h"
 #include "mpegvideo.h"
 #include "h263.h"

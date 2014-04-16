@@ -33,6 +33,8 @@
 #include <stdint.h>
 
 #include "libavutil/intmath.h"
+#include "libavutil/intreadwrite.h"
+
 #include "avcodec.h"
 #include "dsputil.h"
 #include "internal.h"

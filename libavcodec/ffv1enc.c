@@ -31,6 +31,8 @@
 #include "libavutil/crc.h"
 #include "libavutil/opt.h"
 #include "libavutil/imgutils.h"
+#include "libavutil/intreadwrite.h"
+
 #include "avcodec.h"
 #include "internal.h"
 #include "get_bits.h"

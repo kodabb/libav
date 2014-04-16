@@ -25,7 +25,9 @@
  * VC-1 and WMV3 parser
  */
 
+#include "libavutil/intreadwrite.h"
 #include "libavutil/attributes.h"
+
 #include "parser.h"
 #include "vc1.h"
 #include "get_bits.h"

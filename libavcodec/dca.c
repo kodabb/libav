@@ -22,6 +22,7 @@
 #include <string.h>
 
 #include "libavutil/error.h"
+#include "libavutil/intreadwrite.h"
 
 #include "dca.h"
 #include "put_bits.h"

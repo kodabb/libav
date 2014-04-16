@@ -26,6 +26,7 @@
 
 #include "libavutil/attributes.h"
 #include "libavutil/avassert.h"
+#include "libavutil/intreadwrite.h"
 
 #include "avcodec.h"
 #include "internal.h"

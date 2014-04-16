@@ -25,6 +25,8 @@
  * MxPEG decoder
  */
 
+#include "libavutil/intreadwrite.h"
+
 #include "internal.h"
 #include "mjpeg.h"
 #include "mjpegdec.h"
