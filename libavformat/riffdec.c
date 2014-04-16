@@ -21,10 +21,10 @@
 
 #include "libavutil/dict.h"
 #include "libavutil/error.h"
+#include "libavutil/intreadwrite.h"
 #include "libavutil/log.h"
 #include "libavutil/mathematics.h"
 #include "libavcodec/avcodec.h"
-#include "libavcodec/bytestream.h"
 #include "avformat.h"
 #include "avio_internal.h"
 #include "riff.h"

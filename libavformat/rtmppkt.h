@@ -22,7 +22,6 @@
 #ifndef AVFORMAT_RTMPPKT_H
 #define AVFORMAT_RTMPPKT_H
 
-#include "libavcodec/bytestream.h"
 #include "avformat.h"
 #include "url.h"
 

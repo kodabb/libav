@@ -20,7 +20,7 @@
  */
 
 #include "libavcodec/flac.h"
-#include "libavcodec/bytestream.h"
+
 #include "avformat.h"
 #include "flacenc.h"
 

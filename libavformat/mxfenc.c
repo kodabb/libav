@@ -34,8 +34,9 @@
 #include <math.h>
 #include <time.h>
 
+#include "libavutil/intreadwrite.h"
 #include "libavutil/random_seed.h"
-#include "libavcodec/bytestream.h"
+
 #include "audiointerleave.h"
 #include "avformat.h"
 #include "internal.h"

@@ -30,6 +30,8 @@
 #include "libavutil/attributes.h"
 #include "libavutil/avstring.h"
 #include "libavutil/base64.h"
+#include "libavutil/intreadwrite.h"
+
 #include "libavcodec/bytestream.h"
 
 #include <assert.h>

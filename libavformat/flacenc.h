@@ -23,7 +23,6 @@
 #define AVFORMAT_FLACENC_H
 
 #include "libavcodec/flac.h"
-#include "libavcodec/bytestream.h"
 #include "avformat.h"
 
 int ff_flac_write_header(AVIOContext *pb, AVCodecContext *codec,

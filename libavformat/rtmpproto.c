@@ -28,6 +28,7 @@
 #include "libavutil/avstring.h"
 #include "libavutil/base64.h"
 #include "libavutil/intfloat.h"
+#include "libavutil/intreadwrite.h"
 #include "libavutil/lfg.h"
 #include "libavutil/md5.h"
 #include "libavutil/opt.h"

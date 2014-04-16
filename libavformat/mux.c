@@ -23,7 +23,6 @@
 #include "avio_internal.h"
 #include "internal.h"
 #include "libavcodec/internal.h"
-#include "libavcodec/bytestream.h"
 #include "libavutil/opt.h"
 #include "libavutil/dict.h"
 #include "libavutil/pixdesc.h"
