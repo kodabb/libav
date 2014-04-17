@@ -40,6 +40,7 @@
 #include "libavutil/mathematics.h"
 #include "libavutil/opt.h"
 #include "libavutil/dict.h"
+#include "libavutil/intreadwrite.h"
 #include "hevc.h"
 #include "rtpenc.h"
 #include "mov_chan.h"

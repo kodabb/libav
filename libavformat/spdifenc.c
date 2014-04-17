@@ -53,6 +53,7 @@
 #include "libavcodec/dca.h"
 #include "libavcodec/aacadtsdec.h"
 #include "libavutil/opt.h"
+#include "libavutil/intreadwrite.h"
 
 typedef struct IEC61937Context {
     const AVClass *av_class;

@@ -31,6 +31,7 @@
 #include "internal.h"
 #include "libavutil/attributes.h"
 #include "libavutil/avstring.h"
+#include "libavutil/intreadwrite.h"
 #include "libavcodec/get_bits.h"
 
 /** Structure listing useful vars to parse RTP packet payload */

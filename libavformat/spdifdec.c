@@ -25,6 +25,8 @@
  * @author Anssi Hannula
  */
 
+#include "libavutil/intreadwrite.h"
+
 #include "avformat.h"
 #include "spdif.h"
 #include "libavcodec/ac3.h"

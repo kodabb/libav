@@ -30,6 +30,7 @@
 #include "libavutil/opt.h"
 #include "libavutil/intfloat.h"
 #include "libavutil/mathematics.h"
+#include "libavutil/intreadwrite.h"
 #include "libavcodec/bytestream.h"
 #include "libavcodec/mpeg4audio.h"
 #include "avformat.h"

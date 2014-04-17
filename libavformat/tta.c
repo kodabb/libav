@@ -24,6 +24,7 @@
 #include "internal.h"
 #include "id3v1.h"
 #include "libavutil/dict.h"
+#include "libavutil/intreadwrite.h"
 
 typedef struct {
     int totalframes, currentframe;
