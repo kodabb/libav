@@ -20,7 +20,7 @@
  */
 
 #include "libavutil/crc.h"
-#include "libavcodec/get_bits.h"
+#include "libavutil/bitstream.h"
 #include "libavcodec/ac3_parser.h"
 #include "avformat.h"
 #include "rawdec.h"
@@ -30,7 +30,7 @@ static int ac3_eac3_probe(AVProbeData *p, enum AVCodecID expected_codec_id)
     int max_frames, first_frames = 0, frames;
     uint8_t *buf, *buf2, *end;
     AC3HeaderInfo hdr;
-    GetBitContext gbc;
+    AVGetBitContext gbc;
     enum AVCodecID codec_id = AV_CODEC_ID_AC3;
 
     max_frames = 0;
@@ -41,7 +41,7 @@ static int ac3_eac3_probe(AVProbeData *p, enum AVCodecID expected_codec_id)
         buf2 = buf;
 
         for(frames = 0; buf2 < end; frames++) {
-            init_get_bits(&gbc, buf2, 54);
+            av_bitstream_get_init(&gbc, buf2, 54);
             if(avpriv_ac3_parse_header(&gbc, &hdr) < 0)
                 break;
             if(buf2 + hdr.frame_size > end ||

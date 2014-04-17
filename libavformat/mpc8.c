@@ -21,7 +21,7 @@
 
 #include "libavutil/intreadwrite.h"
 
-#include "libavcodec/get_bits.h"
+#include "libavutil/bitstream.h"
 #include "libavcodec/unary.h"
 #include "apetag.h"
 #include "avformat.h"
@@ -108,17 +108,17 @@ static int mpc8_probe(AVProbeData *p)
     return 0;
 }
 
-static inline int64_t gb_get_v(GetBitContext *gb)
+static inline int64_t gb_get_v(AVGetBitContext *gb)
 {
     int64_t v = 0;
     int bits = 0;
-    while(get_bits1(gb) && bits < 64-7){
+    while(av_bitstream_get1(gb) && bits < 64-7){
         v <<= 7;
-        v |= get_bits(gb, 7);
+        v |= av_bitstream_get(gb, 7);
         bits += 7;
     }
     v <<= 7;
-    v |= get_bits(gb, 7);
+    v |= av_bitstream_get(gb, 7);
 
     return v;
 }
@@ -139,7 +139,7 @@ static void mpc8_parse_seektable(AVFormatContext *s, int64_t off)
     int64_t size, pos, ppos[2];
     uint8_t *buf;
     int i, t, seekd;
-    GetBitContext gb;
+    AVGetBitContext gb;
 
     if (s->nb_streams == 0) {
         av_log(s, AV_LOG_ERROR, "No stream added before parsing seek table\n");
@@ -159,13 +159,13 @@ static void mpc8_parse_seektable(AVFormatContext *s, int64_t off)
     if(!(buf = av_malloc(size + FF_INPUT_BUFFER_PADDING_SIZE)))
         return;
     avio_read(s->pb, buf, size);
-    init_get_bits(&gb, buf, size * 8);
+    av_bitstream_get_init(&gb, buf, size * 8);
     size = gb_get_v(&gb);
     if(size > UINT_MAX/4 || size > c->samples/1152){
         av_log(s, AV_LOG_ERROR, "Seek table is too big\n");
         return;
     }
-    seekd = get_bits(&gb, 4);
+    seekd = av_bitstream_get(&gb, 4);
     for(i = 0; i < 2; i++){
         pos = gb_get_v(&gb) + c->header_pos;
         ppos[1 - i] = pos;
@@ -173,7 +173,7 @@ static void mpc8_parse_seektable(AVFormatContext *s, int64_t off)
     }
     for(; i < size; i++){
         t = get_unary(&gb, 1, 33) << 12;
-        t += get_bits(&gb, 12);
+        t += av_bitstream_get(&gb, 12);
         if(t & 1)
             t = -(t & ~1);
         pos = (t >> 1) + ppos[0]*2 - ppos[1];

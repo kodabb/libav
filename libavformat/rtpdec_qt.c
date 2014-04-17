@@ -31,7 +31,7 @@
 #include "rtp.h"
 #include "rtpdec.h"
 #include "isom.h"
-#include "libavcodec/get_bits.h"
+#include "libavutil/bitstream.h"
 
 struct PayloadContext {
     AVPacket pkt;
@@ -45,7 +45,7 @@ static int qt_rtp_parse_packet(AVFormatContext *s, PayloadContext *qt,
                                int len, uint16_t seq, int flags)
 {
     AVIOContext pb;
-    GetBitContext gb;
+    AVGetBitContext gb;
     int packing_scheme, has_payload_desc, has_packet_info, alen,
         has_marker_bit = flags & RTP_FLAG_MARKER;
 
@@ -70,39 +70,39 @@ static int qt_rtp_parse_packet(AVFormatContext *s, PayloadContext *qt,
      * The RTP payload is described in:
      * http://developer.apple.com/quicktime/icefloe/dispatch026.html
      */
-    init_get_bits(&gb, buf, len << 3);
+    av_bitstream_get_init(&gb, buf, len << 3);
     ffio_init_context(&pb, buf, len, 0, NULL, NULL, NULL, NULL);
 
     if (len < 4)
         return AVERROR_INVALIDDATA;
 
-    skip_bits(&gb, 4); // version
-    if ((packing_scheme = get_bits(&gb, 2)) == 0)
+    av_bitstream_skip(&gb, 4); // version
+    if ((packing_scheme = av_bitstream_get(&gb, 2)) == 0)
         return AVERROR_INVALIDDATA;
-    if (get_bits1(&gb))
+    if (av_bitstream_get1(&gb))
         flags          |= RTP_FLAG_KEY;
-    has_payload_desc    = get_bits1(&gb);
-    has_packet_info     = get_bits1(&gb);
-    skip_bits(&gb, 23); // reserved:7, cache payload info:1, payload ID:15
+    has_payload_desc    = av_bitstream_get1(&gb);
+    has_packet_info     = av_bitstream_get1(&gb);
+    av_bitstream_skip(&gb, 23); // reserved:7, cache payload info:1, payload ID:15
 
     if (has_payload_desc) {
         int data_len, pos, is_start, is_finish;
         uint32_t tag;
 
-        pos = get_bits_count(&gb) >> 3;
+        pos = av_bitstream_get_count(&gb) >> 3;
         if (pos + 12 > len)
             return AVERROR_INVALIDDATA;
 
-        skip_bits(&gb, 2); // has non-I frames:1, is sparse:1
-        is_start  = get_bits1(&gb);
-        is_finish = get_bits1(&gb);
+        av_bitstream_skip(&gb, 2); // has non-I frames:1, is sparse:1
+        is_start  = av_bitstream_get1(&gb);
+        is_finish = av_bitstream_get1(&gb);
         if (!is_start || !is_finish) {
             avpriv_request_sample(s, "RTP-X-QT with payload description "
                                   "split over several packets");
             return AVERROR_PATCHWELCOME;
         }
-        skip_bits(&gb, 12); // reserved
-        data_len = get_bits(&gb, 16);
+        av_bitstream_skip(&gb, 12); // reserved
+        data_len = av_bitstream_get(&gb, 16);
 
         avio_seek(&pb, pos + 4, SEEK_SET);
         tag = avio_rl32(&pb);

@@ -20,7 +20,7 @@
 
 #include "libavutil/intreadwrite.h"
 
-#include "libavcodec/get_bits.h"
+#include "libavutil/bitstream.h"
 #include "libavcodec/dirac.h"
 #include "avformat.h"
 #include "internal.h"
@@ -32,13 +32,13 @@ static int dirac_header(AVFormatContext *s, int idx)
     struct ogg_stream *os = ogg->streams + idx;
     AVStream *st = s->streams[idx];
     dirac_source_params source;
-    GetBitContext gb;
+    AVGetBitContext gb;
 
     // already parsed the header
     if (st->codec->codec_id == AV_CODEC_ID_DIRAC)
         return 0;
 
-    init_get_bits(&gb, os->buf + os->pstart + 13, (os->psize - 13) * 8);
+    av_bitstream_get_init(&gb, os->buf + os->pstart + 13, (os->psize - 13) * 8);
     if (avpriv_dirac_parse_sequence_header(st->codec, &gb, &source) < 0)
         return -1;
 

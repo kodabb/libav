@@ -31,7 +31,7 @@
 #include "spdif.h"
 #include "libavcodec/ac3.h"
 #include "libavcodec/aacadtsdec.h"
-#include "libavcodec/get_bits.h"
+#include "libavutil/bitstream.h"
 
 static int spdif_get_offset_and_codec(AVFormatContext *s,
                                       enum IEC61937DataType data_type,
@@ -39,7 +39,7 @@ static int spdif_get_offset_and_codec(AVFormatContext *s,
                                       enum AVCodecID *codec)
 {
     AACADTSHeaderInfo aac_hdr;
-    GetBitContext gbc;
+    AVGetBitContext gbc;
 
     switch (data_type & 0xff) {
     case IEC61937_AC3:
@@ -59,7 +59,7 @@ static int spdif_get_offset_and_codec(AVFormatContext *s,
         *codec = AV_CODEC_ID_MP3;
         break;
     case IEC61937_MPEG2_AAC:
-        init_get_bits(&gbc, buf, AAC_ADTS_HEADER_SIZE * 8);
+        av_bitstream_get_init(&gbc, buf, AAC_ADTS_HEADER_SIZE * 8);
         if (avpriv_aac_parse_header(&gbc, &aac_hdr)) {
             if (s) /* be silent during a probe */
                 av_log(s, AV_LOG_ERROR, "Invalid AAC packet in IEC 61937\n");

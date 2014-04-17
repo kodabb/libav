@@ -52,7 +52,7 @@
 #include "libavcodec/ac3.h"
 #include "libavcodec/dca.h"
 #include "libavcodec/aacadtsdec.h"
-#include "libavcodec/get_bits.h"
+#include "libavutil/bitstream.h"
 #include "libavutil/opt.h"
 #include "libavutil/intreadwrite.h"
 
@@ -351,10 +351,10 @@ static int spdif_header_aac(AVFormatContext *s, AVPacket *pkt)
 {
     IEC61937Context *ctx = s->priv_data;
     AACADTSHeaderInfo hdr;
-    GetBitContext gbc;
+    AVGetBitContext gbc;
     int ret;
 
-    init_get_bits(&gbc, pkt->data, AAC_ADTS_HEADER_SIZE * 8);
+    av_bitstream_get_init(&gbc, pkt->data, AAC_ADTS_HEADER_SIZE * 8);
     ret = avpriv_aac_parse_header(&gbc, &hdr);
     if (ret < 0) {
         av_log(s, AV_LOG_ERROR, "Wrong AAC file format\n");

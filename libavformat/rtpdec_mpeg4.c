@@ -32,7 +32,7 @@
 #include "libavutil/attributes.h"
 #include "libavutil/avstring.h"
 #include "libavutil/intreadwrite.h"
-#include "libavcodec/get_bits.h"
+#include "libavutil/bitstream.h"
 
 /** Structure listing useful vars to parse RTP packet payload */
 struct PayloadContext {
@@ -117,7 +117,7 @@ static int parse_fmtp_config(AVCodecContext *codec, char *value)
 static int rtp_parse_mp4_au(PayloadContext *data, const uint8_t *buf, int len)
 {
     int au_headers_length, au_header_size, i;
-    GetBitContext getbitcontext;
+    AVGetBitContext getbitcontext;
 
     if (len < 2)
         return AVERROR_INVALIDDATA;
@@ -138,7 +138,7 @@ static int rtp_parse_mp4_au(PayloadContext *data, const uint8_t *buf, int len)
     if (len < data->au_headers_length_bytes)
         return AVERROR_INVALIDDATA;
 
-    init_get_bits(&getbitcontext, buf, data->au_headers_length_bytes * 8);
+    av_bitstream_get_init(&getbitcontext, buf, data->au_headers_length_bytes * 8);
 
     /* XXX: Wrong if optionnal additional sections are present (cts, dts etc...) */
     au_header_size = data->sizelength + data->indexlength;
@@ -155,8 +155,8 @@ static int rtp_parse_mp4_au(PayloadContext *data, const uint8_t *buf, int len)
     }
 
     for (i = 0; i < data->nb_au_headers; ++i) {
-        data->au_headers[i].size  = get_bits_long(&getbitcontext, data->sizelength);
-        data->au_headers[i].index = get_bits_long(&getbitcontext, data->indexlength);
+        data->au_headers[i].size  = av_bitstream_get_long(&getbitcontext, data->sizelength);
+        data->au_headers[i].index = av_bitstream_get_long(&getbitcontext, data->indexlength);
     }
 
     return 0;

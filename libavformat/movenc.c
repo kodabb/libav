@@ -31,8 +31,7 @@
 #include "avio.h"
 #include "isom.h"
 #include "avc.h"
-#include "libavcodec/get_bits.h"
-#include "libavcodec/put_bits.h"
+#include "libavutil/bitstream.h"
 #include "libavcodec/vc1.h"
 #include "internal.h"
 #include "libavutil/avstring.h"
@@ -223,8 +222,8 @@ static int mov_write_amr_tag(AVIOContext *pb, MOVTrack *track)
 
 static int mov_write_ac3_tag(AVIOContext *pb, MOVTrack *track)
 {
-    GetBitContext gbc;
-    PutBitContext pbc;
+    AVGetBitContext gbc;
+    AVPutBitContext pbc;
     uint8_t buf[3];
     int fscod, bsid, bsmod, acmod, lfeon, frmsizecod;
 
@@ -234,21 +233,21 @@ static int mov_write_ac3_tag(AVIOContext *pb, MOVTrack *track)
     avio_wb32(pb, 11);
     ffio_wfourcc(pb, "dac3");
 
-    init_get_bits(&gbc, track->vos_data + 4, (track->vos_len - 4) * 8);
-    fscod      = get_bits(&gbc, 2);
-    frmsizecod = get_bits(&gbc, 6);
-    bsid       = get_bits(&gbc, 5);
-    bsmod      = get_bits(&gbc, 3);
-    acmod      = get_bits(&gbc, 3);
+    av_bitstream_get_init(&gbc, track->vos_data + 4, (track->vos_len - 4) * 8);
+    fscod      = av_bitstream_get(&gbc, 2);
+    frmsizecod = av_bitstream_get(&gbc, 6);
+    bsid       = av_bitstream_get(&gbc, 5);
+    bsmod      = av_bitstream_get(&gbc, 3);
+    acmod      = av_bitstream_get(&gbc, 3);
     if (acmod == 2) {
-        skip_bits(&gbc, 2); // dsurmod
+        av_bitstream_skip(&gbc, 2); // dsurmod
     } else {
         if ((acmod & 1) && acmod != 1)
-            skip_bits(&gbc, 2); // cmixlev
+            av_bitstream_skip(&gbc, 2); // cmixlev
         if (acmod & 4)
-            skip_bits(&gbc, 2); // surmixlev
+            av_bitstream_skip(&gbc, 2); // surmixlev
     }
-    lfeon = get_bits1(&gbc);
+    lfeon = av_bitstream_get1(&gbc);
 
     init_put_bits(&pbc, buf, sizeof(buf));
     put_bits(&pbc, 2, fscod);
@@ -440,28 +439,28 @@ static int mov_write_dvc1_structs(MOVTrack *track, uint8_t *buf)
         return AVERROR(ENOMEM);
     start = find_next_marker(track->vos_data, end);
     for (next = start; next < end; start = next) {
-        GetBitContext gb;
+        AVGetBitContext gb;
         int size;
         next = find_next_marker(start + 4, end);
         size = next - start - 4;
         if (size <= 0)
             continue;
         unescaped_size = vc1_unescape_buffer(start + 4, size, unescaped);
-        init_get_bits(&gb, unescaped, 8 * unescaped_size);
+        av_bitstream_get_init(&gb, unescaped, 8 * unescaped_size);
         if (AV_RB32(start) == VC1_CODE_SEQHDR) {
-            int profile = get_bits(&gb, 2);
+            int profile = av_bitstream_get(&gb, 2);
             if (profile != PROFILE_ADVANCED) {
                 av_free(unescaped);
                 return AVERROR(ENOSYS);
             }
             seq_found = 1;
-            level = get_bits(&gb, 3);
+            level = av_bitstream_get(&gb, 3);
             /* chromaformat, frmrtq_postproc, bitrtq_postproc, postprocflag,
              * width, height */
-            skip_bits_long(&gb, 2 + 3 + 5 + 1 + 2*12);
-            skip_bits(&gb, 1); /* broadcast */
-            interlace = get_bits1(&gb);
-            skip_bits(&gb, 4); /* tfcntrflag, finterpflag, reserved, psf */
+            av_bitstream_skip_long(&gb, 2 + 3 + 5 + 1 + 2*12);
+            av_bitstream_skip(&gb, 1); /* broadcast */
+            interlace = av_bitstream_get1(&gb);
+            av_bitstream_skip(&gb, 4); /* tfcntrflag, finterpflag, reserved, psf */
         }
     }
     if (!seq_found) {

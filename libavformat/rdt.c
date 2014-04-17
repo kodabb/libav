@@ -35,7 +35,7 @@
 #include "rm.h"
 #include "internal.h"
 #include "avio_internal.h"
-#include "libavcodec/get_bits.h"
+#include "libavutil/bitstream.h"
 
 struct RDTDemuxContext {
     AVFormatContext *ic; /**< the containing (RTSP) demux context */
@@ -192,7 +192,7 @@ ff_rdt_parse_header(const uint8_t *buf, int len,
                     int *pset_id, int *pseq_no, int *pstream_id,
                     int *pis_keyframe, uint32_t *ptimestamp)
 {
-    GetBitContext gb;
+    AVGetBitContext gb;
     int consumed = 0, set_id, seq_no, stream_id, is_keyframe,
         len_included, need_reliable;
     uint32_t timestamp;
@@ -262,24 +262,24 @@ ff_rdt_parse_header(const uint8_t *buf, int len,
      * [2] http://www.wireshark.org/docs/dfref/r/rdt.html and
      *     http://anonsvn.wireshark.org/viewvc/trunk/epan/dissectors/packet-rdt.c
      */
-    init_get_bits(&gb, buf, len << 3);
-    len_included  = get_bits1(&gb);
-    need_reliable = get_bits1(&gb);
-    set_id        = get_bits(&gb, 5);
-    skip_bits(&gb, 1);
-    seq_no        = get_bits(&gb, 16);
+    av_bitstream_get_init(&gb, buf, len << 3);
+    len_included  = av_bitstream_get1(&gb);
+    need_reliable = av_bitstream_get1(&gb);
+    set_id        = av_bitstream_get(&gb, 5);
+    av_bitstream_skip(&gb, 1);
+    seq_no        = av_bitstream_get(&gb, 16);
     if (len_included)
-        skip_bits(&gb, 16);
-    skip_bits(&gb, 2);
-    stream_id     = get_bits(&gb, 5);
-    is_keyframe   = !get_bits1(&gb);
-    timestamp     = get_bits_long(&gb, 32);
+        av_bitstream_skip(&gb, 16);
+    av_bitstream_skip(&gb, 2);
+    stream_id     = av_bitstream_get(&gb, 5);
+    is_keyframe   = !av_bitstream_get1(&gb);
+    timestamp     = av_bitstream_get_long(&gb, 32);
     if (set_id == 0x1f)
-        set_id    = get_bits(&gb, 16);
+        set_id    = av_bitstream_get(&gb, 16);
     if (need_reliable)
-        skip_bits(&gb, 16);
+        av_bitstream_skip(&gb, 16);
     if (stream_id == 0x1f)
-        stream_id = get_bits(&gb, 16);
+        stream_id = av_bitstream_get(&gb, 16);
 
     if (pset_id)      *pset_id      = set_id;
     if (pseq_no)      *pseq_no      = seq_no;
@@ -287,7 +287,7 @@ ff_rdt_parse_header(const uint8_t *buf, int len,
     if (pis_keyframe) *pis_keyframe = is_keyframe;
     if (ptimestamp)   *ptimestamp   = timestamp;
 
-    return consumed + (get_bits_count(&gb) >> 3);
+    return consumed + (av_bitstream_get_count(&gb) >> 3);
 }
 
 /**< return 0 on packet, no more left, 1 on packet, 1 on partial packet... */

@@ -29,7 +29,7 @@
 #include "rtpdec_formats.h"
 #include "libavutil/attributes.h"
 #include "libavutil/intreadwrite.h"
-#include "libavcodec/get_bits.h"
+#include "libavutil/bitstream.h"
 
 struct PayloadContext {
     AVIOContext *buf;
@@ -162,18 +162,18 @@ static int h263_handle_packet(AVFormatContext *ctx, PayloadContext *data,
             avio_w8(data->buf, data->endbyte);
         } else {
             /* Start/end skip bits not matching - missed packets? */
-            GetBitContext gb;
-            init_get_bits(&gb, buf, len*8 - ebit);
-            skip_bits(&gb, sbit);
+            AVGetBitContext gb;
+            av_bitstream_get_init(&gb, buf, len*8 - ebit);
+            av_bitstream_skip(&gb, sbit);
             if (data->endbyte_bits) {
-                data->endbyte |= get_bits(&gb, 8 - data->endbyte_bits);
+                data->endbyte |= av_bitstream_get(&gb, 8 - data->endbyte_bits);
                 avio_w8(data->buf, data->endbyte);
             }
-            while (get_bits_left(&gb) >= 8)
-                avio_w8(data->buf, get_bits(&gb, 8));
-            data->endbyte_bits = get_bits_left(&gb);
+            while (av_bitstream_get_left(&gb) >= 8)
+                avio_w8(data->buf, av_bitstream_get(&gb, 8));
+            data->endbyte_bits = av_bitstream_get_left(&gb);
             if (data->endbyte_bits)
-                data->endbyte = get_bits(&gb, data->endbyte_bits) <<
+                data->endbyte = av_bitstream_get(&gb, data->endbyte_bits) <<
                                 (8 - data->endbyte_bits);
             ebit = 0;
             len = 0;

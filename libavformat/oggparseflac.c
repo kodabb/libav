@@ -19,7 +19,7 @@
  */
 
 #include <stdlib.h>
-#include "libavcodec/get_bits.h"
+#include "libavutil/bitstream.h"
 #include "libavcodec/flac.h"
 #include "avformat.h"
 #include "internal.h"
@@ -33,27 +33,27 @@ flac_header (AVFormatContext * s, int idx)
     struct ogg *ogg = s->priv_data;
     struct ogg_stream *os = ogg->streams + idx;
     AVStream *st = s->streams[idx];
-    GetBitContext gb;
+    AVGetBitContext gb;
     FLACStreaminfo si;
     int mdt;
 
     if (os->buf[os->pstart] == 0xff)
         return 0;
 
-    init_get_bits(&gb, os->buf + os->pstart, os->psize*8);
-    skip_bits1(&gb); /* metadata_last */
-    mdt = get_bits(&gb, 7);
+    av_bitstream_get_init(&gb, os->buf + os->pstart, os->psize*8);
+    av_bitstream_skip1(&gb); /* metadata_last */
+    mdt = av_bitstream_get(&gb, 7);
 
     if (mdt == OGG_FLAC_METADATA_TYPE_STREAMINFO) {
         uint8_t *streaminfo_start = os->buf + os->pstart + 5 + 4 + 4 + 4;
-        skip_bits_long(&gb, 4*8); /* "FLAC" */
-        if(get_bits(&gb, 8) != 1) /* unsupported major version */
+        av_bitstream_skip_long(&gb, 4*8); /* "FLAC" */
+        if(av_bitstream_get(&gb, 8) != 1) /* unsupported major version */
             return -1;
-        skip_bits_long(&gb, 8 + 16); /* minor version + header count */
-        skip_bits_long(&gb, 4*8); /* "fLaC" */
+        av_bitstream_skip_long(&gb, 8 + 16); /* minor version + header count */
+        av_bitstream_skip_long(&gb, 4*8); /* "fLaC" */
 
         /* METADATA_BLOCK_HEADER */
-        if (get_bits_long(&gb, 32) != FLAC_STREAMINFO_SIZE)
+        if (av_bitstream_get_long(&gb, 32) != FLAC_STREAMINFO_SIZE)
             return -1;
 
         avpriv_flac_parse_streaminfo(st->codec, &si, streaminfo_start);
