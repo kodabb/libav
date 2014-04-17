@@ -37,7 +37,7 @@
 #include "libavutil/base64.h"
 #include "libavutil/avstring.h"
 #include "libavutil/intreadwrite.h"
-#include "libavcodec/get_bits.h"
+
 #include "avformat.h"
 
 #include "network.h"

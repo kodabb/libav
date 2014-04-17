@@ -31,6 +31,7 @@
 #include "spdif.h"
 #include "libavcodec/ac3.h"
 #include "libavcodec/aacadtsdec.h"
+#include "libavcodec/get_bits.h"
 
 static int spdif_get_offset_and_codec(AVFormatContext *s,
                                       enum IEC61937DataType data_type,

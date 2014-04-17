@@ -52,6 +52,7 @@
 #include "libavcodec/ac3.h"
 #include "libavcodec/dca.h"
 #include "libavcodec/aacadtsdec.h"
+#include "libavcodec/get_bits.h"
 #include "libavutil/opt.h"
 #include "libavutil/intreadwrite.h"
 

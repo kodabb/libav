@@ -20,6 +20,7 @@
  */
 
 #include "libavcodec/tak.h"
+#include "libavcodec/get_bits.h"
 #include "avformat.h"
 #include "internal.h"
 #include "rawdec.h"

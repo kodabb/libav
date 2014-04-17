@@ -20,6 +20,7 @@
  */
 
 #include "libavutil/crc.h"
+#include "libavcodec/get_bits.h"
 #include "libavcodec/ac3_parser.h"
 #include "avformat.h"
 #include "rawdec.h"
