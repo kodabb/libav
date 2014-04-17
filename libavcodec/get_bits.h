@@ -355,15 +355,6 @@ static inline unsigned int show_bits_long(GetBitContext *s, int n)
     }
 }
 
-static inline int check_marker(GetBitContext *s, const char *msg)
-{
-    int bit = get_bits1(s);
-    if (!bit)
-        av_log(NULL, AV_LOG_INFO, "Marker bit missing %s\n", msg);
-
-    return bit;
-}
-
 /**
  * Initialize GetBitContext.
  * @param buffer bitstream buffer, must be FF_INPUT_BUFFER_PADDING_SIZE bytes

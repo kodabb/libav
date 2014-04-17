@@ -20,6 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
+#include "libavutil/intreadwrite.h"
+
 #include "error_resilience.h"
 #include "internal.h"
 #include "mpegutils.h"
@@ -46,6 +48,15 @@ static const int mb_type_b_map[4] = {
     MB_TYPE_L1      | MB_TYPE_16x16,
     MB_TYPE_L0      | MB_TYPE_16x16,
 };
+
+static inline int check_marker(GetBitContext *s, const char *msg)
+{
+    int bit = get_bits1(s);
+    if (!bit)
+        av_log(NULL, AV_LOG_INFO, "Marker bit missing %s\n", msg);
+
+    return bit;
+}
 
 /**
  * Predict the ac.
