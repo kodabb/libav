@@ -51,7 +51,7 @@
 #include "avcodec.h"
 #include "internal.h"
 #include "put_bits.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 
 
 typedef struct FlashSVContext {

@@ -58,7 +58,7 @@
 
 #include "libavutil/attributes.h"
 #include "roqvideo.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "elbg.h"
 #include "internal.h"
 #include "mathops.h"

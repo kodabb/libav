@@ -29,7 +29,7 @@
 #include "libavutil/intreadwrite.h"
 #include "avcodec.h"
 #include "get_bits.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 
 #define MODEL_MIN_SYMS    2
 #define MODEL_MAX_SYMS  256

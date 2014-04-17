@@ -26,7 +26,7 @@
 #include "dct.h"
 #include "dsputil.h"
 #include "put_bits.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "internal.h"
 #include "proresdata.h"
 

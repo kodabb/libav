@@ -32,7 +32,7 @@
 #include "error_resilience.h"
 #include "mpeg12.h"
 #include "mpeg12data.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "thread.h"
 
 uint8_t ff_mpeg12_static_rl_table_store[2][2][2*MAX_RUN + MAX_LEVEL + 3];

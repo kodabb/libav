@@ -33,7 +33,7 @@
 #include "libavutil/stereo3d.h"
 
 #include "avcodec.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "mathops.h"
 #include "mpeg12.h"
 #include "mpeg12data.h"

@@ -33,7 +33,7 @@
 #include "internal.h"
 #include "avio_internal.h"
 #include "libavutil/intreadwrite.h"
-#include "libavcodec/bytestream.h"
+#include "libavutil/bytestream.h"
 #include "network.h"
 #include "url.h"
 

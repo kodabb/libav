@@ -22,7 +22,7 @@
  */
 
 #include "avcodec.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "s3tc.h"
 
 static inline void dxt1_decode_pixels(GetByteContext *gb, uint32_t *d,

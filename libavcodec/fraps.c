@@ -34,7 +34,7 @@
 #include "avcodec.h"
 #include "get_bits.h"
 #include "huffman.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "dsputil.h"
 #include "internal.h"
 

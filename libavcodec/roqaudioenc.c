@@ -22,7 +22,7 @@
  */
 
 #include "avcodec.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "internal.h"
 #include "mathops.h"
 

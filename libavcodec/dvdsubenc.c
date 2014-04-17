@@ -19,7 +19,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 #include "avcodec.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 
 #undef NDEBUG
 #include <assert.h>

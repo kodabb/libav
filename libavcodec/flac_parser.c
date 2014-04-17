@@ -35,7 +35,7 @@
 #include "libavutil/attributes.h"
 #include "libavutil/crc.h"
 #include "libavutil/fifo.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "parser.h"
 #include "flac.h"
 

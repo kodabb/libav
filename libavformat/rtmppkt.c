@@ -23,7 +23,7 @@
 #include "libavutil/intfloat.h"
 #include "libavutil/intreadwrite.h"
 
-#include "libavcodec/bytestream.h"
+#include "libavutil/bytestream.h"
 
 #include "avformat.h"
 

@@ -23,7 +23,7 @@
 #include "libavutil/intreadwrite.h"
 
 #include "avcodec.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "copy_block.h"
 #include "internal.h"
 #include "mathops.h"

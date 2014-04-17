@@ -30,7 +30,7 @@
 #include "libavutil/opt.h"
 #include "avcodec.h"
 #include "audio_frame_queue.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "internal.h"
 #include "vorbis.h"
 #include "vorbis_parser.h"

@@ -26,7 +26,7 @@
  */
 
 #include "avcodec.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 
 
 static int imx_dump_header(AVBitStreamFilterContext *bsfc, AVCodecContext *avctx, const char *args,

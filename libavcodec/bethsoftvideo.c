@@ -30,7 +30,7 @@
 #include "libavutil/common.h"
 #include "avcodec.h"
 #include "bethsoftvideo.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "internal.h"
 
 typedef struct BethsoftvidContext {

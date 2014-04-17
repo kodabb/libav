@@ -29,7 +29,7 @@
 #define BITSTREAM_READER_LE
 #include "avcodec.h"
 #include "get_bits.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "internal.h"
 #include "tscc2data.h"
 

@@ -24,7 +24,7 @@
 #include "avformat.h"
 #include "flacenc.h"
 #include "vorbiscomment.h"
-#include "libavcodec/bytestream.h"
+#include "libavutil/bytestream.h"
 
 
 typedef struct FlacMuxerContext {

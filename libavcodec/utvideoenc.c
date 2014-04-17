@@ -28,7 +28,7 @@
 #include "libavutil/intreadwrite.h"
 #include "avcodec.h"
 #include "internal.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "put_bits.h"
 #include "dsputil.h"
 #include "mathops.h"

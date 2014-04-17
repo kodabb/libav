@@ -31,7 +31,7 @@
 #include "libavutil/intfloat.h"
 #include "libavutil/mathematics.h"
 #include "libavutil/intreadwrite.h"
-#include "libavcodec/bytestream.h"
+#include "libavutil/bytestream.h"
 #include "libavcodec/mpeg4audio.h"
 #include "avformat.h"
 #include "internal.h"

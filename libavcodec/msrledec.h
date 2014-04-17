@@ -23,7 +23,7 @@
 #define AVCODEC_MSRLEDEC_H
 
 #include "avcodec.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 
 /**
  * Decode stream in MS RLE format into frame.

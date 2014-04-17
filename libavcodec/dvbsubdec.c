@@ -23,7 +23,7 @@
 
 #include "avcodec.h"
 #include "get_bits.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "libavutil/colorspace.h"
 
 #define DVBSUB_PAGE_SEGMENT     0x10

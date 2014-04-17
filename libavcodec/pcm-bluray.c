@@ -26,7 +26,7 @@
 
 #include "libavutil/channel_layout.h"
 #include "avcodec.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "internal.h"
 
 /*

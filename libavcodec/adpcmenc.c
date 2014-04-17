@@ -25,7 +25,7 @@
 #include "avcodec.h"
 #include "get_bits.h"
 #include "put_bits.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "adpcm.h"
 #include "adpcm_data.h"
 #include "internal.h"

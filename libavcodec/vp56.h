@@ -28,7 +28,7 @@
 
 #include "get_bits.h"
 #include "hpeldsp.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "h264chroma.h"
 #include "videodsp.h"
 #include "vp3dsp.h"

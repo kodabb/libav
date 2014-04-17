@@ -26,7 +26,7 @@
  */
 
 #include "avcodec.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "get_bits.h"
 #include "internal.h"
 #include "mss34dsp.h"

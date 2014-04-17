@@ -25,7 +25,7 @@
 #include <stdlib.h>
 #include "libavutil/intreadwrite.h"
 #include "libavcodec/get_bits.h"
-#include "libavcodec/bytestream.h"
+#include "libavutil/bytestream.h"
 #include "avformat.h"
 #include "internal.h"
 #include "oggdec.h"

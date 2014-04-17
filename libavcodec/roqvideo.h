@@ -24,7 +24,7 @@
 
 #include "libavutil/lfg.h"
 #include "avcodec.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 
 typedef struct roq_cell {
     unsigned char y[4];

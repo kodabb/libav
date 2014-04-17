@@ -38,7 +38,7 @@
 
 #define BITSTREAM_READER_LE
 #include "get_bits.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 
 #define SMKTREE_BITS 9
 #define SMK_NODE 0x80000000

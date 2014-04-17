@@ -39,7 +39,7 @@
 #include "libavutil/attributes.h"
 #include "libavutil/float_dsp.h"
 #include "avcodec.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "fft.h"
 #include "fmtconvert.h"
 #include "get_bits.h"

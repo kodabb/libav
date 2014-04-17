@@ -28,7 +28,7 @@
 #include <stdint.h>
 
 #include "libavutil/imgutils.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "avcodec.h"
 #include "get_bits.h"
 #include "internal.h"

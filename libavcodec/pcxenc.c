@@ -27,7 +27,7 @@
  */
 
 #include "avcodec.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "internal.h"
 
 static const uint32_t monoblack_pal[16] = { 0x000000, 0xFFFFFF };

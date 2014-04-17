@@ -34,7 +34,7 @@
 #include "libavutil/intreadwrite.h"
 #include "libavutil/imgutils.h"
 #include "avcodec.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "faxcompr.h"
 #include "internal.h"
 #include "lzw.h"

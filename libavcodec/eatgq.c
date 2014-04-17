@@ -31,7 +31,7 @@
 #include "avcodec.h"
 #define BITSTREAM_READER_LE
 #include "get_bits.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "dsputil.h"
 #include "aandcttab.h"
 #include "eaidct.h"

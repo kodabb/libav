@@ -40,7 +40,7 @@
 #define BITSTREAM_READER_LE
 #include "libavutil/imgutils.h"
 #include "avcodec.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "internal.h"
 #include "get_bits.h"
 #include "thread.h"

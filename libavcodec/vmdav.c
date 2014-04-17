@@ -48,7 +48,7 @@
 #include "libavutil/intreadwrite.h"
 #include "avcodec.h"
 #include "internal.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 
 #define VMD_HEADER_SIZE 0x330
 #define PALETTE_COUNT 256

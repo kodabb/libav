@@ -39,7 +39,7 @@
 #include <string.h>
 
 #include "avcodec.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "hpeldsp.h"
 #define BITSTREAM_READER_LE
 #include "get_bits.h"

@@ -36,7 +36,7 @@
 #include "libavutil/attributes.h"
 #include "avcodec.h"
 #include "rangecoder.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 
 av_cold void ff_init_range_encoder(RangeCoder *c, uint8_t *buf, int buf_size)
 {

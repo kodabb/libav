@@ -26,7 +26,7 @@
 
 #include "libavutil/imgutils.h"
 #include "avcodec.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "cga_data.h"
 #include "internal.h"
 

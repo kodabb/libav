@@ -34,7 +34,7 @@
 #include "libavutil/opt.h"
 #include "libavutil/pixdesc.h"
 #include "avcodec.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "lzw.h"
 #include "put_bits.h"
 #include "rle.h"

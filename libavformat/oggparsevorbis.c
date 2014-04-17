@@ -28,7 +28,7 @@
 #include "libavutil/base64.h"
 #include "libavutil/bswap.h"
 #include "libavutil/dict.h"
-#include "libavcodec/bytestream.h"
+#include "libavutil/bytestream.h"
 #include "libavcodec/get_bits.h"
 #include "libavcodec/vorbis_parser.h"
 #include "avformat.h"

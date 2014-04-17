@@ -21,7 +21,7 @@
 
 #include "libavutil/pixdesc.h"
 #include "avcodec.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "internal.h"
 
 static int pnm_encode_frame(AVCodecContext *avctx, AVPacket *pkt,

@@ -26,7 +26,7 @@
  */
 
 #include "avcodec.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "mjpeg.h"
 
 

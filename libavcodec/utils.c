@@ -44,7 +44,7 @@
 #include "libavutil/opt.h"
 #include "thread.h"
 #include "internal.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "version.h"
 #include <stdlib.h>
 #include <stdarg.h>

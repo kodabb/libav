@@ -23,7 +23,7 @@
 #include "libavutil/intreadwrite.h"
 #include "libavutil/pixdesc.h"
 #include "avcodec.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "internal.h"
 #include "xwd.h"
 

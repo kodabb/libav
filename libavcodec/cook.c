@@ -47,7 +47,7 @@
 #include "avcodec.h"
 #include "get_bits.h"
 #include "dsputil.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "fft.h"
 #include "internal.h"
 #include "sinewin.h"

@@ -27,7 +27,7 @@
 #include <inttypes.h>
 
 #include "avcodec.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "get_bits.h"
 #include "dsputil.h"
 #include "internal.h"

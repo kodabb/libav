@@ -52,7 +52,7 @@
 #include "flv.h"
 #include "mpeg4video.h"
 #include "internal.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include <limits.h>
 
 static int encode_picture(MpegEncContext *s, int picture_number);

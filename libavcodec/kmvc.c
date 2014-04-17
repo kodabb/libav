@@ -28,7 +28,7 @@
 #include <stdlib.h>
 
 #include "avcodec.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "internal.h"
 #include "libavutil/common.h"
 #include "libavutil/intreadwrite.h"

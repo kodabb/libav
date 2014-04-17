@@ -26,7 +26,7 @@
 #include "libavutil/opt.h"
 #include "libavutil/random_seed.h"
 #include "libavcodec/xiph.h"
-#include "libavcodec/bytestream.h"
+#include "libavutil/bytestream.h"
 #include "libavcodec/flac.h"
 #include "avformat.h"
 #include "avio_internal.h"

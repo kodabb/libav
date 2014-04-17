@@ -24,7 +24,7 @@
 #include "rtpdec_formats.h"
 #include "libavutil/intreadwrite.h"
 #include "libavcodec/mjpeg.h"
-#include "libavcodec/bytestream.h"
+#include "libavutil/bytestream.h"
 
 /**
  * RTP/JPEG specific private data.

@@ -28,7 +28,7 @@
  */
 
 #include "avcodec.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "lzw.h"
 #include "libavutil/mem.h"
 

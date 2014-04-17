@@ -22,7 +22,7 @@
 #include "libavutil/intreadwrite.h"
 
 #include "avcodec.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "dsputil.h"
 #include "png.h"
 

@@ -36,7 +36,7 @@
 #include "libavutil/pixdesc.h"
 #include "libavutil/time.h"
 
-#include "libavcodec/bytestream.h"
+#include "libavutil/bytestream.h"
 #include "libavcodec/internal.h"
 
 #include "audiointerleave.h"

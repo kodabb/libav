@@ -50,7 +50,7 @@
 #include "libavutil/channel_layout.h"
 #include "avcodec.h"
 #include "get_bits.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "internal.h"
 #include "unary.h"
 #include "mathops.h"

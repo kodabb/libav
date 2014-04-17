@@ -31,7 +31,7 @@
 #include "libavutil/pixdesc.h"
 #include "libavutil/stereo3d.h"
 
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "cabac_functions.h"
 #include "dsputil.h"
 #include "golomb.h"

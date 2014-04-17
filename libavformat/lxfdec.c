@@ -22,7 +22,7 @@
 #include <inttypes.h>
 
 #include "libavutil/intreadwrite.h"
-#include "libavcodec/bytestream.h"
+#include "libavutil/bytestream.h"
 #include "avformat.h"
 #include "internal.h"
 

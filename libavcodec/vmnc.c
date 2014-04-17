@@ -32,7 +32,7 @@
 #include "libavutil/intreadwrite.h"
 #include "avcodec.h"
 #include "internal.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 
 enum EncTypes {
     MAGIC_WMVd = 0x574D5664,

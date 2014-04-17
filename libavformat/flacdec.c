@@ -27,7 +27,7 @@
 #include "oggdec.h"
 #include "vorbiscomment.h"
 #include "replaygain.h"
-#include "libavcodec/bytestream.h"
+#include "libavutil/bytestream.h"
 
 static int flac_read_header(AVFormatContext *s)
 {

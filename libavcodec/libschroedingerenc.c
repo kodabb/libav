@@ -35,7 +35,7 @@
 #include "avcodec.h"
 #include "internal.h"
 #include "libschroedinger.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 
 
 /** libschroedinger encoder private data */

@@ -31,7 +31,7 @@
 #include "get_bits.h"
 #include "unary.h"
 #include "mpeg4audio.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "bgmc.h"
 #include "dsputil.h"
 #include "internal.h"

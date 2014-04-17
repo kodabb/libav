@@ -38,7 +38,7 @@
 #include "avcodec.h"
 #include "internal.h"
 #include "get_bits.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "golomb.h"
 #include "flac.h"
 #include "flacdata.h"

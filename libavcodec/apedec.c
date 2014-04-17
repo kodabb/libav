@@ -27,7 +27,7 @@
 #include "libavutil/opt.h"
 #include "avcodec.h"
 #include "dsputil.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "internal.h"
 #include "get_bits.h"
 #include "unary.h"

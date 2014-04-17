@@ -33,7 +33,7 @@
 
 #include "libavutil/intreadwrite.h"
 #include "avcodec.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "internal.h"
 
 #define MM_PREAMBLE_SIZE    6

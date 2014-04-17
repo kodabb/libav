@@ -28,7 +28,7 @@
 
 #include <limits.h>
 #include "avcodec.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "get_bits.h"
 #include "golomb.h"
 #include "internal.h"

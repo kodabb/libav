@@ -32,7 +32,7 @@
 #include "libavutil/base64.h"
 #include "libavutil/intreadwrite.h"
 
-#include "libavcodec/bytestream.h"
+#include "libavutil/bytestream.h"
 
 #include <assert.h>
 

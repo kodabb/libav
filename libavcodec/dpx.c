@@ -21,7 +21,7 @@
 
 #include "libavutil/intreadwrite.h"
 #include "libavutil/imgutils.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "avcodec.h"
 #include "internal.h"
 

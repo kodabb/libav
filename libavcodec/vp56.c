@@ -24,7 +24,7 @@
  */
 
 #include "avcodec.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "internal.h"
 #include "h264chroma.h"
 #include "vp56.h"

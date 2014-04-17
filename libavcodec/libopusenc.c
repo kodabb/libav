@@ -24,7 +24,7 @@
 
 #include "libavutil/opt.h"
 #include "avcodec.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "internal.h"
 #include "libopus.h"
 #include "vorbis.h"

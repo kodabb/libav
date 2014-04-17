@@ -29,7 +29,7 @@
 
 #include "libavutil/intreadwrite.h"
 #include "avcodec.h"
-#include "bytestream.h"
+#include "libavutil/bytestream.h"
 #include "dsputil.h"
 #include "get_bits.h"
 #include "internal.h"

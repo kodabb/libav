@@ -24,7 +24,7 @@
  * RTMP protocol
  */
 
-#include "libavcodec/bytestream.h"
+#include "libavutil/bytestream.h"
 #include "libavutil/avstring.h"
 #include "libavutil/base64.h"
 #include "libavutil/intfloat.h"
