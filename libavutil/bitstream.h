@@ -566,3 +566,32 @@ static inline void av_bitstream_put_align(AVPutBitContext *s)
     av_bitstream_put(s, s->bit_left & 7, 0);
 }
 #endif
+
+
+
+/**
+ * read unsigned exp golomb code.
+ */
+static inline int av_bitstream_get_ue(AVGetBitContext *gb)
+{
+    int nbits = 0;
+    do {
+        nbits = av_bitstream_get1(gb);
+    } while (!nbits);
+
+    return (av_bitstream_get(gb, nbits) | (1 << nbits + 1) ) - 1;
+}
+
+/**
+ * read signed exp golomb code.
+ */
+static inline int av_bitstream_get_se(AVGetBitContext *gb)
+{
+    int num = av_bitstream_get_ue(gb);
+    if (num & 1)
+        num = (num + 1) >> 1;
+    else
+        num = -(num >> 1);
+    return num;
+}
+

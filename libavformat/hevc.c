@@ -19,7 +19,6 @@
  */
 
 #include "libavutil/bitstream.h"
-#include "libavcodec/golomb.h"
 #include "libavcodec/hevc.h"
 #include "libavutil/intreadwrite.h"
 #include "avc.h"
@@ -177,12 +176,12 @@ static void skip_sub_layer_hrd_parameters(AVGetBitContext *gb,
     unsigned int i;
 
     for (i = 0; i <= cpb_cnt_minus1; i++) {
-        get_ue_golomb_long(gb); // bit_rate_value_minus1
-        get_ue_golomb_long(gb); // cpb_size_value_minus1
+        av_bitstream_get_ue(gb); // bit_rate_value_minus1
+        av_bitstream_get_ue(gb); // cpb_size_value_minus1
 
         if (sub_pic_hrd_params_present_flag) {
-            get_ue_golomb_long(gb); // cpb_size_du_value_minus1
-            get_ue_golomb_long(gb); // bit_rate_du_value_minus1
+            av_bitstream_get_ue(gb); // cpb_size_du_value_minus1
+            av_bitstream_get_ue(gb); // bit_rate_du_value_minus1
         }
 
         av_bitstream_skip1(gb); // cbr_flag
@@ -242,12 +241,12 @@ static void skip_hrd_parameters(AVGetBitContext *gb, uint8_t cprms_present_flag,
             fixed_pic_rate_within_cvs_flag = av_bitstream_get1(gb);
 
         if (fixed_pic_rate_within_cvs_flag)
-            get_ue_golomb_long(gb); // elemental_duration_in_tc_minus1
+            av_bitstream_get_ue(gb); // elemental_duration_in_tc_minus1
         else
             low_delay_hrd_flag = av_bitstream_get1(gb);
 
         if (!low_delay_hrd_flag)
-            cpb_cnt_minus1 = get_ue_golomb_long(gb);
+            cpb_cnt_minus1 = av_bitstream_get_ue(gb);
 
         if (nal_hrd_parameters_present_flag)
             skip_sub_layer_hrd_parameters(gb, cpb_cnt_minus1,
@@ -265,7 +264,7 @@ static void skip_timing_info(AVGetBitContext *gb)
     av_bitstream_skip_long(gb, 32); // time_scale
 
     if (av_bitstream_get1(gb))          // poc_proportional_to_timing_flag
-        get_ue_golomb_long(gb); // num_ticks_poc_diff_one_minus1
+        av_bitstream_get_ue(gb); // num_ticks_poc_diff_one_minus1
 }
 
 static void hvcc_parse_vui(AVGetBitContext *gb,
@@ -294,8 +293,8 @@ static void hvcc_parse_vui(AVGetBitContext *gb,
     }
 
     if (av_bitstream_get1(gb)) {        // chroma_loc_info_present_flag
-        get_ue_golomb_long(gb); // chroma_sample_loc_type_top_field
-        get_ue_golomb_long(gb); // chroma_sample_loc_type_bottom_field
+        av_bitstream_get_ue(gb); // chroma_sample_loc_type_top_field
+        av_bitstream_get_ue(gb); // chroma_sample_loc_type_bottom_field
     }
 
     /*
@@ -306,10 +305,10 @@ static void hvcc_parse_vui(AVGetBitContext *gb,
     av_bitstream_skip(gb, 3);
 
     if (av_bitstream_get1(gb)) {        // default_display_window_flag
-        get_ue_golomb_long(gb); // def_disp_win_left_offset
-        get_ue_golomb_long(gb); // def_disp_win_right_offset
-        get_ue_golomb_long(gb); // def_disp_win_top_offset
-        get_ue_golomb_long(gb); // def_disp_win_bottom_offset
+        av_bitstream_get_ue(gb); // def_disp_win_left_offset
+        av_bitstream_get_ue(gb); // def_disp_win_right_offset
+        av_bitstream_get_ue(gb); // def_disp_win_top_offset
+        av_bitstream_get_ue(gb); // def_disp_win_bottom_offset
     }
 
     if (av_bitstream_get1(gb)) { // vui_timing_info_present_flag
@@ -327,7 +326,7 @@ static void hvcc_parse_vui(AVGetBitContext *gb,
          */
         av_bitstream_skip(gb, 3);
 
-        min_spatial_segmentation_idc = get_ue_golomb_long(gb);
+        min_spatial_segmentation_idc = av_bitstream_get_ue(gb);
 
         /*
          * unsigned int(12) min_spatial_segmentation_idc;
@@ -339,18 +338,18 @@ static void hvcc_parse_vui(AVGetBitContext *gb,
         hvcc->min_spatial_segmentation_idc = FFMIN(hvcc->min_spatial_segmentation_idc,
                                                    min_spatial_segmentation_idc);
 
-        get_ue_golomb_long(gb); // max_bytes_per_pic_denom
-        get_ue_golomb_long(gb); // max_bits_per_min_cu_denom
-        get_ue_golomb_long(gb); // log2_max_mv_length_horizontal
-        get_ue_golomb_long(gb); // log2_max_mv_length_vertical
+        av_bitstream_get_ue(gb); // max_bytes_per_pic_denom
+        av_bitstream_get_ue(gb); // max_bits_per_min_cu_denom
+        av_bitstream_get_ue(gb); // log2_max_mv_length_horizontal
+        av_bitstream_get_ue(gb); // log2_max_mv_length_vertical
     }
 }
 
 static void skip_sub_layer_ordering_info(AVGetBitContext *gb)
 {
-    get_ue_golomb_long(gb); // max_dec_pic_buffering_minus1
-    get_ue_golomb_long(gb); // max_num_reorder_pics
-    get_ue_golomb_long(gb); // max_latency_increase_plus1
+    av_bitstream_get_ue(gb); // max_dec_pic_buffering_minus1
+    av_bitstream_get_ue(gb); // max_num_reorder_pics
+    av_bitstream_get_ue(gb); // max_latency_increase_plus1
 }
 
 static int hvcc_parse_vps(AVGetBitContext *gb,
@@ -397,15 +396,15 @@ static void skip_scaling_list_data(AVGetBitContext *gb)
     for (i = 0; i < 4; i++)
         for (j = 0; j < (i == 3 ? 2 : 6); j++)
             if (!av_bitstream_get1(gb))         // scaling_list_pred_mode_flag[i][j]
-                get_ue_golomb_long(gb); // scaling_list_pred_matrix_id_delta[i][j]
+                av_bitstream_get_ue(gb); // scaling_list_pred_matrix_id_delta[i][j]
             else {
                 num_coeffs = FFMIN(64, 1 << (4 + (i << 1)));
 
                 if (i > 1)
-                    get_se_golomb_long(gb); // scaling_list_dc_coef_minus8[i-2][j]
+                    av_bitstream_get_se(gb); // scaling_list_dc_coef_minus8[i-2][j]
 
                 for (k = 0; k < num_coeffs; k++)
-                    get_se_golomb_long(gb); // scaling_list_delta_coef
+                    av_bitstream_get_se(gb); // scaling_list_delta_coef
             }
 }
 
@@ -421,7 +420,7 @@ static int parse_rps(AVGetBitContext *gb, unsigned int rps_idx,
             return AVERROR_INVALIDDATA;
 
         av_bitstream_skip1        (gb); // delta_rps_sign
-        get_ue_golomb_long(gb); // abs_delta_rps_minus1
+        av_bitstream_get_ue(gb); // abs_delta_rps_minus1
 
         num_delta_pocs[rps_idx] = 0;
 
@@ -454,18 +453,18 @@ static int parse_rps(AVGetBitContext *gb, unsigned int rps_idx,
                 num_delta_pocs[rps_idx]++;
         }
     } else {
-        unsigned int num_negative_pics = get_ue_golomb_long(gb);
-        unsigned int num_positive_pics = get_ue_golomb_long(gb);
+        unsigned int num_negative_pics = av_bitstream_get_ue(gb);
+        unsigned int num_positive_pics = av_bitstream_get_ue(gb);
 
         num_delta_pocs[rps_idx] = num_negative_pics + num_positive_pics;
 
         for (i = 0; i < num_negative_pics; i++) {
-            get_ue_golomb_long(gb); // delta_poc_s0_minus1[rps_idx]
+            av_bitstream_get_ue(gb); // delta_poc_s0_minus1[rps_idx]
             av_bitstream_skip1        (gb); // used_by_curr_pic_s0_flag[rps_idx]
         }
 
         for (i = 0; i < num_positive_pics; i++) {
-            get_ue_golomb_long(gb); // delta_poc_s1_minus1[rps_idx]
+            av_bitstream_get_ue(gb); // delta_poc_s1_minus1[rps_idx]
             av_bitstream_skip1        (gb); // used_by_curr_pic_s1_flag[rps_idx]
         }
     }
@@ -498,38 +497,38 @@ static int hvcc_parse_sps(AVGetBitContext *gb,
 
     hvcc_parse_ptl(gb, hvcc, sps_max_sub_layers_minus1);
 
-    get_ue_golomb_long(gb); // sps_seq_parameter_set_id
+    av_bitstream_get_ue(gb); // sps_seq_parameter_set_id
 
-    hvcc->chromaFormat = get_ue_golomb_long(gb);
+    hvcc->chromaFormat = av_bitstream_get_ue(gb);
 
     if (hvcc->chromaFormat == 3)
         av_bitstream_skip1(gb); // separate_colour_plane_flag
 
-    get_ue_golomb_long(gb); // pic_width_in_luma_samples
-    get_ue_golomb_long(gb); // pic_height_in_luma_samples
+    av_bitstream_get_ue(gb); // pic_width_in_luma_samples
+    av_bitstream_get_ue(gb); // pic_height_in_luma_samples
 
     if (av_bitstream_get1(gb)) {        // conformance_window_flag
-        get_ue_golomb_long(gb); // conf_win_left_offset
-        get_ue_golomb_long(gb); // conf_win_right_offset
-        get_ue_golomb_long(gb); // conf_win_top_offset
-        get_ue_golomb_long(gb); // conf_win_bottom_offset
+        av_bitstream_get_ue(gb); // conf_win_left_offset
+        av_bitstream_get_ue(gb); // conf_win_right_offset
+        av_bitstream_get_ue(gb); // conf_win_top_offset
+        av_bitstream_get_ue(gb); // conf_win_bottom_offset
     }
 
-    hvcc->bitDepthLumaMinus8          = get_ue_golomb_long(gb);
-    hvcc->bitDepthChromaMinus8        = get_ue_golomb_long(gb);
-    log2_max_pic_order_cnt_lsb_minus4 = get_ue_golomb_long(gb);
+    hvcc->bitDepthLumaMinus8          = av_bitstream_get_ue(gb);
+    hvcc->bitDepthChromaMinus8        = av_bitstream_get_ue(gb);
+    log2_max_pic_order_cnt_lsb_minus4 = av_bitstream_get_ue(gb);
 
     /* sps_sub_layer_ordering_info_present_flag */
     i = av_bitstream_get1(gb) ? 0 : sps_max_sub_layers_minus1;
     for (; i <= sps_max_sub_layers_minus1; i++)
         skip_sub_layer_ordering_info(gb);
 
-    get_ue_golomb_long(gb); // log2_min_luma_coding_block_size_minus3
-    get_ue_golomb_long(gb); // log2_diff_max_min_luma_coding_block_size
-    get_ue_golomb_long(gb); // log2_min_transform_block_size_minus2
-    get_ue_golomb_long(gb); // log2_diff_max_min_transform_block_size
-    get_ue_golomb_long(gb); // max_transform_hierarchy_depth_inter
-    get_ue_golomb_long(gb); // max_transform_hierarchy_depth_intra
+    av_bitstream_get_ue(gb); // log2_min_luma_coding_block_size_minus3
+    av_bitstream_get_ue(gb); // log2_diff_max_min_luma_coding_block_size
+    av_bitstream_get_ue(gb); // log2_min_transform_block_size_minus2
+    av_bitstream_get_ue(gb); // log2_diff_max_min_transform_block_size
+    av_bitstream_get_ue(gb); // max_transform_hierarchy_depth_inter
+    av_bitstream_get_ue(gb); // max_transform_hierarchy_depth_intra
 
     if (av_bitstream_get1(gb) && // scaling_list_enabled_flag
         av_bitstream_get1(gb))   // sps_scaling_list_data_present_flag
@@ -541,12 +540,12 @@ static int hvcc_parse_sps(AVGetBitContext *gb,
     if (av_bitstream_get1(gb)) {           // pcm_enabled_flag
         av_bitstream_skip         (gb, 4); // pcm_sample_bit_depth_luma_minus1
         av_bitstream_skip         (gb, 4); // pcm_sample_bit_depth_chroma_minus1
-        get_ue_golomb_long(gb);    // log2_min_pcm_luma_coding_block_size_minus3
-        get_ue_golomb_long(gb);    // log2_diff_max_min_pcm_luma_coding_block_size
+        av_bitstream_get_ue(gb);    // log2_min_pcm_luma_coding_block_size_minus3
+        av_bitstream_get_ue(gb);    // log2_diff_max_min_pcm_luma_coding_block_size
         av_bitstream_skip1        (gb);    // pcm_loop_filter_disabled_flag
     }
 
-    num_short_term_ref_pic_sets = get_ue_golomb_long(gb);
+    num_short_term_ref_pic_sets = av_bitstream_get_ue(gb);
     if (num_short_term_ref_pic_sets > MAX_SHORT_TERM_RPS_COUNT)
         return AVERROR_INVALIDDATA;
 
@@ -557,7 +556,7 @@ static int hvcc_parse_sps(AVGetBitContext *gb,
     }
 
     if (av_bitstream_get1(gb)) {                               // long_term_ref_pics_present_flag
-        for (i = 0; i < get_ue_golomb_long(gb); i++) { // num_long_term_ref_pics_sps
+        for (i = 0; i < av_bitstream_get_ue(gb); i++) { // num_long_term_ref_pics_sps
             int len = FFMIN(log2_max_pic_order_cnt_lsb_minus4 + 4, 16);
             av_bitstream_skip (gb, len); // lt_ref_pic_poc_lsb_sps[i]
             av_bitstream_skip1(gb);      // used_by_curr_pic_lt_sps_flag[i]
@@ -579,8 +578,8 @@ static int hvcc_parse_pps(AVGetBitContext *gb,
 {
     uint8_t tiles_enabled_flag, entropy_coding_sync_enabled_flag;
 
-    get_ue_golomb_long(gb); // pps_pic_parameter_set_id
-    get_ue_golomb_long(gb); // pps_seq_parameter_set_id
+    av_bitstream_get_ue(gb); // pps_pic_parameter_set_id
+    av_bitstream_get_ue(gb); // pps_seq_parameter_set_id
 
     /*
      * dependent_slice_segments_enabled_flag u(1)
@@ -591,9 +590,9 @@ static int hvcc_parse_pps(AVGetBitContext *gb,
      */
     av_bitstream_skip(gb, 7);
 
-    get_ue_golomb_long(gb); // num_ref_idx_l0_default_active_minus1
-    get_ue_golomb_long(gb); // num_ref_idx_l1_default_active_minus1
-    get_se_golomb_long(gb); // init_qp_minus26
+    av_bitstream_get_ue(gb); // num_ref_idx_l0_default_active_minus1
+    av_bitstream_get_ue(gb); // num_ref_idx_l1_default_active_minus1
+    av_bitstream_get_se(gb); // init_qp_minus26
 
     /*
      * constrained_intra_pred_flag u(1)
@@ -602,10 +601,10 @@ static int hvcc_parse_pps(AVGetBitContext *gb,
     av_bitstream_skip(gb, 2);
 
     if (av_bitstream_get1(gb))          // cu_qp_delta_enabled_flag
-        get_ue_golomb_long(gb); // diff_cu_qp_delta_depth
+        av_bitstream_get_ue(gb); // diff_cu_qp_delta_depth
 
-    get_se_golomb_long(gb); // pps_cb_qp_offset
-    get_se_golomb_long(gb); // pps_cr_qp_offset
+    av_bitstream_get_se(gb); // pps_cb_qp_offset
+    av_bitstream_get_se(gb); // pps_cr_qp_offset
 
     /*
      * weighted_pred_flag               u(1)
