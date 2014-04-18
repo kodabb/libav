@@ -87,7 +87,7 @@ static void put_swf_rect(AVIOContext *pb,
     uint8_t buf[256];
     int nbits, mask;
 
-    init_av_bitstream_put(&p, buf, sizeof(buf));
+    av_bitstream_put_init(&p, buf, sizeof(buf));
 
     nbits = 0;
     max_nbits(&nbits, xmin);
@@ -103,7 +103,7 @@ static void put_swf_rect(AVIOContext *pb,
     av_bitstream_put(&p, nbits, ymin & mask);
     av_bitstream_put(&p, nbits, ymax & mask);
 
-    flush_av_bitstream_put(&p);
+    av_bitstream_put_flush(&p);
     avio_write(pb, buf, av_bitstream_put_ptr(&p) - p.buf);
 }
 
@@ -143,7 +143,7 @@ static void put_swf_matrix(AVIOContext *pb,
     uint8_t buf[256];
     int nbits;
 
-    init_av_bitstream_put(&p, buf, sizeof(buf));
+    av_bitstream_put_init(&p, buf, sizeof(buf));
 
     av_bitstream_put(&p, 1, 1); /* a, d present */
     nbits = 1;
@@ -168,7 +168,7 @@ static void put_swf_matrix(AVIOContext *pb,
     av_bitstream_put(&p, nbits, tx);
     av_bitstream_put(&p, nbits, ty);
 
-    flush_av_bitstream_put(&p);
+    av_bitstream_put_flush(&p);
     avio_write(pb, buf, av_bitstream_put_ptr(&p) - p.buf);
 }
 
@@ -279,7 +279,7 @@ static int swf_write_header(AVFormatContext *s)
         avio_w8(pb, 0); /* no line style */
 
         /* shape drawing */
-        init_av_bitstream_put(&p, buf1, sizeof(buf1));
+        av_bitstream_put_init(&p, buf1, sizeof(buf1));
         av_bitstream_put(&p, 4, 1); /* one fill bit */
         av_bitstream_put(&p, 4, 0); /* zero line bit */
 
@@ -300,7 +300,7 @@ static int swf_write_header(AVFormatContext *s)
         av_bitstream_put(&p, 1, 0); /* not an edge */
         av_bitstream_put(&p, 5, 0);
 
-        flush_av_bitstream_put(&p);
+        av_bitstream_put_flush(&p);
         avio_write(pb, buf1, av_bitstream_put_ptr(&p) - p.buf);
 
         put_swf_end_tag(s);

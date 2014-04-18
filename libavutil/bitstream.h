@@ -263,14 +263,6 @@ static inline int av_bitstream_get_init8(AVGetBitContext *s,
     return av_bitstream_get_init(s, buffer, byte_size * 8);
 }
 
-static inline const uint8_t *align_av_bitstream_get(AVGetBitContext *s)
-{
-    int n = -av_bitstream_get_count(s) & 7;
-    if (n)
-        av_bitstream_skip(s, n);
-    return s->buffer + (s->index >> 3);
-}
-
 static inline int av_bitstream_get_left(AVGetBitContext *gb)
 {
     return gb->size_in_bits - av_bitstream_get_count(gb);
@@ -282,8 +274,8 @@ static inline int av_bitstream_get_left(AVGetBitContext *gb)
  * @param buffer the buffer where to put bits
  * @param buffer_size the size in bytes of buffer
  */
-static inline void init_av_bitstream_put(AVPutBitContext *s, uint8_t *buffer,
-                                 int buffer_size)
+static inline void av_bitstream_put_init(AVPutBitContext *s, uint8_t *buffer,
+                                         int buffer_size)
 {
     if (buffer_size < 0) {
         buffer_size = 0;
@@ -301,7 +293,7 @@ static inline void init_av_bitstream_put(AVPutBitContext *s, uint8_t *buffer,
 /**
  * Pad the end of the output stream with zeros.
  */
-static inline void flush_av_bitstream_put(AVPutBitContext *s)
+static inline void av_bitstream_put_flush(AVPutBitContext *s)
 {
 #ifndef BITSTREAM_WRITER_LE
     if (s->bit_left < 32)
@@ -326,7 +318,8 @@ static inline void flush_av_bitstream_put(AVPutBitContext *s)
  * Write up to 31 bits into a bitstream.
  * Use av_bitstream_put32 to write 32 bits.
  */
-static inline void av_bitstream_put(AVPutBitContext *s, int n, unsigned int value)
+static inline void av_bitstream_put(AVPutBitContext *s, int n,
+                                    unsigned int value)
 {
     unsigned int bit_buf;
     int bit_left;
@@ -389,7 +382,6 @@ static inline uint8_t *av_bitstream_put_ptr(AVPutBitContext *s)
 {
     return s->buf_ptr;
 }
-
 
 /**
  * @return the total number of bits written to the bitstream.

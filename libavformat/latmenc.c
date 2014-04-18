@@ -144,7 +144,7 @@ static int latm_write_packet(AVFormatContext *s, AVPacket *pkt)
     if (!buf)
         return AVERROR(ENOMEM);
 
-    init_av_bitstream_put(&bs, buf, pkt->size+1024);
+    av_bitstream_put_init(&bs, buf, pkt->size+1024);
 
     latm_write_frame_header(s, &bs);
 
@@ -161,7 +161,7 @@ static int latm_write_packet(AVFormatContext *s, AVPacket *pkt)
         av_bitstream_put(&bs, 8, pkt->data[i]);
 
     av_bitstream_put(s, bs.bit_left & 7, 0);
-    flush_av_bitstream_put(&bs);
+    av_bitstream_put_flush(&bs);
 
     len = av_bitstream_put_count(&bs) >> 3;
 

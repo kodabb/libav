@@ -95,7 +95,7 @@ static int put_pack_header(AVFormatContext *ctx,
     MpegMuxContext *s = ctx->priv_data;
     AVPutBitContext pb;
 
-    init_av_bitstream_put(&pb, buf, 128);
+    av_bitstream_put_init(&pb, buf, 128);
 
     av_bitstream_put32(&pb, PACK_START_CODE);
     if (s->is_mpeg2) {
@@ -121,7 +121,7 @@ static int put_pack_header(AVFormatContext *ctx,
         av_bitstream_put(&pb, 5, 0x1f); /* reserved */
         av_bitstream_put(&pb, 3, 0); /* stuffing length */
     }
-    flush_av_bitstream_put(&pb);
+    av_bitstream_put_flush(&pb);
     return av_bitstream_put_ptr(&pb) - pb.buf;
 }
 
@@ -131,7 +131,7 @@ static int put_system_header(AVFormatContext *ctx, uint8_t *buf,int only_for_str
     int size, i, private_stream_coded, id;
     AVPutBitContext pb;
 
-    init_av_bitstream_put(&pb, buf, 128);
+    av_bitstream_put_init(&pb, buf, 128);
 
     av_bitstream_put32(&pb, SYSTEM_HEADER_START_CODE);
     av_bitstream_put(&pb, 16, 0);
@@ -263,7 +263,7 @@ static int put_system_header(AVFormatContext *ctx, uint8_t *buf,int only_for_str
         }
     }
 
-    flush_av_bitstream_put(&pb);
+    av_bitstream_put_flush(&pb);
     size = av_bitstream_put_ptr(&pb) - pb.buf;
     /* patch packet size */
     buf[4] = (size - 6) >> 8;

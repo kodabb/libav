@@ -211,7 +211,7 @@ static int gif_image_write_image(AVIOContext *pb,
 
     left = width * height;
 
-    init_av_bitstream_put(&p, buffer, 130);
+    av_bitstream_put_init(&p, buffer, 130);
 
 /*
  * the thing here is the bitstream is written as little packets, with a size
@@ -239,7 +239,7 @@ static int gif_image_write_image(AVIOContext *pb,
 
         if (left <= GIF_CHUNKS) {
             av_bitstream_put(&p, 9, 0x101); /* end of stream */
-            flush_av_bitstream_put(&p);
+            av_bitstream_put_flush(&p);
         }
         if (av_bitstream_put_ptr(&p) - p.buf > 0) {
             avio_w8(pb, av_bitstream_put_ptr(&p) - p.buf); /* byte count of the packet */

@@ -249,7 +249,7 @@ static int mov_write_ac3_tag(AVIOContext *pb, MOVTrack *track)
     }
     lfeon = av_bitstream_get1(&gbc);
 
-    init_av_bitstream_put(&pbc, buf, sizeof(buf));
+    av_bitstream_put_init(&pbc, buf, sizeof(buf));
     av_bitstream_put(&pbc, 2, fscod);
     av_bitstream_put(&pbc, 5, bsid);
     av_bitstream_put(&pbc, 3, bsmod);
@@ -258,7 +258,7 @@ static int mov_write_ac3_tag(AVIOContext *pb, MOVTrack *track)
     av_bitstream_put(&pbc, 5, frmsizecod >> 1); // bit_rate_code
     av_bitstream_put(&pbc, 5, 0); // reserved
 
-    flush_av_bitstream_put(&pbc);
+    av_bitstream_put_flush(&pbc);
     avio_write(pb, buf, sizeof(buf));
 
     return 11;
@@ -468,7 +468,7 @@ static int mov_write_dvc1_structs(MOVTrack *track, uint8_t *buf)
         return AVERROR(ENOSYS);
     }
 
-    init_av_bitstream_put(&pbc, buf, 7);
+    av_bitstream_put_init(&pbc, buf, 7);
     /* VC1DecSpecStruc */
     av_bitstream_put(&pbc, 4, 12); /* profile - advanced */
     av_bitstream_put(&pbc, 3, level);
@@ -484,7 +484,7 @@ static int mov_write_dvc1_structs(MOVTrack *track, uint8_t *buf)
     av_bitstream_put(&pbc, 1, 0); /* no bframe */
     av_bitstream_put(&pbc, 1, 0); /* reserved */
     av_bitstream_put32(&pbc, track->enc->time_base.den); /* framerate */
-    flush_av_bitstream_put(&pbc);
+    av_bitstream_put_flush(&pbc);
 
     av_free(unescaped);
 

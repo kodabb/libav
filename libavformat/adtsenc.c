@@ -75,11 +75,11 @@ static int adts_decode_extradata(AVFormatContext *s, ADTSContext *adts, uint8_t 
         return -1;
     }
     if (!adts->channel_conf) {
-        init_av_bitstream_put(&pb, adts->pce_data, MAX_PCE_SIZE);
+        av_bitstream_put_init(&pb, adts->pce_data, MAX_PCE_SIZE);
 
         av_bitstream_put(&pb, 3, 5); //ID_PCE
         adts->pce_size = (avpriv_copy_pce_data(&pb, &gb) + 3) / 8;
-        flush_av_bitstream_put(&pb);
+        av_bitstream_put_flush(&pb);
     }
 
     adts->write_adts = 1;
@@ -111,7 +111,7 @@ static int adts_write_frame_header(ADTSContext *ctx,
         return AVERROR_INVALIDDATA;
     }
 
-    init_av_bitstream_put(&pb, buf, ADTS_HEADER_SIZE);
+    av_bitstream_put_init(&pb, buf, ADTS_HEADER_SIZE);
 
     /* adts_fixed_header */
     av_bitstream_put(&pb, 12, 0xfff);   /* syncword */
@@ -132,7 +132,7 @@ static int adts_write_frame_header(ADTSContext *ctx,
     av_bitstream_put(&pb, 11, 0x7ff);   /* adts_buffer_fullness */
     av_bitstream_put(&pb, 2, 0);        /* number_of_raw_data_blocks_in_frame */
 
-    flush_av_bitstream_put(&pb);
+    av_bitstream_put_flush(&pb);
 
     return 0;
 }

@@ -48,7 +48,7 @@ static void send_mode_a(AVFormatContext *s1, const struct H263Info *info,
     RTPMuxContext *s = s1->priv_data;
     AVPutBitContext pb;
 
-    init_av_bitstream_put(&pb, s->buf, 32);
+    av_bitstream_put_init(&pb, s->buf, 32);
     av_bitstream_put(&pb, 1, 0); /* F - 0, mode A */
     av_bitstream_put(&pb, 1, 0); /* P - 0, normal I/P */
     av_bitstream_put(&pb, 3, 0); /* SBIT - 0 bits */
@@ -62,7 +62,7 @@ static void send_mode_a(AVFormatContext *s1, const struct H263Info *info,
     av_bitstream_put(&pb, 2, 0); /* DBQ - 0 */
     av_bitstream_put(&pb, 3, 0); /* TRB - 0 */
     av_bitstream_put(&pb, 8, info->tr); /* TR */
-    flush_av_bitstream_put(&pb);
+    av_bitstream_put_flush(&pb);
     memcpy(s->buf + 4, buf, len);
 
     ff_rtp_send_data(s1, s->buf, len + 4, m);
@@ -75,7 +75,7 @@ static void send_mode_b(AVFormatContext *s1, const struct H263Info *info,
     RTPMuxContext *s = s1->priv_data;
     AVPutBitContext pb;
 
-    init_av_bitstream_put(&pb, s->buf, 64);
+    av_bitstream_put_init(&pb, s->buf, 64);
     av_bitstream_put(&pb, 1, 1); /* F - 1, mode B */
     av_bitstream_put(&pb, 1, 0); /* P - 0, mode B */
     av_bitstream_put(&pb, 3, sbits); /* SBIT - 0 bits */
@@ -93,7 +93,7 @@ static void send_mode_b(AVFormatContext *s1, const struct H263Info *info,
     av_bitstream_put(&pb, 7, state->vmv1); /* VMV1 - vertical motion vector 1 */
     av_bitstream_put(&pb, 7, state->hmv2); /* HVM2 - horizontal motion vector 2 */
     av_bitstream_put(&pb, 7, state->vmv2); /* VMV2 - vertical motion vector 2 */
-    flush_av_bitstream_put(&pb);
+    av_bitstream_put_flush(&pb);
     memcpy(s->buf + 8, buf, len);
 
     ff_rtp_send_data(s1, s->buf, len + 8, m);
