@@ -222,7 +222,7 @@ static int mov_write_amr_tag(AVIOContext *pb, MOVTrack *track)
 
 static int mov_write_ac3_tag(AVIOContext *pb, MOVTrack *track)
 {
-    GetBitContext gbc;
+    AVGetBitContext gbc;
     AVPutBitContext pbc;
     uint8_t buf[3];
     int fscod, bsid, bsmod, acmod, lfeon, frmsizecod;
