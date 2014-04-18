@@ -160,7 +160,7 @@ static int latm_write_packet(AVFormatContext *s, AVPacket *pkt)
     for (i = 0; i < pkt->size; i++)
         av_bitstream_put(&bs, 8, pkt->data[i]);
 
-    av_bitstream_put_align(&bs);
+    av_bitstream_put(s, bs.bit_left & 7, 0);
     flush_av_bitstream_put(&bs);
 
     len = av_bitstream_put_count(&bs) >> 3;
