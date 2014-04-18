@@ -36,6 +36,13 @@ typedef struct AVGetBitContext {
     int size_in_bits_plus8;
 } AVGetBitContext;
 
+typedef struct AVPutBitContext {
+    uint32_t bit_buf;
+    int bit_left;
+    uint8_t *buf, *buf_ptr, *buf_end;
+    int size_in_bits;
+} AVPutBitContext;
+
 #if 0
 #define VLC_TYPE int16_t
 
@@ -426,3 +433,136 @@ static inline int av_bitstream_get_trace(AVGetBitContext *s, int n,
 #endif /* AVUTIL_BITSTREAM_H */
 
 
+/**
+ * Initialize the AVPutBitContext s.
+ *
+ * @param buffer the buffer where to put bits
+ * @param buffer_size the size in bytes of buffer
+ */
+static inline void init_av_bitstream_put(AVPutBitContext *s, uint8_t *buffer,
+                                 int buffer_size)
+{
+    if (buffer_size < 0) {
+        buffer_size = 0;
+        buffer      = NULL;
+    }
+
+    s->size_in_bits = 8 * buffer_size;
+    s->buf          = buffer;
+    s->buf_end      = s->buf + buffer_size;
+    s->buf_ptr      = s->buf;
+    s->bit_left     = 32;
+    s->bit_buf      = 0;
+}
+
+
+/**
+ * Pad the end of the output stream with zeros.
+ */
+static inline void flush_av_bitstream_put(AVPutBitContext *s)
+{
+#ifndef BITSTREAM_WRITER_LE
+    if (s->bit_left < 32)
+        s->bit_buf <<= s->bit_left;
+#endif
+    while (s->bit_left < 32) {
+        /* XXX: should test end of buffer */
+#ifdef BITSTREAM_WRITER_LE
+        *s->buf_ptr++ = s->bit_buf;
+        s->bit_buf  >>= 8;
+#else
+        *s->buf_ptr++ = s->bit_buf >> 24;
+        s->bit_buf  <<= 8;
+#endif
+        s->bit_left  += 8;
+    }
+    s->bit_left = 32;
+    s->bit_buf  = 0;
+}
+
+
+/**
+ * Write up to 31 bits into a bitstream.
+ * Use av_bitstream_put32 to write 32 bits.
+ */
+static inline void av_bitstream_put(AVPutBitContext *s, int n, unsigned int value)
+{
+    unsigned int bit_buf;
+    int bit_left;
+
+    assert(n <= 31 && value < (1U << n));
+
+    bit_buf  = s->bit_buf;
+    bit_left = s->bit_left;
+
+    /* XXX: optimize */
+#ifdef BITSTREAM_WRITER_LE
+    bit_buf |= value << (32 - bit_left);
+    if (n >= bit_left) {
+        AV_WL32(s->buf_ptr, bit_buf);
+        s->buf_ptr += 4;
+        bit_buf     = (bit_left == 32) ? 0 : value >> bit_left;
+        bit_left   += 32;
+    }
+    bit_left -= n;
+#else
+    if (n < bit_left) {
+        bit_buf     = (bit_buf << n) | value;
+        bit_left   -= n;
+    } else {
+        bit_buf   <<= bit_left;
+        bit_buf    |= value >> (n - bit_left);
+        AV_WB32(s->buf_ptr, bit_buf);
+        s->buf_ptr += 4;
+        bit_left   += 32 - n;
+        bit_buf     = value;
+    }
+#endif
+
+    s->bit_buf  = bit_buf;
+    s->bit_left = bit_left;
+}
+
+
+/**
+ * Write exactly 32 bits into a bitstream.
+ */
+static inline void av_bitstream_put32(AVPutBitContext *s, uint32_t value)
+{
+    int lo = value & 0xffff;
+    int hi = value >> 16;
+#ifdef BITSTREAM_WRITER_LE
+    av_bitstream_put(s, 16, lo);
+    av_bitstream_put(s, 16, hi);
+#else
+    av_bitstream_put(s, 16, hi);
+    av_bitstream_put(s, 16, lo);
+#endif
+}
+
+/**
+ * Return the pointer to the byte where the bitstream writer will put
+ * the next bit.
+ */
+static inline uint8_t *av_bitstream_put_ptr(AVPutBitContext *s)
+{
+    return s->buf_ptr;
+}
+
+
+/**
+ * @return the total number of bits written to the bitstream.
+ */
+static inline int av_bitstream_put_count(AVPutBitContext *s)
+{
+    return (s->buf_ptr - s->buf) * 8 + 32 - s->bit_left;
+}
+
+#ifdef BITSTREAM_WRITER_LE
+#define av_bitstream_put_align align_put_bits_unsupported_here
+#else
+static inline void av_bitstream_put_align(AVPutBitContext *s)
+{
+    av_bitstream_put(s, s->bit_left & 7, 0);
+}
+#endif

@@ -47,7 +47,7 @@
 /* at least they don't use PDP_ENDIAN :) */
 #define BITSTREAM_WRITER_LE
 
-#include "libavcodec/put_bits.h"
+#include "libavutil/bitstream.h"
 
 /* bitstream minipacket size */
 #define GIF_CHUNKS 100
@@ -193,7 +193,7 @@ static int gif_image_write_image(AVIOContext *pb,
                                  int x1, int y1, int width, int height,
                                  const uint8_t *buf, int linesize, int pix_fmt)
 {
-    PutBitContext p;
+    AVPutBitContext p;
     uint8_t buffer[200]; /* 100 * 9 / 8 = 113 */
     int i, left, w, v;
     const uint8_t *ptr;
@@ -211,7 +211,7 @@ static int gif_image_write_image(AVIOContext *pb,
 
     left = width * height;
 
-    init_put_bits(&p, buffer, 130);
+    init_av_bitstream_put(&p, buffer, 130);
 
 /*
  * the thing here is the bitstream is written as little packets, with a size
@@ -220,7 +220,7 @@ static int gif_image_write_image(AVIOContext *pb,
     ptr = buf;
     w   = width;
     while (left > 0) {
-        put_bits(&p, 9, 0x0100); /* clear code */
+        av_bitstream_put(&p, 9, 0x0100); /* clear code */
 
         for (i = (left < GIF_CHUNKS) ? left : GIF_CHUNKS; i; i--) {
             if (pix_fmt == AV_PIX_FMT_RGB24) {
@@ -229,7 +229,7 @@ static int gif_image_write_image(AVIOContext *pb,
             } else {
                 v = *ptr++;
             }
-            put_bits(&p, 9, v);
+            av_bitstream_put(&p, 9, v);
             if (--w == 0) {
                 w    = width;
                 buf += linesize;
@@ -238,12 +238,12 @@ static int gif_image_write_image(AVIOContext *pb,
         }
 
         if (left <= GIF_CHUNKS) {
-            put_bits(&p, 9, 0x101); /* end of stream */
-            flush_put_bits(&p);
+            av_bitstream_put(&p, 9, 0x101); /* end of stream */
+            flush_av_bitstream_put(&p);
         }
-        if (put_bits_ptr(&p) - p.buf > 0) {
-            avio_w8(pb, put_bits_ptr(&p) - p.buf); /* byte count of the packet */
-            avio_write(pb, p.buf, put_bits_ptr(&p) - p.buf); /* the actual buffer */
+        if (av_bitstream_put_ptr(&p) - p.buf > 0) {
+            avio_w8(pb, av_bitstream_put_ptr(&p) - p.buf); /* byte count of the packet */
+            avio_write(pb, p.buf, av_bitstream_put_ptr(&p) - p.buf); /* the actual buffer */
             p.buf_ptr = p.buf; /* dequeue the bytes off the bitstream */
         }
         left -= GIF_CHUNKS;

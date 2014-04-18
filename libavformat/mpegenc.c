@@ -26,7 +26,7 @@
 #include "libavutil/log.h"
 #include "libavutil/mathematics.h"
 #include "libavutil/opt.h"
-#include "libavcodec/put_bits.h"
+#include "libavutil/bitstream.h"
 #include "avformat.h"
 #include "internal.h"
 #include "mpeg.h"
@@ -93,89 +93,89 @@ static int put_pack_header(AVFormatContext *ctx,
                            uint8_t *buf, int64_t timestamp)
 {
     MpegMuxContext *s = ctx->priv_data;
-    PutBitContext pb;
+    AVPutBitContext pb;
 
-    init_put_bits(&pb, buf, 128);
+    init_av_bitstream_put(&pb, buf, 128);
 
-    put_bits32(&pb, PACK_START_CODE);
+    av_bitstream_put32(&pb, PACK_START_CODE);
     if (s->is_mpeg2) {
-        put_bits(&pb, 2, 0x1);
+        av_bitstream_put(&pb, 2, 0x1);
     } else {
-        put_bits(&pb, 4, 0x2);
+        av_bitstream_put(&pb, 4, 0x2);
     }
-    put_bits(&pb, 3,  (uint32_t)((timestamp >> 30) & 0x07));
-    put_bits(&pb, 1, 1);
-    put_bits(&pb, 15, (uint32_t)((timestamp >> 15) & 0x7fff));
-    put_bits(&pb, 1, 1);
-    put_bits(&pb, 15, (uint32_t)((timestamp      ) & 0x7fff));
-    put_bits(&pb, 1, 1);
+    av_bitstream_put(&pb, 3,  (uint32_t)((timestamp >> 30) & 0x07));
+    av_bitstream_put(&pb, 1, 1);
+    av_bitstream_put(&pb, 15, (uint32_t)((timestamp >> 15) & 0x7fff));
+    av_bitstream_put(&pb, 1, 1);
+    av_bitstream_put(&pb, 15, (uint32_t)((timestamp      ) & 0x7fff));
+    av_bitstream_put(&pb, 1, 1);
     if (s->is_mpeg2) {
         /* clock extension */
-        put_bits(&pb, 9, 0);
+        av_bitstream_put(&pb, 9, 0);
     }
-    put_bits(&pb, 1, 1);
-    put_bits(&pb, 22, s->mux_rate);
-    put_bits(&pb, 1, 1);
+    av_bitstream_put(&pb, 1, 1);
+    av_bitstream_put(&pb, 22, s->mux_rate);
+    av_bitstream_put(&pb, 1, 1);
     if (s->is_mpeg2) {
-        put_bits(&pb, 1, 1);
-        put_bits(&pb, 5, 0x1f); /* reserved */
-        put_bits(&pb, 3, 0); /* stuffing length */
+        av_bitstream_put(&pb, 1, 1);
+        av_bitstream_put(&pb, 5, 0x1f); /* reserved */
+        av_bitstream_put(&pb, 3, 0); /* stuffing length */
     }
-    flush_put_bits(&pb);
-    return put_bits_ptr(&pb) - pb.buf;
+    flush_av_bitstream_put(&pb);
+    return av_bitstream_put_ptr(&pb) - pb.buf;
 }
 
 static int put_system_header(AVFormatContext *ctx, uint8_t *buf,int only_for_stream_id)
 {
     MpegMuxContext *s = ctx->priv_data;
     int size, i, private_stream_coded, id;
-    PutBitContext pb;
+    AVPutBitContext pb;
 
-    init_put_bits(&pb, buf, 128);
+    init_av_bitstream_put(&pb, buf, 128);
 
-    put_bits32(&pb, SYSTEM_HEADER_START_CODE);
-    put_bits(&pb, 16, 0);
-    put_bits(&pb, 1, 1);
+    av_bitstream_put32(&pb, SYSTEM_HEADER_START_CODE);
+    av_bitstream_put(&pb, 16, 0);
+    av_bitstream_put(&pb, 1, 1);
 
-    put_bits(&pb, 22, s->mux_rate); /* maximum bit rate of the multiplexed stream */
-    put_bits(&pb, 1, 1); /* marker */
+    av_bitstream_put(&pb, 22, s->mux_rate); /* maximum bit rate of the multiplexed stream */
+    av_bitstream_put(&pb, 1, 1); /* marker */
     if (s->is_vcd && only_for_stream_id==VIDEO_ID) {
         /* This header applies only to the video stream (see VCD standard p. IV-7)*/
-        put_bits(&pb, 6, 0);
+        av_bitstream_put(&pb, 6, 0);
     } else
-        put_bits(&pb, 6, s->audio_bound);
+        av_bitstream_put(&pb, 6, s->audio_bound);
 
     if (s->is_vcd) {
         /* see VCD standard, p. IV-7*/
-        put_bits(&pb, 1, 0);
-        put_bits(&pb, 1, 1);
+        av_bitstream_put(&pb, 1, 0);
+        av_bitstream_put(&pb, 1, 1);
     } else {
-        put_bits(&pb, 1, 0); /* variable bitrate*/
-        put_bits(&pb, 1, 0); /* non constrainted bit stream */
+        av_bitstream_put(&pb, 1, 0); /* variable bitrate*/
+        av_bitstream_put(&pb, 1, 0); /* non constrainted bit stream */
     }
 
     if (s->is_vcd || s->is_dvd) {
         /* see VCD standard p IV-7 */
-        put_bits(&pb, 1, 1); /* audio locked */
-        put_bits(&pb, 1, 1); /* video locked */
+        av_bitstream_put(&pb, 1, 1); /* audio locked */
+        av_bitstream_put(&pb, 1, 1); /* video locked */
     } else {
-        put_bits(&pb, 1, 0); /* audio locked */
-        put_bits(&pb, 1, 0); /* video locked */
+        av_bitstream_put(&pb, 1, 0); /* audio locked */
+        av_bitstream_put(&pb, 1, 0); /* video locked */
     }
 
-    put_bits(&pb, 1, 1); /* marker */
+    av_bitstream_put(&pb, 1, 1); /* marker */
 
     if (s->is_vcd && (only_for_stream_id & 0xe0) == AUDIO_ID) {
         /* This header applies only to the audio stream (see VCD standard p. IV-7)*/
-        put_bits(&pb, 5, 0);
+        av_bitstream_put(&pb, 5, 0);
     } else
-        put_bits(&pb, 5, s->video_bound);
+        av_bitstream_put(&pb, 5, s->video_bound);
 
     if (s->is_dvd) {
-        put_bits(&pb, 1, 0);    /* packet_rate_restriction_flag */
-        put_bits(&pb, 7, 0x7f); /* reserved byte */
+        av_bitstream_put(&pb, 1, 0);    /* packet_rate_restriction_flag */
+        av_bitstream_put(&pb, 7, 0x7f); /* reserved byte */
     } else
-        put_bits(&pb, 8, 0xff); /* reserved byte */
+        av_bitstream_put(&pb, 8, 0xff); /* reserved byte */
 
     /* DVD-Video Stream_bound entries
     id (0xB9) video, maximum P-STD for stream 0xE0. (P-STD_buffer_bound_scale = 1)
@@ -202,30 +202,30 @@ static int put_system_header(AVFormatContext *ctx, uint8_t *buf,int only_for_str
         }
 
         /* video */
-        put_bits(&pb, 8, 0xb9); /* stream ID */
-        put_bits(&pb, 2, 3);
-        put_bits(&pb, 1, 1);
-        put_bits(&pb, 13, P_STD_max_video / 1024);
+        av_bitstream_put(&pb, 8, 0xb9); /* stream ID */
+        av_bitstream_put(&pb, 2, 3);
+        av_bitstream_put(&pb, 1, 1);
+        av_bitstream_put(&pb, 13, P_STD_max_video / 1024);
 
         /* audio */
         if (P_STD_max_mpeg_audio == 0)
             P_STD_max_mpeg_audio = 4096;
-        put_bits(&pb, 8, 0xb8); /* stream ID */
-        put_bits(&pb, 2, 3);
-        put_bits(&pb, 1, 0);
-        put_bits(&pb, 13, P_STD_max_mpeg_audio / 128);
+        av_bitstream_put(&pb, 8, 0xb8); /* stream ID */
+        av_bitstream_put(&pb, 2, 3);
+        av_bitstream_put(&pb, 1, 0);
+        av_bitstream_put(&pb, 13, P_STD_max_mpeg_audio / 128);
 
         /* private stream 1 */
-        put_bits(&pb, 8, 0xbd); /* stream ID */
-        put_bits(&pb, 2, 3);
-        put_bits(&pb, 1, 0);
-        put_bits(&pb, 13, P_STD_max_mpeg_PS1 / 128);
+        av_bitstream_put(&pb, 8, 0xbd); /* stream ID */
+        av_bitstream_put(&pb, 2, 3);
+        av_bitstream_put(&pb, 1, 0);
+        av_bitstream_put(&pb, 13, P_STD_max_mpeg_PS1 / 128);
 
         /* private stream 2 */
-        put_bits(&pb, 8, 0xbf); /* stream ID */
-        put_bits(&pb, 2, 3);
-        put_bits(&pb, 1, 1);
-        put_bits(&pb, 13, 2);
+        av_bitstream_put(&pb, 8, 0xbf); /* stream ID */
+        av_bitstream_put(&pb, 2, 3);
+        av_bitstream_put(&pb, 1, 1);
+        av_bitstream_put(&pb, 13, 2);
     }
     else {
         /* audio stream info */
@@ -248,23 +248,23 @@ static int put_system_header(AVFormatContext *ctx, uint8_t *buf,int only_for_str
                     private_stream_coded = 1;
                     id = 0xbd;
                 }
-                put_bits(&pb, 8, id); /* stream ID */
-                put_bits(&pb, 2, 3);
+                av_bitstream_put(&pb, 8, id); /* stream ID */
+                av_bitstream_put(&pb, 2, 3);
                 if (id < 0xe0) {
                     /* audio */
-                    put_bits(&pb, 1, 0);
-                    put_bits(&pb, 13, stream->max_buffer_size / 128);
+                    av_bitstream_put(&pb, 1, 0);
+                    av_bitstream_put(&pb, 13, stream->max_buffer_size / 128);
                 } else {
                     /* video */
-                    put_bits(&pb, 1, 1);
-                    put_bits(&pb, 13, stream->max_buffer_size / 1024);
+                    av_bitstream_put(&pb, 1, 1);
+                    av_bitstream_put(&pb, 13, stream->max_buffer_size / 1024);
                 }
             }
         }
     }
 
-    flush_put_bits(&pb);
-    size = put_bits_ptr(&pb) - pb.buf;
+    flush_av_bitstream_put(&pb);
+    size = av_bitstream_put_ptr(&pb) - pb.buf;
     /* patch packet size */
     buf[4] = (size - 6) >> 8;
     buf[5] = (size - 6) & 0xff;

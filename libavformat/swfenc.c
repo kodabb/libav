@@ -22,7 +22,7 @@
 
 #include "libavutil/intreadwrite.h"
 
-#include "libavcodec/put_bits.h"
+#include "libavutil/bitstream.h"
 #include "avformat.h"
 #include "swf.h"
 
@@ -83,11 +83,11 @@ static inline void max_nbits(int *nbits_ptr, int val)
 static void put_swf_rect(AVIOContext *pb,
                          int xmin, int xmax, int ymin, int ymax)
 {
-    PutBitContext p;
+    AVPutBitContext p;
     uint8_t buf[256];
     int nbits, mask;
 
-    init_put_bits(&p, buf, sizeof(buf));
+    init_av_bitstream_put(&p, buf, sizeof(buf));
 
     nbits = 0;
     max_nbits(&nbits, xmin);
@@ -97,40 +97,40 @@ static void put_swf_rect(AVIOContext *pb,
     mask = (1 << nbits) - 1;
 
     /* rectangle info */
-    put_bits(&p, 5, nbits);
-    put_bits(&p, nbits, xmin & mask);
-    put_bits(&p, nbits, xmax & mask);
-    put_bits(&p, nbits, ymin & mask);
-    put_bits(&p, nbits, ymax & mask);
+    av_bitstream_put(&p, 5, nbits);
+    av_bitstream_put(&p, nbits, xmin & mask);
+    av_bitstream_put(&p, nbits, xmax & mask);
+    av_bitstream_put(&p, nbits, ymin & mask);
+    av_bitstream_put(&p, nbits, ymax & mask);
 
-    flush_put_bits(&p);
-    avio_write(pb, buf, put_bits_ptr(&p) - p.buf);
+    flush_av_bitstream_put(&p);
+    avio_write(pb, buf, av_bitstream_put_ptr(&p) - p.buf);
 }
 
-static void put_swf_line_edge(PutBitContext *pb, int dx, int dy)
+static void put_swf_line_edge(AVPutBitContext *pb, int dx, int dy)
 {
     int nbits, mask;
 
-    put_bits(pb, 1, 1); /* edge */
-    put_bits(pb, 1, 1); /* line select */
+    av_bitstream_put(pb, 1, 1); /* edge */
+    av_bitstream_put(pb, 1, 1); /* line select */
     nbits = 2;
     max_nbits(&nbits, dx);
     max_nbits(&nbits, dy);
 
     mask = (1 << nbits) - 1;
-    put_bits(pb, 4, nbits - 2); /* 16 bits precision */
+    av_bitstream_put(pb, 4, nbits - 2); /* 16 bits precision */
     if (dx == 0) {
-        put_bits(pb, 1, 0);
-        put_bits(pb, 1, 1);
-        put_bits(pb, nbits, dy & mask);
+        av_bitstream_put(pb, 1, 0);
+        av_bitstream_put(pb, 1, 1);
+        av_bitstream_put(pb, nbits, dy & mask);
     } else if (dy == 0) {
-        put_bits(pb, 1, 0);
-        put_bits(pb, 1, 0);
-        put_bits(pb, nbits, dx & mask);
+        av_bitstream_put(pb, 1, 0);
+        av_bitstream_put(pb, 1, 0);
+        av_bitstream_put(pb, nbits, dx & mask);
     } else {
-        put_bits(pb, 1, 1);
-        put_bits(pb, nbits, dx & mask);
-        put_bits(pb, nbits, dy & mask);
+        av_bitstream_put(pb, 1, 1);
+        av_bitstream_put(pb, nbits, dx & mask);
+        av_bitstream_put(pb, nbits, dy & mask);
     }
 }
 
@@ -139,44 +139,44 @@ static void put_swf_line_edge(PutBitContext *pb, int dx, int dy)
 static void put_swf_matrix(AVIOContext *pb,
                            int a, int b, int c, int d, int tx, int ty)
 {
-    PutBitContext p;
+    AVPutBitContext p;
     uint8_t buf[256];
     int nbits;
 
-    init_put_bits(&p, buf, sizeof(buf));
+    init_av_bitstream_put(&p, buf, sizeof(buf));
 
-    put_bits(&p, 1, 1); /* a, d present */
+    av_bitstream_put(&p, 1, 1); /* a, d present */
     nbits = 1;
     max_nbits(&nbits, a);
     max_nbits(&nbits, d);
-    put_bits(&p, 5, nbits); /* nb bits */
-    put_bits(&p, nbits, a);
-    put_bits(&p, nbits, d);
+    av_bitstream_put(&p, 5, nbits); /* nb bits */
+    av_bitstream_put(&p, nbits, a);
+    av_bitstream_put(&p, nbits, d);
 
-    put_bits(&p, 1, 1); /* b, c present */
+    av_bitstream_put(&p, 1, 1); /* b, c present */
     nbits = 1;
     max_nbits(&nbits, c);
     max_nbits(&nbits, b);
-    put_bits(&p, 5, nbits); /* nb bits */
-    put_bits(&p, nbits, c);
-    put_bits(&p, nbits, b);
+    av_bitstream_put(&p, 5, nbits); /* nb bits */
+    av_bitstream_put(&p, nbits, c);
+    av_bitstream_put(&p, nbits, b);
 
     nbits = 1;
     max_nbits(&nbits, tx);
     max_nbits(&nbits, ty);
-    put_bits(&p, 5, nbits); /* nb bits */
-    put_bits(&p, nbits, tx);
-    put_bits(&p, nbits, ty);
+    av_bitstream_put(&p, 5, nbits); /* nb bits */
+    av_bitstream_put(&p, nbits, tx);
+    av_bitstream_put(&p, nbits, ty);
 
-    flush_put_bits(&p);
-    avio_write(pb, buf, put_bits_ptr(&p) - p.buf);
+    flush_av_bitstream_put(&p);
+    avio_write(pb, buf, av_bitstream_put_ptr(&p) - p.buf);
 }
 
 static int swf_write_header(AVFormatContext *s)
 {
     SWFContext *swf = s->priv_data;
     AVIOContext *pb = s->pb;
-    PutBitContext p;
+    AVPutBitContext p;
     uint8_t buf1[256];
     int i, width, height, rate, rate_base;
     int version;
@@ -279,16 +279,16 @@ static int swf_write_header(AVFormatContext *s)
         avio_w8(pb, 0); /* no line style */
 
         /* shape drawing */
-        init_put_bits(&p, buf1, sizeof(buf1));
-        put_bits(&p, 4, 1); /* one fill bit */
-        put_bits(&p, 4, 0); /* zero line bit */
+        init_av_bitstream_put(&p, buf1, sizeof(buf1));
+        av_bitstream_put(&p, 4, 1); /* one fill bit */
+        av_bitstream_put(&p, 4, 0); /* zero line bit */
 
-        put_bits(&p, 1, 0); /* not an edge */
-        put_bits(&p, 5, FLAG_MOVETO | FLAG_SETFILL0);
-        put_bits(&p, 5, 1); /* nbits */
-        put_bits(&p, 1, 0); /* X */
-        put_bits(&p, 1, 0); /* Y */
-        put_bits(&p, 1, 1); /* set fill style 1 */
+        av_bitstream_put(&p, 1, 0); /* not an edge */
+        av_bitstream_put(&p, 5, FLAG_MOVETO | FLAG_SETFILL0);
+        av_bitstream_put(&p, 5, 1); /* nbits */
+        av_bitstream_put(&p, 1, 0); /* X */
+        av_bitstream_put(&p, 1, 0); /* Y */
+        av_bitstream_put(&p, 1, 1); /* set fill style 1 */
 
         /* draw the rectangle ! */
         put_swf_line_edge(&p, width, 0);
@@ -297,11 +297,11 @@ static int swf_write_header(AVFormatContext *s)
         put_swf_line_edge(&p, 0, -height);
 
         /* end of shape */
-        put_bits(&p, 1, 0); /* not an edge */
-        put_bits(&p, 5, 0);
+        av_bitstream_put(&p, 1, 0); /* not an edge */
+        av_bitstream_put(&p, 5, 0);
 
-        flush_put_bits(&p);
-        avio_write(pb, buf1, put_bits_ptr(&p) - p.buf);
+        flush_av_bitstream_put(&p);
+        avio_write(pb, buf1, av_bitstream_put_ptr(&p) - p.buf);
 
         put_swf_end_tag(s);
     }

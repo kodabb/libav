@@ -23,7 +23,6 @@
 
 #include "avformat.h"
 #include "rtpenc.h"
-#include "libavcodec/put_bits.h"
 #include "libavutil/bitstream.h"
 
 struct H263Info {
@@ -47,23 +46,23 @@ static void send_mode_a(AVFormatContext *s1, const struct H263Info *info,
                         const uint8_t *buf, int len, int ebits, int m)
 {
     RTPMuxContext *s = s1->priv_data;
-    PutBitContext pb;
+    AVPutBitContext pb;
 
-    init_put_bits(&pb, s->buf, 32);
-    put_bits(&pb, 1, 0); /* F - 0, mode A */
-    put_bits(&pb, 1, 0); /* P - 0, normal I/P */
-    put_bits(&pb, 3, 0); /* SBIT - 0 bits */
-    put_bits(&pb, 3, ebits); /* EBIT */
-    put_bits(&pb, 3, info->src); /* SRC - source format */
-    put_bits(&pb, 1, info->i); /* I - inter/intra */
-    put_bits(&pb, 1, info->u); /* U - unrestricted motion vector */
-    put_bits(&pb, 1, info->s); /* S - syntax-baesd arithmetic coding */
-    put_bits(&pb, 1, info->a); /* A - advanced prediction */
-    put_bits(&pb, 4, 0); /* R - reserved */
-    put_bits(&pb, 2, 0); /* DBQ - 0 */
-    put_bits(&pb, 3, 0); /* TRB - 0 */
-    put_bits(&pb, 8, info->tr); /* TR */
-    flush_put_bits(&pb);
+    init_av_bitstream_put(&pb, s->buf, 32);
+    av_bitstream_put(&pb, 1, 0); /* F - 0, mode A */
+    av_bitstream_put(&pb, 1, 0); /* P - 0, normal I/P */
+    av_bitstream_put(&pb, 3, 0); /* SBIT - 0 bits */
+    av_bitstream_put(&pb, 3, ebits); /* EBIT */
+    av_bitstream_put(&pb, 3, info->src); /* SRC - source format */
+    av_bitstream_put(&pb, 1, info->i); /* I - inter/intra */
+    av_bitstream_put(&pb, 1, info->u); /* U - unrestricted motion vector */
+    av_bitstream_put(&pb, 1, info->s); /* S - syntax-baesd arithmetic coding */
+    av_bitstream_put(&pb, 1, info->a); /* A - advanced prediction */
+    av_bitstream_put(&pb, 4, 0); /* R - reserved */
+    av_bitstream_put(&pb, 2, 0); /* DBQ - 0 */
+    av_bitstream_put(&pb, 3, 0); /* TRB - 0 */
+    av_bitstream_put(&pb, 8, info->tr); /* TR */
+    flush_av_bitstream_put(&pb);
     memcpy(s->buf + 4, buf, len);
 
     ff_rtp_send_data(s1, s->buf, len + 4, m);
@@ -74,27 +73,27 @@ static void send_mode_b(AVFormatContext *s1, const struct H263Info *info,
                         int len, int sbits, int ebits, int m)
 {
     RTPMuxContext *s = s1->priv_data;
-    PutBitContext pb;
+    AVPutBitContext pb;
 
-    init_put_bits(&pb, s->buf, 64);
-    put_bits(&pb, 1, 1); /* F - 1, mode B */
-    put_bits(&pb, 1, 0); /* P - 0, mode B */
-    put_bits(&pb, 3, sbits); /* SBIT - 0 bits */
-    put_bits(&pb, 3, ebits); /* EBIT - 0 bits */
-    put_bits(&pb, 3, info->src); /* SRC - source format */
-    put_bits(&pb, 5, state->quant); /* QUANT - quantizer for the first MB */
-    put_bits(&pb, 5, state->gobn); /* GOBN - GOB number */
-    put_bits(&pb, 9, state->mba); /* MBA - MB address */
-    put_bits(&pb, 2, 0); /* R - reserved */
-    put_bits(&pb, 1, info->i); /* I - inter/intra */
-    put_bits(&pb, 1, info->u); /* U - unrestricted motion vector */
-    put_bits(&pb, 1, info->s); /* S - syntax-baesd arithmetic coding */
-    put_bits(&pb, 1, info->a); /* A - advanced prediction */
-    put_bits(&pb, 7, state->hmv1); /* HVM1 - horizontal motion vector 1 */
-    put_bits(&pb, 7, state->vmv1); /* VMV1 - vertical motion vector 1 */
-    put_bits(&pb, 7, state->hmv2); /* HVM2 - horizontal motion vector 2 */
-    put_bits(&pb, 7, state->vmv2); /* VMV2 - vertical motion vector 2 */
-    flush_put_bits(&pb);
+    init_av_bitstream_put(&pb, s->buf, 64);
+    av_bitstream_put(&pb, 1, 1); /* F - 1, mode B */
+    av_bitstream_put(&pb, 1, 0); /* P - 0, mode B */
+    av_bitstream_put(&pb, 3, sbits); /* SBIT - 0 bits */
+    av_bitstream_put(&pb, 3, ebits); /* EBIT - 0 bits */
+    av_bitstream_put(&pb, 3, info->src); /* SRC - source format */
+    av_bitstream_put(&pb, 5, state->quant); /* QUANT - quantizer for the first MB */
+    av_bitstream_put(&pb, 5, state->gobn); /* GOBN - GOB number */
+    av_bitstream_put(&pb, 9, state->mba); /* MBA - MB address */
+    av_bitstream_put(&pb, 2, 0); /* R - reserved */
+    av_bitstream_put(&pb, 1, info->i); /* I - inter/intra */
+    av_bitstream_put(&pb, 1, info->u); /* U - unrestricted motion vector */
+    av_bitstream_put(&pb, 1, info->s); /* S - syntax-baesd arithmetic coding */
+    av_bitstream_put(&pb, 1, info->a); /* A - advanced prediction */
+    av_bitstream_put(&pb, 7, state->hmv1); /* HVM1 - horizontal motion vector 1 */
+    av_bitstream_put(&pb, 7, state->vmv1); /* VMV1 - vertical motion vector 1 */
+    av_bitstream_put(&pb, 7, state->hmv2); /* HVM2 - horizontal motion vector 2 */
+    av_bitstream_put(&pb, 7, state->vmv2); /* VMV2 - vertical motion vector 2 */
+    flush_av_bitstream_put(&pb);
     memcpy(s->buf + 8, buf, len);
 
     ff_rtp_send_data(s1, s->buf, len + 8, m);

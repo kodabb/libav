@@ -21,7 +21,6 @@
  */
 
 #include "libavutil/bitstream.h"
-#include "libavcodec/put_bits.h"
 #include "libavcodec/avcodec.h"
 #include "libavcodec/mpeg4audio.h"
 #include "avformat.h"
@@ -42,7 +41,7 @@ typedef struct {
 static int adts_decode_extradata(AVFormatContext *s, ADTSContext *adts, uint8_t *buf, int size)
 {
     AVGetBitContext gb;
-    PutBitContext pb;
+    AVPutBitContext pb;
     MPEG4AudioConfig m4ac;
     int off;
 
@@ -76,11 +75,11 @@ static int adts_decode_extradata(AVFormatContext *s, ADTSContext *adts, uint8_t 
         return -1;
     }
     if (!adts->channel_conf) {
-        init_put_bits(&pb, adts->pce_data, MAX_PCE_SIZE);
+        init_av_bitstream_put(&pb, adts->pce_data, MAX_PCE_SIZE);
 
-        put_bits(&pb, 3, 5); //ID_PCE
+        av_bitstream_put(&pb, 3, 5); //ID_PCE
         adts->pce_size = (avpriv_copy_pce_data(&pb, &gb) + 3) / 8;
-        flush_put_bits(&pb);
+        flush_av_bitstream_put(&pb);
     }
 
     adts->write_adts = 1;
@@ -103,7 +102,7 @@ static int adts_write_header(AVFormatContext *s)
 static int adts_write_frame_header(ADTSContext *ctx,
                                    uint8_t *buf, int size, int pce_size)
 {
-    PutBitContext pb;
+    AVPutBitContext pb;
 
     unsigned full_frame_size = (unsigned)ADTS_HEADER_SIZE + size + pce_size;
     if (full_frame_size > ADTS_MAX_FRAME_BYTES) {
@@ -112,28 +111,28 @@ static int adts_write_frame_header(ADTSContext *ctx,
         return AVERROR_INVALIDDATA;
     }
 
-    init_put_bits(&pb, buf, ADTS_HEADER_SIZE);
+    init_av_bitstream_put(&pb, buf, ADTS_HEADER_SIZE);
 
     /* adts_fixed_header */
-    put_bits(&pb, 12, 0xfff);   /* syncword */
-    put_bits(&pb, 1, 0);        /* ID */
-    put_bits(&pb, 2, 0);        /* layer */
-    put_bits(&pb, 1, 1);        /* protection_absent */
-    put_bits(&pb, 2, ctx->objecttype); /* profile_objecttype */
-    put_bits(&pb, 4, ctx->sample_rate_index);
-    put_bits(&pb, 1, 0);        /* private_bit */
-    put_bits(&pb, 3, ctx->channel_conf); /* channel_configuration */
-    put_bits(&pb, 1, 0);        /* original_copy */
-    put_bits(&pb, 1, 0);        /* home */
+    av_bitstream_put(&pb, 12, 0xfff);   /* syncword */
+    av_bitstream_put(&pb, 1, 0);        /* ID */
+    av_bitstream_put(&pb, 2, 0);        /* layer */
+    av_bitstream_put(&pb, 1, 1);        /* protection_absent */
+    av_bitstream_put(&pb, 2, ctx->objecttype); /* profile_objecttype */
+    av_bitstream_put(&pb, 4, ctx->sample_rate_index);
+    av_bitstream_put(&pb, 1, 0);        /* private_bit */
+    av_bitstream_put(&pb, 3, ctx->channel_conf); /* channel_configuration */
+    av_bitstream_put(&pb, 1, 0);        /* original_copy */
+    av_bitstream_put(&pb, 1, 0);        /* home */
 
     /* adts_variable_header */
-    put_bits(&pb, 1, 0);        /* copyright_identification_bit */
-    put_bits(&pb, 1, 0);        /* copyright_identification_start */
-    put_bits(&pb, 13, full_frame_size); /* aac_frame_length */
-    put_bits(&pb, 11, 0x7ff);   /* adts_buffer_fullness */
-    put_bits(&pb, 2, 0);        /* number_of_raw_data_blocks_in_frame */
+    av_bitstream_put(&pb, 1, 0);        /* copyright_identification_bit */
+    av_bitstream_put(&pb, 1, 0);        /* copyright_identification_start */
+    av_bitstream_put(&pb, 13, full_frame_size); /* aac_frame_length */
+    av_bitstream_put(&pb, 11, 0x7ff);   /* adts_buffer_fullness */
+    av_bitstream_put(&pb, 2, 0);        /* number_of_raw_data_blocks_in_frame */
 
-    flush_put_bits(&pb);
+    flush_av_bitstream_put(&pb);
 
     return 0;
 }

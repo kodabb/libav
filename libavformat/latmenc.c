@@ -20,7 +20,6 @@
  */
 
 #include "libavutil/bitstream.h"
-#include "libavcodec/put_bits.h"
 #include "libavcodec/avcodec.h"
 #include "libavcodec/mpeg4audio.h"
 #include "libavutil/opt.h"
@@ -83,7 +82,7 @@ static int latm_write_header(AVFormatContext *s)
     return 0;
 }
 
-static int latm_write_frame_header(AVFormatContext *s, PutBitContext *bs)
+static int latm_write_frame_header(AVFormatContext *s, AVPutBitContext *bs)
 {
     LATMContext *ctx = s->priv_data;
     AVCodecContext *avctx = s->streams[0]->codec;
@@ -91,17 +90,17 @@ static int latm_write_frame_header(AVFormatContext *s, PutBitContext *bs)
     int header_size;
 
     /* AudioMuxElement */
-    put_bits(bs, 1, !!ctx->counter);
+    av_bitstream_put(bs, 1, !!ctx->counter);
 
     if (!ctx->counter) {
         av_bitstream_get_init(&gb, avctx->extradata, avctx->extradata_size * 8);
 
         /* StreamMuxConfig */
-        put_bits(bs, 1, 0); /* audioMuxVersion */
-        put_bits(bs, 1, 1); /* allStreamsSameTimeFraming */
-        put_bits(bs, 6, 0); /* numSubFrames */
-        put_bits(bs, 4, 0); /* numProgram */
-        put_bits(bs, 3, 0); /* numLayer */
+        av_bitstream_put(bs, 1, 0); /* audioMuxVersion */
+        av_bitstream_put(bs, 1, 1); /* allStreamsSameTimeFraming */
+        av_bitstream_put(bs, 6, 0); /* numSubFrames */
+        av_bitstream_put(bs, 4, 0); /* numProgram */
+        av_bitstream_put(bs, 3, 0); /* numLayer */
 
         /* AudioSpecificConfig */
         if (ctx->object_type == AOT_ALS) {
@@ -115,11 +114,11 @@ static int latm_write_frame_header(AVFormatContext *s, PutBitContext *bs)
             }
         }
 
-        put_bits(bs, 3, 0); /* frameLengthType */
-        put_bits(bs, 8, 0xff); /* latmBufferFullness */
+        av_bitstream_put(bs, 3, 0); /* frameLengthType */
+        av_bitstream_put(bs, 8, 0xff); /* latmBufferFullness */
 
-        put_bits(bs, 1, 0); /* otherDataPresent */
-        put_bits(bs, 1, 0); /* crcCheckPresent */
+        av_bitstream_put(bs, 1, 0); /* otherDataPresent */
+        av_bitstream_put(bs, 1, 0); /* crcCheckPresent */
     }
 
     ctx->counter++;
@@ -131,7 +130,7 @@ static int latm_write_frame_header(AVFormatContext *s, PutBitContext *bs)
 static int latm_write_packet(AVFormatContext *s, AVPacket *pkt)
 {
     AVIOContext *pb = s->pb;
-    PutBitContext bs;
+    AVPutBitContext bs;
     int i, len;
     uint8_t loas_header[] = "\x56\xe0\x00";
     uint8_t *buf;
@@ -145,26 +144,26 @@ static int latm_write_packet(AVFormatContext *s, AVPacket *pkt)
     if (!buf)
         return AVERROR(ENOMEM);
 
-    init_put_bits(&bs, buf, pkt->size+1024);
+    init_av_bitstream_put(&bs, buf, pkt->size+1024);
 
     latm_write_frame_header(s, &bs);
 
     /* PayloadLengthInfo() */
     for (i = 0; i <= pkt->size-255; i+=255)
-        put_bits(&bs, 8, 255);
+        av_bitstream_put(&bs, 8, 255);
 
-    put_bits(&bs, 8, pkt->size-i);
+    av_bitstream_put(&bs, 8, pkt->size-i);
 
     /* The LATM payload is written unaligned */
 
     /* PayloadMux() */
     for (i = 0; i < pkt->size; i++)
-        put_bits(&bs, 8, pkt->data[i]);
+        av_bitstream_put(&bs, 8, pkt->data[i]);
 
-    avpriv_align_put_bits(&bs);
-    flush_put_bits(&bs);
+    av_bitstream_put_align(&bs);
+    flush_av_bitstream_put(&bs);
 
-    len = put_bits_count(&bs) >> 3;
+    len = av_bitstream_put_count(&bs) >> 3;
 
     loas_header[1] |= (len >> 8) & 0x1f;
     loas_header[2] |= len & 0xff;

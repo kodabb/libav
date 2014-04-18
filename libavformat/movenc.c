@@ -222,7 +222,7 @@ static int mov_write_amr_tag(AVIOContext *pb, MOVTrack *track)
 
 static int mov_write_ac3_tag(AVIOContext *pb, MOVTrack *track)
 {
-    AVGetBitContext gbc;
+    GetBitContext gbc;
     AVPutBitContext pbc;
     uint8_t buf[3];
     int fscod, bsid, bsmod, acmod, lfeon, frmsizecod;
@@ -249,16 +249,16 @@ static int mov_write_ac3_tag(AVIOContext *pb, MOVTrack *track)
     }
     lfeon = av_bitstream_get1(&gbc);
 
-    init_put_bits(&pbc, buf, sizeof(buf));
-    put_bits(&pbc, 2, fscod);
-    put_bits(&pbc, 5, bsid);
-    put_bits(&pbc, 3, bsmod);
-    put_bits(&pbc, 3, acmod);
-    put_bits(&pbc, 1, lfeon);
-    put_bits(&pbc, 5, frmsizecod >> 1); // bit_rate_code
-    put_bits(&pbc, 5, 0); // reserved
+    init_av_bitstream_put(&pbc, buf, sizeof(buf));
+    av_bitstream_put(&pbc, 2, fscod);
+    av_bitstream_put(&pbc, 5, bsid);
+    av_bitstream_put(&pbc, 3, bsmod);
+    av_bitstream_put(&pbc, 3, acmod);
+    av_bitstream_put(&pbc, 1, lfeon);
+    av_bitstream_put(&pbc, 5, frmsizecod >> 1); // bit_rate_code
+    av_bitstream_put(&pbc, 5, 0); // reserved
 
-    flush_put_bits(&pbc);
+    flush_av_bitstream_put(&pbc);
     avio_write(pb, buf, sizeof(buf));
 
     return 11;
@@ -425,7 +425,7 @@ static int mov_write_dvc1_structs(MOVTrack *track, uint8_t *buf)
     int packet_seq   = track->vc1_info.packet_seq;
     int packet_entry = track->vc1_info.packet_entry;
     int slices       = track->vc1_info.slices;
-    PutBitContext pbc;
+    AVPutBitContext pbc;
 
     if (track->start_dts == AV_NOPTS_VALUE) {
         /* No packets written yet, vc1_info isn't authoritative yet. */
@@ -468,23 +468,23 @@ static int mov_write_dvc1_structs(MOVTrack *track, uint8_t *buf)
         return AVERROR(ENOSYS);
     }
 
-    init_put_bits(&pbc, buf, 7);
+    init_av_bitstream_put(&pbc, buf, 7);
     /* VC1DecSpecStruc */
-    put_bits(&pbc, 4, 12); /* profile - advanced */
-    put_bits(&pbc, 3, level);
-    put_bits(&pbc, 1, 0); /* reserved */
+    av_bitstream_put(&pbc, 4, 12); /* profile - advanced */
+    av_bitstream_put(&pbc, 3, level);
+    av_bitstream_put(&pbc, 1, 0); /* reserved */
     /* VC1AdvDecSpecStruc */
-    put_bits(&pbc, 3, level);
-    put_bits(&pbc, 1, 0); /* cbr */
-    put_bits(&pbc, 6, 0); /* reserved */
-    put_bits(&pbc, 1, !interlace); /* no interlace */
-    put_bits(&pbc, 1, !packet_seq); /* no multiple seq */
-    put_bits(&pbc, 1, !packet_entry); /* no multiple entry */
-    put_bits(&pbc, 1, !slices); /* no slice code */
-    put_bits(&pbc, 1, 0); /* no bframe */
-    put_bits(&pbc, 1, 0); /* reserved */
-    put_bits32(&pbc, track->enc->time_base.den); /* framerate */
-    flush_put_bits(&pbc);
+    av_bitstream_put(&pbc, 3, level);
+    av_bitstream_put(&pbc, 1, 0); /* cbr */
+    av_bitstream_put(&pbc, 6, 0); /* reserved */
+    av_bitstream_put(&pbc, 1, !interlace); /* no interlace */
+    av_bitstream_put(&pbc, 1, !packet_seq); /* no multiple seq */
+    av_bitstream_put(&pbc, 1, !packet_entry); /* no multiple entry */
+    av_bitstream_put(&pbc, 1, !slices); /* no slice code */
+    av_bitstream_put(&pbc, 1, 0); /* no bframe */
+    av_bitstream_put(&pbc, 1, 0); /* reserved */
+    av_bitstream_put32(&pbc, track->enc->time_base.den); /* framerate */
+    flush_av_bitstream_put(&pbc);
 
     av_free(unescaped);
 
