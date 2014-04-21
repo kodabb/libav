@@ -123,6 +123,7 @@ typedef struct {
     uint64_t pixel_width;
     uint64_t pixel_height;
     uint64_t fourcc;
+    uint64_t stereo_mode;
 } MatroskaTrackVideo;
 
 typedef struct {
@@ -319,7 +320,7 @@ static EbmlSyntax matroska_track_video[] = {
     { MATROSKA_ID_VIDEOPIXELCROPR,     EBML_NONE },
     { MATROSKA_ID_VIDEODISPLAYUNIT,    EBML_NONE },
     { MATROSKA_ID_VIDEOFLAGINTERLACED, EBML_NONE },
-    { MATROSKA_ID_VIDEOSTEREOMODE,     EBML_NONE },
+    { MATROSKA_ID_VIDEOSTEREOMODE,     EBML_UINT,  0, offsetof(MatroskaTrackVideo, stereo_mode), { .u = MATROSKA_VIDEO_STEREOMODE_TYPE_NB } },
     { MATROSKA_ID_VIDEOASPECTRATIO,    EBML_NONE },
     { 0 }
 };
@@ -1785,6 +1786,11 @@ static int matroska_parse_tracks(AVFormatContext *s)
             if (track->default_duration) {
                 av_reduce(&st->avg_frame_rate.num, &st->avg_frame_rate.den,
                           1000000000, track->default_duration, 30000);
+            }
+            if (track->video.stereo_mode < MATROSKA_VIDEO_STEREOMODE_TYPE_NB) {
+                int ret = ff_mkv_stereo3d_conv(st, track->video.stereo_mode);
+                if (ret < 0)
+                    return ret;
             }
         } else if (track->type == MATROSKA_TRACK_TYPE_AUDIO) {
             st->codec->codec_type  = AVMEDIA_TYPE_AUDIO;
