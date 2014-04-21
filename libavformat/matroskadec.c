@@ -45,6 +45,7 @@
 #include "libavutil/intreadwrite.h"
 #include "libavutil/lzo.h"
 #include "libavutil/mathematics.h"
+#include "libavutil/stereo3d.h"
 
 #include "libavcodec/bytestream.h"
 #include "libavcodec/flac.h"
@@ -116,6 +117,19 @@ typedef struct {
     MatroskaTrackCompression compression;
 } MatroskaTrackEncoding;
 
+typedef struct MatroskaTrackCombinePlanes {
+    EbmlList plane;
+} MatroskaTrackCombinePlanes;
+
+typedef struct MatroskaTrackJoinBlocks {
+    uint64_t uid;
+} MatroskaTrackJoinBlocks;
+
+typedef struct MatroskaTrackPlane {
+    uint64_t uid;
+    uint64_t type;
+} MatroskaTrackPlane;
+
 typedef struct {
     double   frame_rate;
     uint64_t display_width;
@@ -143,6 +157,11 @@ typedef struct {
     uint8_t *buf;
 } MatroskaTrackAudio;
 
+typedef struct MatroskaTrackOperation {
+    EbmlList combine_planes;
+    EbmlList join_blocks;
+} MatroskaTrackOperation;
+
 typedef struct {
     uint64_t num;
     uint64_t uid;
@@ -157,6 +176,7 @@ typedef struct {
     uint64_t flag_forced;
     MatroskaTrackVideo video;
     MatroskaTrackAudio audio;
+    MatroskaTrackOperation operation;
     EbmlList encodings;
     uint64_t codec_delay;
 
@@ -333,6 +353,28 @@ static EbmlSyntax matroska_track_audio[] = {
     { 0 }
 };
 
+static EbmlSyntax matroska_track_plane[] = {
+    { MATROSKA_ID_TRACKPLANEUID,    EBML_UINT, 0, offsetof(MatroskaTrackPlane, uid) },
+    { MATROSKA_ID_TRACKPLANETYPE,   EBML_UINT, 0, offsetof(MatroskaTrackPlane, type) },
+    { 0 }
+};
+
+static EbmlSyntax matroska_track_combine_planes[] = {
+    { MATROSKA_ID_TRACKPLANE,       EBML_NEST, sizeof(MatroskaTrackPlane), offsetof(MatroskaTrackCombinePlanes, plane), { .n = matroska_track_plane } },
+    { 0 }
+};
+
+static EbmlSyntax matroska_track_join_blocks[] = {
+    { MATROSKA_ID_TRACKJOINUID,     EBML_UINT, 0, offsetof(MatroskaTrackJoinBlocks, uid) },
+    { 0 }
+};
+
+static EbmlSyntax matroska_track_operation[] = {
+    { MATROSKA_ID_TRACKCOMBINEPLANES,   EBML_NEST, sizeof(MatroskaTrackCombinePlanes), offsetof(MatroskaTrackOperation, combine_planes), { .n = matroska_track_combine_planes } },
+    { MATROSKA_ID_TRACKJOINBLOCKS,      EBML_NEST, sizeof(MatroskaTrackJoinBlocks),    offsetof(MatroskaTrackOperation, join_blocks), { .n = matroska_track_join_blocks } },
+    { 0 }
+};
+
 static EbmlSyntax matroska_track_encoding_compression[] = {
     { MATROSKA_ID_ENCODINGCOMPALGO,     EBML_UINT, 0, offsetof(MatroskaTrackCompression, algo), { .u = 0 } },
     { MATROSKA_ID_ENCODINGCOMPSETTINGS, EBML_BIN,  0, offsetof(MatroskaTrackCompression, settings) },
@@ -367,6 +409,7 @@ static EbmlSyntax matroska_track[] = {
     { MATROSKA_ID_TRACKFLAGFORCED,       EBML_UINT,  0, offsetof(MatroskaTrack, flag_forced),  { .u = 0   } },
     { MATROSKA_ID_TRACKVIDEO,            EBML_NEST,  0, offsetof(MatroskaTrack, video),        { .n = matroska_track_video } },
     { MATROSKA_ID_TRACKAUDIO,            EBML_NEST,  0, offsetof(MatroskaTrack, audio),        { .n = matroska_track_audio } },
+    { MATROSKA_ID_TRACKOPERATION,        EBML_NEST,  0, offsetof(MatroskaTrack, operation),    { .n = matroska_track_operation } },
     { MATROSKA_ID_TRACKCONTENTENCODINGS, EBML_NEST,  0, 0,                                     { .n = matroska_track_encodings } },
     { MATROSKA_ID_TRACKFLAGENABLED,      EBML_NONE },
     { MATROSKA_ID_TRACKFLAGLACING,       EBML_NONE },
@@ -1232,6 +1275,69 @@ static int matroska_merge_packets(AVPacket *out, AVPacket *in)
     return 0;
 }
 
+static int matroska_convert_s3dmulti(AVFormatContext *s, MatroskaTrack *track)
+{
+    int i, j;
+    MatroskaDemuxContext *matroska = s->priv_data;
+
+    if (track->operation.combine_planes.nb_elem > 3) {
+        avpriv_request_sample(s, "operation.combine_planes.nb_elem > 3 (%d)",
+                              track->operation.combine_planes.nb_elem);
+        return (s->error_recognition & AV_EF_EXPLODE) ? AVERROR_PATCHWELCOME : 0;
+    }
+
+    for (i = 0; i < track->operation.combine_planes.nb_elem; i++) {
+        MatroskaTrackPlane *planes = track->operation.combine_planes.elem;
+        if (planes[i].type > 3) {
+            avpriv_request_sample(s,
+                                  "operation.combine_planes.elem[%d].type > 3"
+                                  "(%"PRIu64")", i, planes[i].type);
+            return (s->error_recognition & AV_EF_EXPLODE)
+                ? AVERROR_PATCHWELCOME : 0;
+        }
+
+        // iterate over the tracks until the uid matches with the plane's
+        for (j = 0; j < matroska->tracks.nb_elem; j++) {
+            MatroskaTrack *tracks = matroska->tracks.elem;
+            if (planes[i].uid == tracks[j].uid) {
+                AVStream *st = s->streams[j];
+                AVStereo3D *stereo;
+                AVPacketSideData *sd, *tmp;
+
+                // do not overwrite side data from the other plane/stream
+                if (av_stream_get_side_data(st, AV_PKT_DATA_STEREO3D, NULL))
+                    continue;
+
+                stereo = av_stereo3d_alloc();
+                if (!stereo)
+                    return AVERROR(ENOMEM);
+
+                tmp = av_realloc_array(st->side_data, st->nb_side_data + 1,
+                                       sizeof(*tmp));
+                if (!tmp) {
+                    av_freep(&stereo);
+                    return AVERROR(ENOMEM);
+                }
+                st->side_data = tmp;
+                st->nb_side_data++;
+
+                sd = &st->side_data[st->nb_side_data - 1];
+                sd->type = AV_PKT_DATA_STEREO3D;
+                sd->data = (uint8_t *)stereo;
+                sd->size = sizeof(*stereo);
+
+                stereo->type = AV_STEREO3D_MULTIVIEW;
+                if (planes[i].type == 0)
+                    stereo->flags |= AV_STEREO3D_FLAG_LEFT;
+                else if (planes[i].type == 1)
+                    stereo->flags |= AV_STEREO3D_FLAG_RIGHT;
+                // type == 2 would mean "background" but it's not part of s3d
+            }
+        }
+    }
+    return 0;
+}
+
 static void matroska_convert_tag(AVFormatContext *s, EbmlList *list,
                                  AVDictionary **metadata, char *prefix)
 {
@@ -1789,6 +1895,10 @@ static int matroska_parse_tracks(AVFormatContext *s)
             }
             if (track->video.stereo_mode < MATROSKA_VIDEO_STEREOMODE_TYPE_NB) {
                 int ret = ff_mkv_stereo3d_conv(st, track->video.stereo_mode);
+                if (ret < 0)
+                    return ret;
+            } else if (track->operation.combine_planes.nb_elem) {
+                int ret = matroska_convert_s3dmulti(s, track);
                 if (ret < 0)
                     return ret;
             }
