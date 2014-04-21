@@ -116,6 +116,19 @@ typedef struct {
     MatroskaTrackCompression compression;
 } MatroskaTrackEncoding;
 
+typedef struct MatroskaTrackCombinePlanes {
+    EbmlList plane;
+} MatroskaTrackCombinePlanes;
+
+typedef struct MatroskaTrackJoinBlocks {
+    uint64_t uid;
+} MatroskaTrackJoinBlocks;
+
+typedef struct MatroskaTrackPlane {
+    uint64_t uid;
+    uint64_t type;
+} MatroskaTrackPlane;
+
 typedef struct {
     double   frame_rate;
     uint64_t display_width;
@@ -143,6 +156,11 @@ typedef struct {
     uint8_t *buf;
 } MatroskaTrackAudio;
 
+typedef struct MatroskaTrackOperation {
+    EbmlList planes;
+    EbmlList blocks;
+} MatroskaTrackOperation;
+
 typedef struct {
     uint64_t num;
     uint64_t uid;
@@ -157,6 +175,7 @@ typedef struct {
     uint64_t flag_forced;
     MatroskaTrackVideo video;
     MatroskaTrackAudio audio;
+    MatroskaTrackOperation operation;
     EbmlList encodings;
     uint64_t codec_delay;
 
@@ -333,6 +352,28 @@ static EbmlSyntax matroska_track_audio[] = {
     { 0 }
 };
 
+static EbmlSyntax matroska_track_plane[] = {
+    { MATROSKA_ID_TRACKPLANEUID,    EBML_UINT, 0, offsetof(MatroskaTrackPlane, uid) },
+    { MATROSKA_ID_TRACKPLANETYPE,   EBML_UINT, 0, offsetof(MatroskaTrackPlane, type) },
+    { 0 }
+};
+
+static EbmlSyntax matroska_track_combine_planes[] = {
+    { MATROSKA_ID_TRACKPLANE,       EBML_NEST, sizeof(MatroskaTrackPlane), offsetof(MatroskaTrackCombinePlanes, plane), { .n = matroska_track_plane } },
+    { 0 }
+};
+
+static EbmlSyntax matroska_track_join_blocks[] = {
+    { MATROSKA_ID_TRACKJOINUID,     EBML_UINT, 0, offsetof(MatroskaTrackJoinBlocks, uid) },
+    { 0 }
+};
+
+static EbmlSyntax matroska_track_operation[] = {
+    { MATROSKA_ID_TRACKCOMBINEPLANES,   EBML_NEST, sizeof(MatroskaTrackCombinePlanes), offsetof(MatroskaTrackOperation, planes), { .n = matroska_track_combine_planes } },
+    { MATROSKA_ID_TRACKJOINBLOCKS,      EBML_NEST, sizeof(MatroskaTrackJoinBlocks),    offsetof(MatroskaTrackOperation, blocks), { .n = matroska_track_join_blocks } },
+    { 0 }
+};
+
 static EbmlSyntax matroska_track_encoding_compression[] = {
     { MATROSKA_ID_ENCODINGCOMPALGO,     EBML_UINT, 0, offsetof(MatroskaTrackCompression, algo), { .u = 0 } },
     { MATROSKA_ID_ENCODINGCOMPSETTINGS, EBML_BIN,  0, offsetof(MatroskaTrackCompression, settings) },
@@ -367,6 +408,7 @@ static EbmlSyntax matroska_track[] = {
     { MATROSKA_ID_TRACKFLAGFORCED,       EBML_UINT,  0, offsetof(MatroskaTrack, flag_forced),  { .u = 0   } },
     { MATROSKA_ID_TRACKVIDEO,            EBML_NEST,  0, offsetof(MatroskaTrack, video),        { .n = matroska_track_video } },
     { MATROSKA_ID_TRACKAUDIO,            EBML_NEST,  0, offsetof(MatroskaTrack, audio),        { .n = matroska_track_audio } },
+    { MATROSKA_ID_TRACKOPERATION,        EBML_NEST,  0, offsetof(MatroskaTrack, operation),    { .n = matroska_track_operation } },
     { MATROSKA_ID_TRACKCONTENTENCODINGS, EBML_NEST,  0, 0,                                     { .n = matroska_track_encodings } },
     { MATROSKA_ID_TRACKFLAGENABLED,      EBML_NONE },
     { MATROSKA_ID_TRACKFLAGLACING,       EBML_NONE },
