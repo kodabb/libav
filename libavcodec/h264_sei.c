@@ -205,8 +205,8 @@ static int decode_display_orientation(H264Context *h)
     h->sei_display_orientation_present = !get_bits1(&h->gb);
 
     if (h->sei_display_orientation_present) {
-        skip_bits1(&h->gb);     // hor_flip
-        skip_bits1(&h->gb);     // ver_flip
+        h->sei_hor_flip = get_bits1(&h->gb);
+        h->sei_ver_flip = get_bits1(&h->gb);
 
         h->sei_anticlockwise_rotation = get_bits(&h->gb, 16);
         get_ue_golomb(&h->gb);  // display_orientation_repetition_period

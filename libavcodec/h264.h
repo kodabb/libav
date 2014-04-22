@@ -637,6 +637,7 @@ typedef struct H264Context {
      * display orientation SEI message
      */
     int sei_display_orientation_present;
+    int sei_hor_flip, sei_ver_flip;
     int sei_anticlockwise_rotation;
 
     /**

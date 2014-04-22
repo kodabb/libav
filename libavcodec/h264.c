@@ -823,20 +823,29 @@ static void decode_postinit(H264Context *h, int setup_finished)
             stereo->flags = AV_STEREO3D_FLAG_INVERT;
     }
 
-    if (h->sei_display_orientation_present && h->sei_anticlockwise_rotation) {
+    if (h->sei_display_orientation_present) {
         double angle = h->sei_anticlockwise_rotation * 360 / (1 << 16);
         AVFrameSideData *rotation = av_frame_new_side_data(&cur->f,
                                                            AV_FRAME_DATA_DISPLAYMATRIX,
                                                            sizeof(int32_t) * 3 * 3);
-        uint8_t *display_matrix = av_display_angle_to_matrix(angle);
-
-        if (!rotation || !display_matrix) {
+        uint8_t *matrix_data = av_display_angle_to_matrix(angle);
+        const uint8_t *buf;
+        int32_t display_matrix[3][3];
+        int i, j;
+        if (!rotation || !matrix_data) {
             av_free(rotation);
             av_free(display_matrix);
             return;
         }
+        buf = matrix;
+        for (i = 0; i < 3; i++) {
+            for (j = 0; j < 3; j++) {
+                display_matrix[j][i] = AV_RL32(buf);
+                buf += 4;
+            }
+        }
+        av_free(matrix_data);
         memcpy(rotation->data, display_matrix, sizeof(int32_t) * 3 * 3);
-        av_free(display_matrix);
     }
 
     // FIXME do something with unavailable reference frames
