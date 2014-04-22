@@ -92,3 +92,75 @@ uint8_t *av_display_angle_to_matrix(double angle)
 
     return av_display_matrix_to_data(display_matrix);
 }
+
+uint8_t *av_display_translate_matrix(const uint8_t *matrix,
+                                     unsigned int x, unsigned int y)
+{
+    int32_t display_matrix[3][3];
+    const uint8_t *buf;
+    int i, j;
+
+    buf = matrix;
+    for (i = 0; i < 3; i++) {
+        for (j = 0; j < 3; j++) {
+            display_matrix[j][i] = AV_RL32(buf);
+            buf += 4;
+        }
+    }
+
+    display_matrix[2][0] = x << 16;
+    display_matrix[2][1] = y << 16;
+
+    buf = matrix;
+    for (i = 0; i < 3; i++) {
+        for (j = 0; j < 3; j++) {
+            AV_WL32(buf, display_matrix[j][i]);
+            buf += 4;
+        }
+    }
+
+    return matrix;
+}
+
+uint8_t *av_display_flip_matrix(const uint8_t *matrix, int hflip, int vflip)
+{
+    int32_t display_matrix[3][3];
+    int32_t flip[3][3];
+    int32_t result[3][3];
+    const uint8_t *buf;
+    int i, j, k;
+
+    if (!hflip && !vflip)
+        return matrix;
+
+    memset(flip, 0, sizeof(int32_t) * 3 * 3);
+    flip[0][0] = 1 - 2 * (!!hflip);
+    flip[1][1] = 1 - 2 * (!!vflip);
+    flip[2][2] = 1;
+
+    buf = matrix;
+    for (i = 0; i < 3; i++) {
+        for (j = 0; j < 3; j++) {
+            display_matrix[j][i] = AV_RL32(buf);
+            buf += 4;
+        }
+    }
+
+    for (i = 0; i < 3; i++) {
+        for (j = 0; j < 3; j++) {
+            result[i][j] = 0;
+            for (k = 0; k < 3; k++)
+                result[i][j] += display_matrix[i][k] * flip[k][j];
+        }
+    }
+
+    buf = matrix;
+    for (i = 0; i < 3; i++) {
+        for (j = 0; j < 3; j++) {
+            AV_WL32(buf, result[j][i]);
+            buf += 4;
+        }
+    }
+
+    return matrix;
+}
