@@ -13,6 +13,10 @@ libavutil:     2013-12-xx
 
 API changes, most recent first:
 
+2014-05-xx - xxxxxxx - lavu 53.16.0 - display.h
+  Add av_display_matrix_translate() and av_display_matrix_flip() to
+  set translation values and to flip the transformation matrix.
+
 2014-04-xx - xxxxxxx - lavr 1.3.0 - avresample.h
   Add avresample_max_output_samples
 
