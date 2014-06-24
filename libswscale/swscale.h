@@ -228,6 +228,15 @@ int sws_scale(struct SwsContext *c, const uint8_t *const srcSlice[],
               uint8_t *const dst[], const int dstStride[]);
 
 /**
+ * Set src and dst color range. This function must be called before sws_scale().
+ *
+ * @return -1 if not supported
+ */
+int sws_setColorrangeDetails(struct SwsContext *c,
+                             enum AVColorRange srcRange,
+                             enum AVColorRange dstRange);
+
+/**
  * @param inv_table the yuv2rgb coefficients, normally ff_yuv2rgb_coeffs[x]
  * @return -1 if not supported
  */

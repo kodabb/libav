@@ -787,6 +787,19 @@ static void getSubSampleFactors(int *h, int *v, enum AVPixelFormat format)
     *v = desc->log2_chroma_h;
 }
 
+int sws_setColorrangeDetails(struct SwsContext *c,
+                             enum AVColorRange srcRange,
+                             enum AVColorRange dstRange)
+{
+    if (!isYUV(c->srcFormat) || !isYUV(c->dstFormat))
+        return -1;
+
+    c->srcRange   = srcRange;
+    c->dstRange   = dstRange;
+
+    return 0;
+}
+
 int sws_setColorspaceDetails(struct SwsContext *c, const int inv_table[4],
                              int srcRange, const int table[4], int dstRange,
                              int brightness, int contrast, int saturation)
