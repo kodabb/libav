@@ -1334,4 +1334,8 @@ AVCodec ff_svq3_decoder = {
                       CODEC_CAP_DELAY,
     .pix_fmts       = (const enum AVPixelFormat[]) { AV_PIX_FMT_YUVJ420P,
                                                      AV_PIX_FMT_NONE},
+#if FF_API_PIX_FMT_FULL
+    .pix_fmts_full  = (const enum AVPixelFormat[]) { AV_PIX_FMT_YUV420P,
+                                                     AV_PIX_FMT_NONE },
+#endif
 };

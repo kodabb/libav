@@ -2784,6 +2784,9 @@ typedef struct AVCodec {
     int capabilities;
     const AVRational *supported_framerates; ///< array of supported framerates, or NULL if any, array is terminated by {0,0}
     const enum AVPixelFormat *pix_fmts;     ///< array of supported pixel formats, or NULL if unknown, array is terminated by -1
+#if FF_API_PIX_FMT_FULL
+    const enum AVPixelFormat *pix_fmts_full; ///< array of supported full range pixel formats, or NULL if unknown, array is terminated by -1
+#endif
     const int *supported_samplerates;       ///< array of supported audio samplerates, or NULL if unknown, array is terminated by 0
     const enum AVSampleFormat *sample_fmts; ///< array of supported sample formats, or NULL if unknown, array is terminated by -1
     const uint64_t *channel_layouts;         ///< array of support channel layouts, or NULL if unknown. array is terminated by 0

@@ -13,6 +13,10 @@ libavutil:     2013-12-xx
 
 API changes, most recent first:
 
+2014-xx-xx - xxxxxxx - lavc 55.55.1 - avcodec.h
+  Add pix_fmts_full to AVCodec to list supported full range pixel formats.
+  Enabled on the next lavc major bump.
+
 2014-xx-xx - xxxxxxx - lsws 2.2.0
   Add sws_setColorrangeDetails() to set the input and output color range.
 
