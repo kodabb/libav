@@ -2,8 +2,8 @@ HEVC_SAMPLES =                  \
     AMP_A_Samsung_4             \
     AMP_B_Samsung_4             \
     AMVP_C_Samsung_4            \
-    AMP_D_Hisilicon             \
-    AMP_E_Hisilicon             \
+    AMP_D_Hisilicon_3           \
+    AMP_E_Hisilicon_3           \
     AMP_F_Hisilicon_3           \
     AMVP_A_MTK_4                \
     AMVP_B_MTK_4                \
