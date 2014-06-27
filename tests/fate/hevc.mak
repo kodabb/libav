@@ -38,6 +38,8 @@ HEVC_SAMPLES =                  \
     ENTP_B_LG_2                 \
     ENTP_C_LG_3                 \
     EXT_A_ericsson_4            \
+    FILLER_A_Sony_1             \
+    INITQP_A_Sony_1             \
     ipcm_A_NEC_3                \
     ipcm_B_NEC_3                \
     ipcm_C_NEC_3                \
@@ -63,6 +65,8 @@ HEVC_SAMPLES =                  \
     MVDL1ZERO_A_docomo_4        \
     MVEDGE_A_qualcomm_3         \
     NUT_A_ericsson_5            \
+    OPFLAG_B_Qualcomm_1         \
+    OPFLAG_C_Qualcomm_1         \
     PICSIZE_A_Bossen_1          \
     PICSIZE_B_Bossen_1          \
     PICSIZE_C_Bossen_1          \
@@ -128,6 +132,7 @@ HEVC_SAMPLES =                  \
 
 HEVC_SAMPLES_10BIT =            \
     DBLK_A_MAIN10_VIXS_3        \
+    INITQP_B_Main10_Sony_1      \
     WP_A_MAIN10_Toshiba_3       \
     WP_MAIN10_B_Toshiba_3       \
     WPP_A_ericsson_MAIN10_2     \
@@ -136,6 +141,8 @@ HEVC_SAMPLES_10BIT =            \
     WPP_D_ericsson_MAIN10_2     \
     WPP_E_ericsson_MAIN10_2     \
     WPP_F_ericsson_MAIN10_2     \
+
+fate-hevc-conformance-CONFWIN_A_Sony_1: CMD = framecrc -vsync 0 -flags unaligned -i $(TARGET_SAMPLES)/hevc-conformance/CONFWIN_A_Sony_1.bit
 
 # do not pass:
 # DELTAQP_A_BRCM_4.bit -- TODO uses CRC instead of MD5
@@ -156,6 +163,7 @@ $(foreach N,$(HEVC_SAMPLES),$(eval $(call FATE_HEVC_TEST,$(N))))
 $(foreach N,$(HEVC_SAMPLES_10BIT),$(eval $(call FATE_HEVC_TEST_10BIT,$(N))))
 
 FATE_HEVC-$(call DEMDEC, HEVC, HEVC) += $(FATE_HEVC)
+FATE_HEVC-$(call DEMDEC, HEVC, HEVC) += fate-hevc-conformance-CONFWIN_A_Sony_1
 
 FATE_SAMPLES_AVCONV += $(FATE_HEVC-yes)
 
