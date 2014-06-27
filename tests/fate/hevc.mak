@@ -144,10 +144,13 @@ HEVC_SAMPLES_10BIT =            \
 
 fate-hevc-conformance-CONFWIN_A_Sony_1: CMD = framecrc -vsync 0 -flags unaligned -i $(TARGET_SAMPLES)/hevc-conformance/CONFWIN_A_Sony_1.bit
 
-# do not pass:
-# DELTAQP_A_BRCM_4.bit -- TODO uses CRC instead of MD5
-# HRD_A_Fujitsu_2.bin -- TODO uses hash 2 ("checksum")
-# TSUNEQBD_A_MAIN10_Technicolor_2.bit (segfault)
+# not fully supported (TODO):
+# BUMPING_A_ericsson_1.bit -- all frames are decoded, some should be skipped
+# DELTAQP_A_BRCM_4.bit -- uses CRC instead of MD5
+# HRD_A_Fujitsu_2.bin -- uses hash 2 ("checksum")
+# NoOutPrior_A_Qualcomm_1 -- missing 4 refs
+# NoOutPrior_B_Qualcomm_1 -- adding 4 extra refs
+# TSUNEQBD_A_MAIN10_Technicolor_2.bit -- uses different bitdepth for Y and UV
 
 define FATE_HEVC_TEST
 FATE_HEVC += fate-hevc-conformance-$(1)
