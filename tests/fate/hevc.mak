@@ -45,7 +45,7 @@ HEVC_SAMPLES =                  \
     ipcm_E_NEC_2                \
     IPRED_A_docomo_2            \
     IPRED_B_Nokia_3             \
-    IPRED_C_Mitsubishi_2        \
+    IPRED_C_Mitsubishi_3        \
     LS_A_Orange_2               \
     LS_B_ORANGE_4               \
     LTRPSPS_A_Qualcomm_1        \
@@ -60,7 +60,7 @@ HEVC_SAMPLES =                  \
     MERGE_F_MTK_4               \
     MERGE_G_HHI_4               \
     MVCLIP_A_qualcomm_3         \
-    MVDL1ZERO_A_docomo_3        \
+    MVDL1ZERO_A_docomo_4        \
     MVEDGE_A_qualcomm_3         \
     NUT_A_ericsson_5            \
     PICSIZE_A_Bossen_1          \
@@ -85,7 +85,7 @@ HEVC_SAMPLES =                  \
     RPS_C_ericsson_5            \
     RPS_D_ericsson_6            \
     RPS_E_qualcomm_5            \
-    RPS_F_docomo_1              \
+    RPS_F_docomo_2              \
     RQT_A_HHI_4                 \
     RQT_B_HHI_4                 \
     RQT_C_HHI_4                 \
@@ -127,7 +127,7 @@ HEVC_SAMPLES =                  \
     WPP_F_ericsson_MAIN_2       \
 
 HEVC_SAMPLES_10BIT =            \
-    DBLK_A_MAIN10_VIXS_2        \
+    DBLK_A_MAIN10_VIXS_3        \
     WP_A_MAIN10_Toshiba_3       \
     WP_MAIN10_B_Toshiba_3       \
     WPP_A_ericsson_MAIN10_2     \
