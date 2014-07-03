@@ -171,7 +171,9 @@ typedef struct AVFrame {
     int format;
 
     /**
-     * 1 -> keyframe, 0-> not
+     * frame has no reference to other frames other than itself, so it
+     * may be used as a hint for correct input or output.
+     * This corresponds to H264 IDR frames or HEVC IRAP frames.
      */
     int key_frame;
 
