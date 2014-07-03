@@ -143,6 +143,7 @@ int ff_hevc_set_new_ref(HEVCContext *s, AVFrame **frame, int poc)
     *frame = ref->frame;
     s->ref = ref;
 
+    av_log(NULL, AV_LOG_ERROR, "poc:%d flag:%d\n", poc, s->sh.no_output_of_prior_pics_flag);
     if (s->sh.pic_output_flag)
         ref->flags = HEVC_FRAME_FLAG_OUTPUT | HEVC_FRAME_FLAG_SHORT_REF;
     else
@@ -162,6 +163,20 @@ int ff_hevc_output_frame(HEVCContext *s, AVFrame *out, int flush)
         int min_poc   = INT_MAX;
         int i, min_idx, ret;
 
+        if (s->sh.no_output_of_prior_pics_flag && IS_IRAP(s)) {
+            for (i = 0; i < FF_ARRAY_ELEMS(s->DPB); i++) {
+                HEVCFrame *frame = &s->DPB[i];
+                if ((frame->flags & HEVC_FRAME_FLAG_OUTPUT) &&
+                    frame->poc != s->poc &&
+                    frame->sequence == s->seq_output) {
+                    av_log(NULL, AV_LOG_INFO, "%d frame POC %d ", i, frame->poc);
+                    av_log(NULL, AV_LOG_INFO, "REMOVED");
+                    frame->flags &= ~HEVC_FRAME_FLAG_OUTPUT;
+                    av_log(NULL, AV_LOG_INFO, "sbl %d \n", s->sps->temporal_layer[s->sps->max_sub_layers - 1].num_reorder_pics);
+                }
+            }
+        }
+
         for (i = 0; i < FF_ARRAY_ELEMS(s->DPB); i++) {
             HEVCFrame *frame = &s->DPB[i];
             if ((frame->flags & HEVC_FRAME_FLAG_OUTPUT) &&
@@ -173,7 +188,6 @@ int ff_hevc_output_frame(HEVCContext *s, AVFrame *out, int flush)
                 }
             }
         }
-
         /* wait for more frames before output */
         if (!flush && s->seq_output == s->seq_decode && s->sps &&
             nb_output <= s->sps->temporal_layer[s->sps->max_sub_layers - 1].num_reorder_pics)
