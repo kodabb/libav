@@ -82,6 +82,8 @@ enum AVFrameSideDataType {
      * See libavutil/display.h for a detailed description of the data.
      */
     AV_FRAME_DATA_DISPLAYMATRIX,
+
+    AV_FRAME_DATA_CODED_PROPERTIES,
 };
 
 typedef struct AVFrameSideData {
@@ -170,6 +172,7 @@ typedef struct AVFrame {
      */
     int format;
 
+#if FF_API_AVFRAME_CODED_PROP
     /**
      * frame has no reference to other frames other than itself, so it
      * may be used as a hint for correct input or output.
@@ -181,6 +184,7 @@ typedef struct AVFrame {
      * Picture type of the frame.
      */
     enum AVPictureType pict_type;
+#endif
 
 #if FF_API_AVFRAME_LAVC
     attribute_deprecated
@@ -216,10 +220,13 @@ typedef struct AVFrame {
      */
     int display_picture_number;
 
+#if FF_API_AVFRAME_CODED_PROP
+    // QUANTIZER
     /**
      * quality (between 1 (good) and FF_LAMBDA_MAX (bad))
      */
     int quality;
+#endif
 
 #if FF_API_AVFRAME_LAVC
     attribute_deprecated
@@ -285,10 +292,13 @@ typedef struct AVFrame {
      */
     void *opaque;
 
+#if FF_API_AVFRAME_CODED_PROP
+    // PSNR
     /**
      * error
      */
     uint64_t error[AV_NUM_DATA_POINTERS];
+#endif
 
 #if FF_API_AVFRAME_LAVC
     attribute_deprecated
