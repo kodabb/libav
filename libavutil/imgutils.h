@@ -100,8 +100,12 @@ int av_image_alloc(uint8_t *pointers[4], int linesizes[4],
  * The first byte of each successive line is separated by *_linesize
  * bytes.
  *
+ * @param dst          destination plane pointer
  * @param dst_linesize linesize for the image plane in dst
+ * @param src          source plane pointer
  * @param src_linesize linesize for the image plane in src
+ * @param bytewidth    length of lines to copy
+ * @param height       number of lines to copy
  */
 void av_image_copy_plane(uint8_t       *dst, int dst_linesize,
                          const uint8_t *src, int src_linesize,
@@ -110,8 +114,13 @@ void av_image_copy_plane(uint8_t       *dst, int dst_linesize,
 /**
  * Copy image in src_data to dst_data.
  *
+ * @param dst_data      destination data pointers
  * @param dst_linesizes linesizes for the image in dst_data
+ * @param src_data      source data pointers
  * @param src_linesizes linesizes for the image in src_data
+ * @param pix_fmt       pixel format (must match between src and dst)
+ * @param width         number of pixels to be copied horizontally
+ * @param height        number of pixels to be copied vertically
  */
 void av_image_copy(uint8_t *dst_data[4], int dst_linesizes[4],
                    const uint8_t *src_data[4], const int src_linesizes[4],
