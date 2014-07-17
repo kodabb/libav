@@ -55,7 +55,7 @@ typedef struct TiltandshiftContext {
     FrameList *input;
 } TiltandshiftContext;
 
-static int add_list_frame(TiltandshiftContext *s, AVFrame *frame)
+static int list_add_frame(TiltandshiftContext *s, AVFrame *frame)
 {
     FrameList *element = av_mallocz(sizeof(FrameList));
     if (!element)
@@ -75,6 +75,20 @@ static int add_list_frame(TiltandshiftContext *s, AVFrame *frame)
     element->column_index =s->list_size;
     s->list_size++;
     return 0;
+}
+
+static void list_empty(TiltandshiftContext *s)
+{
+    FrameList *next = s->input;
+    FrameList *tmp;
+
+    while (next) {
+        tmp = next;
+        next = tmp->next;
+        av_free(tmp);
+    }
+    s->input = NULL;
+    s->list_size = 0;
 }
 
 static const enum AVPixelFormat formats_supported[] = {
@@ -114,36 +128,35 @@ static int config_output(AVFilterLink *outlink)
 static int filter_frame(AVFilterLink *inlink, AVFrame *frame)
 {
     TiltandshiftContext *s = inlink->dst->priv;
-    return add_list_frame(s, frame);
+    return list_add_frame(s, frame);
 }
-static prr;
+
 static int request_frame(AVFilterLink *outlink)
 {
     AVFilterContext *ctx = outlink->src;
     TiltandshiftContext *s = ctx->priv;
     const AVPixFmtDescriptor *pix_desc;
-    int ret, ncol;
-    FrameList *head = s->input;
+    int ret = 0;
+    int ncol, nframe;
+    FrameList *head;
 
     while (s->list_size < outlink->w) {
         ret = ff_request_frame(ctx->inputs[0]);
         if (ret < 0) //TODO handle eof
             return ret;
     }
-    if (prr)
-        return AVERROR_EOF;
-    prr=1;
      //   return AVERROR(EAGAIN);
 
-    AVFrame *dst = ff_get_video_buffer(outlink, outlink->w, outlink->h);
-    if (!dst)
-        return AVERROR(ENOMEM);
 
     pix_desc = av_pix_fmt_desc_get(outlink->format);
     if (!pix_desc)
         return AVERROR_BUG;
-    {
 
+    for (nframe = 0; nframe < s->list_size; nframe++) {
+        AVFrame *dst = ff_get_video_buffer(outlink, outlink->w, outlink->h);
+        if (!dst)
+            return AVERROR(ENOMEM);
+        head = s->input;
         for (ncol = 0; ncol < outlink->w; ncol++) {
             uint8_t *dst_data[4];
             const uint8_t *src_data[4];
@@ -153,20 +166,26 @@ static int request_frame(AVFilterLink *outlink)
             dst_data[1] = dst->data[1] + ncol/2;
             dst_data[2] = dst->data[2] + ncol/2;
             dst_data[3] = dst->data[3];
-            src_data[0] = src->data[0] + ncol;
-            src_data[1] = src->data[1] + ncol/2;
-            src_data[2] = src->data[2] + ncol/2;
+            // ncol+nframe generates width-long seq
+            src_data[0] = src->data[0] + ncol + nframe;
+            src_data[1] = src->data[1] + (ncol + nframe) / 2;
+            src_data[2] = src->data[2] + (ncol + nframe) / 2;
             src_data[3] = src->data[3];
 
             av_image_copy(dst_data, dst->linesize,
                           src_data, src->linesize,
                           outlink->format, 1, outlink->h);
-    av_log(NULL, AV_LOG_INFO, "buffer %d [%d / %d]\n", head->column_index, outlink->w, outlink->h);
+            av_log(NULL, AV_LOG_INFO, "hit %d [%d / %d]\n", nframe, outlink->w, outlink->h);
             head = head->next;
         }
-
+        ret = ff_filter_frame(outlink, dst);
+        if (ret < 0)
+            return ret;
     }
-    return ff_filter_frame(outlink, dst);
+
+    list_empty(s);
+    av_log(ctx, AV_LOG_VERBOSE, "Completed ");
+    return ret;
 }
 
 #define OFFSET(x) offsetof(TiltandshiftContext, x)
