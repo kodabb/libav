@@ -175,15 +175,22 @@ static int request_frame(AVFilterLink *outlink)
             av_image_copy(dst_data, dst->linesize,
                           src_data, src->linesize,
                           outlink->format, 1, outlink->h);
-            av_log(NULL, AV_LOG_INFO, "hit %d [%d / %d]\n", nframe, outlink->w, outlink->h);
             head = head->next;
         }
+        av_log(NULL, AV_LOG_INFO, "hit %d [%d / %d]\n", nframe, outlink->w, outlink->h);
         ret = ff_filter_frame(outlink, dst);
         if (ret < 0)
             return ret;
+        s->input = s->input->next;
+        do {
+            ret = ff_request_frame(ctx->inputs[0]);
+            if (ret != AVERROR(EAGAIN) && ret < 0) //TODO handle eof
+                return ret;
+        } while (ret == AVERROR(EAGAIN));
+
     }
 
-    list_empty(s);
+    //list_empty(s);
     av_log(ctx, AV_LOG_VERBOSE, "Completed ");
     return ret;
 }
