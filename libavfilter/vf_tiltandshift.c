@@ -128,6 +128,31 @@ static int config_output(AVFilterLink *outlink)
 static int filter_frame(AVFilterLink *inlink, AVFrame *frame)
 {
     TiltandshiftContext *s = inlink->dst->priv;
+    AVFrame *dst = ff_get_video_buffer(inlink, inlink->w, inlink->h);
+
+    /*
+    for (ncol = 0; ncol <= s->list_size; ncol++) {
+            uint8_t *dst_data[4];
+            const uint8_t *src_data[4];
+            AVFrame *src = head->frame;
+
+            dst_data[0] = dst->data[0] + ncol;
+            dst_data[1] = dst->data[1] + ncol/2;
+            dst_data[2] = dst->data[2] + ncol/2;
+            dst_data[3] = dst->data[3];
+            // ncol+nframe generates width-long seq
+            src_data[0] = src->data[0] + ncol + nframe;
+            src_data[1] = src->data[1] + (ncol + nframe) / 2;
+            src_data[2] = src->data[2] + (ncol + nframe) / 2;
+            src_data[3] = src->data[3];
+
+            av_image_copy(dst_data, dst->linesize,
+                          src_data, src->linesize,
+                          outlink->format, 1, outlink->h);
+            head = head->next;
+        }
+        av_log(NULL, AV_LOG_INFO, "hit %d [%d / %d]\n", nframe, outlink->w, outlink->h);
+*/
     return list_add_frame(s, frame);
 }
 
@@ -139,21 +164,18 @@ static int request_frame(AVFilterLink *outlink)
     int ret = 0;
     int ncol, nframe;
     FrameList *head;
-
+AVFrame *dst;
     while (s->list_size < outlink->w) {
         ret = ff_request_frame(ctx->inputs[0]);
         if (ret < 0) //TODO handle eof
             return ret;
     }
-     //   return AVERROR(EAGAIN);
-
 
     pix_desc = av_pix_fmt_desc_get(outlink->format);
     if (!pix_desc)
         return AVERROR_BUG;
 
-    for (nframe = 0; nframe < s->list_size; nframe++) {
-        AVFrame *dst = ff_get_video_buffer(outlink, outlink->w, outlink->h);
+    for (nframe = 0; nframe <= s->list_size; nframe++) {
         if (!dst)
             return AVERROR(ENOMEM);
         head = s->input;
@@ -181,13 +203,6 @@ static int request_frame(AVFilterLink *outlink)
         ret = ff_filter_frame(outlink, dst);
         if (ret < 0)
             return ret;
-        s->input = s->input->next;
-        do {
-            ret = ff_request_frame(ctx->inputs[0]);
-            if (ret != AVERROR(EAGAIN) && ret < 0) //TODO handle eof
-                return ret;
-        } while (ret == AVERROR(EAGAIN));
-
     }
 
     //list_empty(s);
