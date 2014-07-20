@@ -419,6 +419,26 @@ static void bswap16UV_c(uint8_t *_dstU, uint8_t *_dstV, const uint8_t *_src1,
     }
 }
 
+static void bswap16gray_c(uint8_t *_dst, const uint8_t *_src, int width,
+                          uint32_t *unused)
+{
+    int i;
+    const uint16_t *src = (const uint16_t *)_src;
+    uint16_t *dst       = (uint16_t *)_dst;
+    for (i = 0; i < width; i++)
+        dst[i] = av_bswap16(src[i * 2]);
+}
+
+static void bswap16alpha_c(uint8_t *_dst, const uint8_t *_src, int width,
+                           uint32_t *unused)
+{
+    int i;
+    const uint16_t *src = (const uint16_t *)_src;
+    uint16_t *dst       = (uint16_t *)_dst;
+    for (i = 0; i < width; i++)
+        dst[i] = av_bswap16(src[i * 2 + 1]);
+}
+
 /* This is almost identical to the previous, end exists only because
  * yuy2ToY/UV)(dst, src + 1, ...) would have 100% unaligned accesses. */
 static void uyvyToY_c(uint8_t *dst, const uint8_t *src, int width,
@@ -961,6 +981,10 @@ av_cold void ff_sws_init_input_funcs(SwsContext *c)
         c->lumToYV12 = bswap16Y_c;
         c->alpToYV12 = bswap16Y_c;
         break;
+    case AV_PIX_FMT_YA16LE:
+        c->lumToYV12 = bswap16gray_c;
+        c->alpToYV12 = bswap16alpha_c;
+        break;
 #else
     case AV_PIX_FMT_YUV444P9BE:
     case AV_PIX_FMT_YUV422P9BE:
@@ -985,6 +1009,10 @@ av_cold void ff_sws_init_input_funcs(SwsContext *c)
     case AV_PIX_FMT_YUVA444P16BE:
         c->lumToYV12 = bswap16Y_c;
         c->alpToYV12 = bswap16Y_c;
+        break;
+    case AV_PIX_FMT_YA16BE:
+        c->lumToYV12 = bswap16gray_c;
+        c->alpToYV12 = bswap16alpha_c;
         break;
 #endif
     case AV_PIX_FMT_YUYV422:
