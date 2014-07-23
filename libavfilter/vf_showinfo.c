@@ -62,6 +62,9 @@ static void dump_stereo3d(AVFilterContext *ctx, AVFrameSideData *sd)
     case AV_STEREO3D_COLUMNS:             av_log(ctx, AV_LOG_INFO, "interleaved columns");    break;
     case AV_STEREO3D_SIDEBYSIDE_QUINCUNX: av_log(ctx, AV_LOG_INFO, "side by side "
                                                                    "(quincunx subsampling)"); break;
+    case AV_STEREO3D_MULTIVIEW:           av_log(ctx, AV_LOG_INFO, "multiple streams");       break;
+    case AV_STEREO3D_ANAGLYPH_CYAN_RED:   av_log(ctx, AV_LOG_INFO, "anaglyph (cyan/red)");    break;
+    case AV_STEREO3D_ANAGLYPH_GREEN_MAGENTA: av_log(ctx, AV_LOG_INFO, "anaglyph (green/magenta"); break;
     default:                              av_log(ctx, AV_LOG_WARNING, "unknown");             break;
     }
 

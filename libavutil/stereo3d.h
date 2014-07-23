@@ -105,6 +105,18 @@ enum AVStereo3DType {
      *    ...
      */
     AV_STEREO3D_COLUMNS,
+
+    /**
+     * Views are in separate streams (eg. MKV) or
+     * in separate layers (eg. MVC).
+     */
+    AV_STEREO3D_MULTIVIEW,
+
+    /**
+     * Views are colored funny.
+     */
+    AV_STEREO3D_ANAGLYPH_CYAN_RED,
+    AV_STEREO3D_ANAGLYPH_GREEN_MAGENTA,
 };
 
 
