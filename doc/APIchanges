@@ -13,6 +13,9 @@ libavutil:     2013-12-xx
 
 API changes, most recent first:
 
+2014-07-xx - xxxxxxx - lavc 55.58.0 - avcodec.h
+  Add AV_PKT_DATA_STEREO3D to export conteiner-level stereo3d information.
+
 2014-08-xx - xxxxxxx - lavu 53.23.0 - stereo3d.h
   Add multistream and anaglyph types to stereo3d types, AV_STEREO3D_MULTIVIEW,
   AV_STEREO3D_ANAGLYPH_CYAN_RED, and AV_STEREO3D_ANAGLYPH_GREEN_MAGENTA.
