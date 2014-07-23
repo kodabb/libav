@@ -105,6 +105,18 @@ enum AVStereo3DType {
      *    ...
      */
     AV_STEREO3D_COLUMNS,
+
+    /**
+     * Views are in separate streams or layers (eg. Matroska or MVC).
+     * You can check which is which by looking at AV_STEREO3D_FLAG_{LEFT,RIGHT}.
+     */
+    AV_STEREO3D_MULTIVIEW,
+
+    /**
+     * Views are colored funny.
+     */
+    AV_STEREO3D_ANAGLYPH_CYAN_RED,
+    AV_STEREO3D_ANAGLYPH_GREEN_MAGENTA,
 };
 
 
@@ -112,6 +124,13 @@ enum AVStereo3DType {
  * Inverted views, Right/Bottom represents the left view.
  */
 #define AV_STEREO3D_FLAG_INVERT     (1 << 0)
+
+/**
+ * When mode is AV_STEREO3D_MULTIVIEW you can check against the following
+ * flags to discriminate whether the current stream is the left or right one.
+ */
+#define AV_STEREO3D_FLAG_LEFT       (1 << 1)
+#define AV_STEREO3D_FLAG_RIGHT      (1 << 2)
 
 /**
  * Stereo 3D type: this structure describes how two videos are packed
