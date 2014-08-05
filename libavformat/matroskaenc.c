@@ -43,6 +43,7 @@
 #include "libavutil/opt.h"
 #include "libavutil/random_seed.h"
 #include "libavutil/samplefmt.h"
+#include "libavutil/stereo3d.h"
 
 #include "libavcodec/xiph.h"
 #include "libavcodec/mpeg4audio.h"
@@ -624,26 +625,69 @@ static int mkv_write_codecprivate(AVFormatContext *s, AVIOContext *pb,
     return ret;
 }
 
-static void mkv_write_stereo_mode(AVIOContext *pb, uint8_t stereo_fmt,
-                                  int mode)
+static MatroskaVideoStereoModeType mkv_stereo3d_get(AVStream *st, int mode)
 {
-    int valid_fmt = 0;
+    int i;
+    MatroskaVideoStereoModeType format = MATROSKA_VIDEO_STEREOMODE_TYPE_NB;
 
-    switch (mode) {
-    case MODE_WEBM:
-        if (stereo_fmt <= MATROSKA_VIDEO_STEREOMODE_TYPE_TOP_BOTTOM ||
-            stereo_fmt == MATROSKA_VIDEO_STEREOMODE_TYPE_RIGHT_LEFT)
-            valid_fmt = 1;
-        break;
-    case MODE_MATROSKAv2:
-        if (stereo_fmt <= MATROSKA_VIDEO_STEREOMODE_TYPE_BOTH_EYES_BLOCK_RL)
-            valid_fmt = 1;
-        break;
+    for (i = 0; i < st->nb_side_data; i++) {
+        AVPacketSideData sd = st->side_data[i];
+        if (sd.type == AV_PKT_DATA_STEREO3D) {
+            AVStereo3D *stereo = (AVStereo3D *)sd.data;
+
+            switch (stereo->type) {
+            case AV_STEREO3D_2D:
+                format = MATROSKA_VIDEO_STEREOMODE_TYPE_MONO;
+                break;
+            case AV_STEREO3D_SIDEBYSIDE:
+                format = (stereo->flags & AV_STEREO3D_FLAG_INVERT) ? MATROSKA_VIDEO_STEREOMODE_TYPE_RIGHT_LEFT
+                                                                   : MATROSKA_VIDEO_STEREOMODE_TYPE_LEFT_RIGHT;
+                break;
+            case AV_STEREO3D_TOPBOTTOM:
+                format = MATROSKA_VIDEO_STEREOMODE_TYPE_TOP_BOTTOM;
+                if (stereo->flags & AV_STEREO3D_FLAG_INVERT)
+                    format--;
+                break;
+            case AV_STEREO3D_CHECKERBOARD:
+                format = MATROSKA_VIDEO_STEREOMODE_TYPE_CHECKERBOARD_LR;
+                if (stereo->flags & AV_STEREO3D_FLAG_INVERT)
+                    format--;
+                break;
+            case AV_STEREO3D_LINES:
+                format = MATROSKA_VIDEO_STEREOMODE_TYPE_ROW_INTERLEAVED_LR;
+                if (stereo->flags & AV_STEREO3D_FLAG_INVERT)
+                    format--;
+                break;
+            case AV_STEREO3D_COLUMNS:
+                format = MATROSKA_VIDEO_STEREOMODE_TYPE_COL_INTERLEAVED_LR;
+                if (stereo->flags & AV_STEREO3D_FLAG_INVERT)
+                    format--;
+                break;
+            case AV_STEREO3D_ANAGLYPH_CYAN_RED:
+                format = MATROSKA_VIDEO_STEREOMODE_TYPE_ANAGLYPH_CYAN_RED;
+                break;
+            case AV_STEREO3D_ANAGLYPH_GREEN_MAGENTA:
+                format = MATROSKA_VIDEO_STEREOMODE_TYPE_ANAGLYPH_GREEN_MAG;
+                break;
+            case AV_STEREO3D_MULTIVIEW:
+                format = MATROSKA_VIDEO_STEREOMODE_TYPE_BOTH_EYES_BLOCK_LR;
+                if (stereo->flags & AV_STEREO3D_FLAG_INVERT)
+                    format++;
+                break;
+            }
+
+            break;
+        }
     }
 
-    if (valid_fmt)
-        put_ebml_uint (pb, MATROSKA_ID_VIDEOSTEREOMODE, stereo_fmt);
+    if (mode == MODE_WEBM &&
+        (format > MATROSKA_VIDEO_STEREOMODE_TYPE_TOP_BOTTOM &&
+         format != MATROSKA_VIDEO_STEREOMODE_TYPE_RIGHT_LEFT))
+        format = MATROSKA_VIDEO_STEREOMODE_TYPE_NB;
+
+    return format;
 }
+
 
 static int mkv_write_track(AVFormatContext *s, MatroskaMuxContext *mkv,
                            int i, AVIOContext *pb)
@@ -656,6 +700,7 @@ static int mkv_write_track(AVFormatContext *s, MatroskaMuxContext *mkv,
     int bit_depth = av_get_bits_per_sample(codec->codec_id);
     int sample_rate = codec->sample_rate;
     int output_sample_rate = 0;
+    int stereo_format;
     int j, ret;
     AVDictionaryEntry *tag;
 
@@ -743,9 +788,21 @@ static int mkv_write_track(AVFormatContext *s, MatroskaMuxContext *mkv,
         // XXX: interlace flag?
         put_ebml_uint (pb, MATROSKA_ID_VIDEOPIXELWIDTH , codec->width);
         put_ebml_uint (pb, MATROSKA_ID_VIDEOPIXELHEIGHT, codec->height);
+
+        //TODO: question, should i wrap this two ifs in mvk_write_stereo_mode?
+
+        // convert metadata into proper side data and add it to the stream
         if ((tag = av_dict_get(s->metadata, "stereo_mode", NULL, 0))) {
-            mkv_write_stereo_mode(pb, atoi(tag->value), mkv->mode);
+            ret = ff_mkv_stereo3d_conv(st, atoi(tag->value));
+            if (ret < 0)
+                return ret;
         }
+
+        // now check side data and write the result to the bitstream
+        stereo_format = mkv_stereo3d_get(st, mkv->mode);
+        if (stereo_format < MATROSKA_VIDEO_STEREOMODE_TYPE_NB)
+            put_ebml_uint(pb, MATROSKA_ID_VIDEOSTEREOMODE, stereo_format);
+
         if (st->sample_aspect_ratio.num) {
             int d_width = codec->width*av_q2d(st->sample_aspect_ratio);
             put_ebml_uint(pb, MATROSKA_ID_VIDEODISPLAYWIDTH , d_width);
