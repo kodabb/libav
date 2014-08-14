@@ -2752,6 +2752,256 @@ unsharp=7:7:-2:7:7:-2
 ./avconv -i in.avi -vf "unsharp" out.mp4
 @end example
 
+
+@anchor{vidstabdetect}
+@section vidstabdetect
+
+Analyze video stabilization/deshaking. Perform pass 1 of 2, see
+@ref{vidstabtransform} for pass 2.
+
+This filter generates a file with relative translation and rotation
+transform information about subsequent frames, which is then used by
+the @ref{vidstabtransform} filter.
+
+To enable compilation of this filter you need to configure Libav with
+@code{--enable-libvidstab}.
+
+This filter accepts the following options:
+
+@table @option
+@item result
+Set the path to the file used to write the transforms information.
+Default value is @file{transforms.trf}.
+
+@item shakiness
+Set how shaky the video is and how quick the camera is. It accepts an
+integer in the range 1-10, a value of 1 means little shakiness, a
+value of 10 means strong shakiness. Default value is 5.
+
+@item accuracy
+Set the accuracy of the detection process. It must be a value in the
+range 1-15. A value of 1 means low accuracy, a value of 15 means high
+accuracy. Default value is 15.
+
+@item stepsize
+Set stepsize of the search process. The region around minimum is
+scanned with 1 pixel resolution. Default value is 6.
+
+@item mincontrast
+Set minimum contrast. Below this value a local measurement field is
+discarded. Must be a floating point value in the range 0-1. Default
+value is 0.3.
+
+@item tripod
+Set reference frame number for tripod mode.
+
+If enabled, the motion of the frames is compared to a reference frame
+in the filtered stream, identified by the specified number. The idea
+is to compensate all movements in a more-or-less static scene and keep
+the camera view absolutely still.
+
+If set to 0, it is disabled. The frames are counted starting from 1.
+
+@item show
+Show fields and transforms in the resulting frames. It accepts an
+integer in the range 0-2. Default value is 0, which disables any
+visualization.
+@end table
+
+@subsection Examples
+
+@itemize
+@item
+Use default values:
+@example
+vidstabdetect
+@end example
+
+@item
+Analyze strongly shaky movie and put the results in file
+@file{mytransforms.trf}:
+@example
+vidstabdetect=shakiness=10:accuracy=15:result="mytransforms.trf"
+@end example
+
+@item
+Visualize the result of internal transformations in the resulting
+video:
+@example
+vidstabdetect=show=1
+@end example
+
+@item
+Analyze a video with medium shakiness using @command{avconv}:
+@example
+avconv -i input -vf vidstabdetect=shakiness=5:show=1 dummy.avi
+@end example
+@end itemize
+
+@anchor{vidstabtransform}
+@section vidstabtransform
+
+Video stabilization/deshaking: pass 2 of 2,
+see @ref{vidstabdetect} for pass 1.
+
+Read a file with transform information for each frame and
+apply/compensate them. Together with the @ref{vidstabdetect}
+filter this can be used to deshake videos. See also
+@url{http://public.hronopik.de/vid.stab}. It is important to also use
+the unsharp filter, see below.
+
+To enable compilation of this filter you need to configure Libav with
+@code{--enable-libvidstab}.
+
+This filter accepts the following options:
+
+@table @option
+
+@item input
+path to the file used to read the transforms (default: @file{transforms.trf})
+
+@item smoothing
+Set the number of frames (value * 2 + 1) used for lowpass filtering the camera
+movements (default: 10). For example a number of 10 means that 21 frames are
+used (10 in the past and 10 in the future) to smoothen the motion in the
+video. A larger values leads to a smoother video, but limits the acceleration
+of the camera (pan/tilt movements).
+0 is a special case where a static camera is simulated.
+
+@item optalgo
+Set the camera path optimization algorithm:
+@table @samp
+@item gauss
+gaussian kernel low-pass filter on camera motion (default)
+@item avg
+averaging on transformations
+@end table
+
+@item maxshift
+maximal number of pixels to translate frames (default: -1 no limit)
+
+@item maxangle
+maximal angle in radians (degree*PI/180) to rotate frames (default: -1
+no limit)
+
+@item crop
+How to deal with borders that may be visible due to movement
+compensation. Available values are:
+
+@table @samp
+@item keep
+keep image information from previous frame (default)
+@item black
+fill the border black
+@end table
+
+@item invert
+@table @samp
+@item 0
+keep transforms normal (default)
+@item 1
+invert transforms
+@end table
+
+@item relative
+consider transforms as
+@table @samp
+@item 0
+absolute
+@item 1
+relative to previous frame (default)
+@end table
+
+@item zoom
+Set percentage to zoom (default: 0)
+@table @samp
+@item >0
+zoom in
+@item <0
+zoom out
+@end table
+
+@item optzoom
+Set optimal zooming to avoid borders
+@table @samp
+@item 0
+disabled
+@item 1
+optimal static zoom value is determined (only very strong movements will lead
+to visible borders) (default)
+@item 2
+optimal adaptive zoom value is determined (no borders will be visible),
+see @option{zoomspeed}
+@end table
+Note that the value given at zoom is added to the one calculated
+here.
+
+@item zoomspeed
+Set percent to zoom maximally each frame (for @option{optzoom=2}).
+Range is from 0 to 5, default value is 0.2
+
+@item interpol
+type of interpolation
+
+Available values are:
+@table @samp
+@item no
+no interpolation
+@item linear
+linear only horizontal
+@item bilinear
+linear in both directions (default)
+@item bicubic
+cubic in both directions (slow)
+@end table
+
+@item tripod
+virtual tripod mode means that the video is stabilized such that the
+camera stays stationary. Use also @code{tripod} option of
+@ref{vidstabdetect}.
+@table @samp
+@item 0
+off (default)
+@item 1
+virtual tripod mode: equivalent to @code{relative=0:smoothing=0}
+@end table
+
+@item debug
+Increase log verbosity of set to 1. Also the detected global motions are
+written to the temporary file @file{global_motions.trf}.
+@table @samp
+@item 0
+disabled (default)
+@item 1
+enabled
+@end table
+
+@end table
+
+@subsection Examples
+
+@itemize
+@item
+typical call with default default values:
+ (note the unsharp filter which is always recommended)
+@example
+avconv -i inp.mpeg -vf vidstabtransform,unsharp=5:5:0.8:3:3:0.4 inp_stabilized.mpeg
+@end example
+
+@item
+zoom in a bit more and load transform data from a given file
+@example
+vidstabtransform=zoom=5:input="mytransforms.trf"
+@end example
+
+@item
+smoothen the video even more
+@example
+vidstabtransform=smoothing=30
+@end example
+
+@end itemize
+
 @section vflip
 
 Flip the input video vertically.

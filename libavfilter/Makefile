@@ -80,6 +80,8 @@ OBJS-$(CONFIG_SPLIT_FILTER)                  += split.o
 OBJS-$(CONFIG_TRANSPOSE_FILTER)              += vf_transpose.o
 OBJS-$(CONFIG_TRIM_FILTER)                   += trim.o
 OBJS-$(CONFIG_UNSHARP_FILTER)                += vf_unsharp.o
+OBJS-$(CONFIG_VIDSTABDETECT_FILTER)          += vidstabutils.o vf_vidstabdetect.o
+OBJS-$(CONFIG_VIDSTABTRANSFORM_FILTER)       += vidstabutils.o vf_vidstabtransform.o
 OBJS-$(CONFIG_VFLIP_FILTER)                  += vf_vflip.o
 OBJS-$(CONFIG_YADIF_FILTER)                  += vf_yadif.o
 
@@ -93,6 +95,8 @@ OBJS-$(CONFIG_TESTSRC_FILTER)                += vsrc_testsrc.o
 OBJS-$(CONFIG_NULLSINK_FILTER)               += vsink_nullsink.o
 
 OBJS-$(HAVE_THREADS)                         += pthread.o
+
+SKIPHEADERS-$(CONFIG_LIBVIDSTAB)             += vidstabutils.h
 
 TOOLS     = graph2dot
 TESTPROGS = filtfmts

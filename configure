@@ -199,6 +199,7 @@ External library support:
   --enable-libspeex        enable Speex de/encoding via libspeex [no]
   --enable-libtheora       enable Theora encoding via libtheora [no]
   --enable-libtwolame      enable MP2 encoding via libtwolame [no]
+  --enable-libvidstab      enable video stabilization using vid.stab [no]
   --enable-libvo-aacenc    enable AAC encoding via libvo-aacenc [no]
   --enable-libvo-amrwbenc  enable AMR-WB encoding via libvo-amrwbenc [no]
   --enable-libvorbis       enable Vorbis encoding via libvorbis [no]
@@ -1159,6 +1160,7 @@ EXTERNAL_LIBRARY_LIST="
     libspeex
     libtheora
     libtwolame
+    libvidstab
     libvo_aacenc
     libvo_amrwbenc
     libvorbis
@@ -2142,6 +2144,9 @@ interlace_filter_deps="gpl"
 ocv_filter_deps="libopencv"
 resample_filter_deps="avresample"
 scale_filter_deps="swscale"
+vidstabdetect_filter_deps="libvidstab"
+vidstabtransform_filter_deps="libvidstab"
+
 
 # examples
 avcodec_example_deps="avcodec avutil"
@@ -3705,6 +3710,7 @@ die_license_disabled() {
 }
 
 die_license_disabled gpl libcdio
+die_license_disabled gpl libvidstab
 die_license_disabled gpl libx264
 die_license_disabled gpl libx265
 die_license_disabled gpl libxavs
@@ -4160,6 +4166,7 @@ enabled libschroedinger   && require_pkg_config schroedinger-1.0 schroedinger/sc
 enabled libspeex          && require_pkg_config speex speex/speex.h speex_decoder_init -lspeex
 enabled libtheora         && require libtheora theora/theoraenc.h th_info_init -ltheoraenc -ltheoradec -logg
 enabled libtwolame        && require libtwolame twolame.h twolame_init -ltwolame
+enabled libvidstab        && require_pkg_config vidstab vid.stab/libvidstab.h vsMotionDetectInit
 enabled libvo_aacenc      && require libvo_aacenc vo-aacenc/voAAC.h voGetAACEncAPI -lvo-aacenc
 enabled libvo_amrwbenc    && require libvo_amrwbenc vo-amrwbenc/enc_if.h E_IF_init -lvo-amrwbenc
 enabled libvorbis         && require libvorbis vorbis/vorbisenc.h vorbis_info_init -lvorbisenc -lvorbis -logg
