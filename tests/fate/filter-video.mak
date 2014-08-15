@@ -84,6 +84,13 @@ FATE_FILTER_VSYNTH-$(CONFIG_TRIM_FILTER) += $(FATE_TRIM)
 FATE_FILTER_VSYNTH-$(CONFIG_UNSHARP_FILTER) += fate-filter-unsharp
 fate-filter-unsharp: CMD = framecrc -c:v pgmyuv -i $(SRC) -vf unsharp
 
+FATE_FILTER_VSYNTH-$(CONFIG_VIDSTABDETECT_FILTER) += fate-filter-vidstab-detect
+fate-filter-vidstab-detect: CMD = framecrc -i $(SRC) -vf vidstabdetect=show=1:result=-
+
+FATE_FILTER_VSYNTH-$(CONFIG_VIDSTABTRANSFORM_FILTER) += fate-filter-vidstab-transform
+fate-filter-vidstab-transform: fate-filter-vidstab-detect
+fate-filter-vidstab-transform: CMD = framecrc -i $(SRC) -vf vidstabtransform=input=-
+
 
 FATE_FILTER_VSYNTH-$(CONFIG_CROP_FILTER) += fate-filter-crop
 fate-filter-crop: CMD = video_filter "crop=iw-100:ih-100:100:100"
