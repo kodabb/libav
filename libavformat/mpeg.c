@@ -218,9 +218,8 @@ static long mpegps_psm_parse(MpegDemuxContext *m, AVIOContext *pb)
 /* read the next PES header. Return its position in ppos
  * (if not NULL), and its start code, pts and dts.
  */
-static int mpegps_read_pes_header(AVFormatContext *s,
-                                  int64_t *ppos, int *pstart_code,
-                                  int64_t *ppts, int64_t *pdts)
+int ff_mpegps_read_pes_header(AVFormatContext *s, int64_t *ppos, int *pstart_code,
+                              int64_t *ppts, int64_t *pdts)
 {
     MpegDemuxContext *m = s->priv_data;
     int len, size, startcode, c, flags, header_len;
@@ -407,7 +406,7 @@ static int mpegps_read_packet(AVFormatContext *s,
     uint8_t av_uninit(dvdaudio_substream_type);
 
 redo:
-    len = mpegps_read_pes_header(s, &dummy_pos, &startcode, &pts, &dts);
+    len = ff_mpegps_read_pes_header(s, &dummy_pos, &startcode, &pts, &dts);
     if (len < 0)
         return len;
 
@@ -548,7 +547,7 @@ static int64_t mpegps_read_dts(AVFormatContext *s, int stream_index,
         return AV_NOPTS_VALUE;
 
     for (;;) {
-        len = mpegps_read_pes_header(s, &pos, &startcode, &pts, &dts);
+        len = ff_mpegps_read_pes_header(s, &pos, &startcode, &pts, &dts);
         if (len < 0) {
             av_dlog(s, "none (ret=%d)\n", len);
             return AV_NOPTS_VALUE;

@@ -243,6 +243,7 @@ void av_register_all(void)
     REGISTER_DEMUXER (VC1,              vc1);
     REGISTER_MUXDEMUX(VC1T,             vc1t);
     REGISTER_DEMUXER (VMD,              vmd);
+    REGISTER_DEMUXER (VOBSUB,           vobsub);
     REGISTER_MUXDEMUX(VOC,              voc);
     REGISTER_DEMUXER (VQF,              vqf);
     REGISTER_DEMUXER (W64,              w64);

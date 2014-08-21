@@ -70,4 +70,12 @@ static inline int64_t ff_parse_pes_pts(const uint8_t *buf) {
              AV_RB16(buf+3) >> 1;
 }
 
+/**
+ * Shared functions with vobsub decoder
+ */
+int ff_mpegps_read_pes_header(AVFormatContext *s, int64_t *ppos, int *pstart_code,
+                              int64_t *ppts, int64_t *pdts);
+
+AVInputFormat ff_mpegps_demuxer;
+
 #endif /* AVFORMAT_MPEG_H */
