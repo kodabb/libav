@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 Vittorio Giovara
+ * Copyright (c) 2014 Vittorio Giovara
  *
  * This file is part of Libav.
  *
@@ -42,7 +42,7 @@
 typedef struct FrameList {
     AVFrame *frame;
     struct FrameList *next;
-    int column_index;
+    int ready;  // a frame is ready when width columns have been processed
 } FrameList;
 
 typedef struct TiltandshiftContext {
@@ -72,7 +72,6 @@ static int list_add_frame(TiltandshiftContext *s, AVFrame *frame)
         head->next = element;
     }
 
-    element->column_index =s->list_size;
     s->list_size++;
     return 0;
 }
@@ -125,35 +124,12 @@ static int config_output(AVFilterLink *outlink)
     return 0;
 }
 */
+int fr;
 static int filter_frame(AVFilterLink *inlink, AVFrame *frame)
 {
     TiltandshiftContext *s = inlink->dst->priv;
-    AVFrame *dst = ff_get_video_buffer(inlink, inlink->w, inlink->h);
-
-    /*
-    for (ncol = 0; ncol <= s->list_size; ncol++) {
-            uint8_t *dst_data[4];
-            const uint8_t *src_data[4];
-            AVFrame *src = head->frame;
-
-            dst_data[0] = dst->data[0] + ncol;
-            dst_data[1] = dst->data[1] + ncol/2;
-            dst_data[2] = dst->data[2] + ncol/2;
-            dst_data[3] = dst->data[3];
-            // ncol+nframe generates width-long seq
-            src_data[0] = src->data[0] + ncol + nframe;
-            src_data[1] = src->data[1] + (ncol + nframe) / 2;
-            src_data[2] = src->data[2] + (ncol + nframe) / 2;
-            src_data[3] = src->data[3];
-
-            av_image_copy(dst_data, dst->linesize,
-                          src_data, src->linesize,
-                          outlink->format, 1, outlink->h);
-            head = head->next;
-        }
-        av_log(NULL, AV_LOG_INFO, "hit %d [%d / %d]\n", nframe, outlink->w, outlink->h);
-*/
-    return list_add_frame(s, frame);
+    list_add_frame(s, frame);
+    return 0;
 }
 
 static int request_frame(AVFilterLink *outlink)
@@ -164,22 +140,21 @@ static int request_frame(AVFilterLink *outlink)
     int ret = 0;
     int ncol, nframe;
     FrameList *head;
-AVFrame *dst;
+    AVFrame *dst;
+
     while (s->list_size < outlink->w) {
         ret = ff_request_frame(ctx->inputs[0]);
         if (ret < 0) //TODO handle eof
             return ret;
     }
 
-    pix_desc = av_pix_fmt_desc_get(outlink->format);
-    if (!pix_desc)
-        return AVERROR_BUG;
-
-    for (nframe = 0; nframe <= s->list_size; nframe++) {
-        if (!dst)
-            return AVERROR(ENOMEM);
-        head = s->input;
-        for (ncol = 0; ncol < outlink->w; ncol++) {
+    dst = ff_get_video_buffer(outlink, outlink->w, outlink->h);
+    if (!dst)
+        return AVERROR(ENOMEM);
+    head = s->input;
+    for (ncol = 0; ncol < s->list_size; ncol++) {
+        nframe = 0;
+        //for (ncol = 0; ncol < outlink->w; ncol++) {
             uint8_t *dst_data[4];
             const uint8_t *src_data[4];
             AVFrame *src = head->frame;
@@ -198,12 +173,13 @@ AVFrame *dst;
                           src_data, src->linesize,
                           outlink->format, 1, outlink->h);
             head = head->next;
-        }
+        //}
         av_log(NULL, AV_LOG_INFO, "hit %d [%d / %d]\n", nframe, outlink->w, outlink->h);
-        ret = ff_filter_frame(outlink, dst);
-        if (ret < 0)
-            return ret;
     }
+    ret = ff_filter_frame(outlink, dst);
+    if (ret < 0)
+        return ret;
+
 
     //list_empty(s);
     av_log(ctx, AV_LOG_VERBOSE, "Completed ");
