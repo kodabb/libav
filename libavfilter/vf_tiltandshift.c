@@ -76,6 +76,18 @@ static int list_add_frame(TiltandshiftContext *s, AVFrame *frame)
     return 0;
 }
 
+static void list_remove_head(TiltandshiftContext *s)
+{
+    FrameList *head = s->input;
+
+    if (head) {
+        s->input = head->next;
+        av_freep(&head);
+    }
+
+    s->list_size--;
+}
+
 static void list_empty(TiltandshiftContext *s)
 {
     FrameList *next = s->input;
@@ -105,40 +117,22 @@ static int query_formats(AVFilterContext *ctx)
 
 static av_cold void tiltandshift_uninit(AVFilterContext *ctx)
 {
+    TiltandshiftContext *s = ctx->priv;
+    list_empty(s);
 }
-/*
-static int config_output(AVFilterLink *outlink)
-{
-    AVFilterContext *ctx = outlink->src;
-    FramepackContext *s  = outlink->src->priv;
 
-    int width            = ctx->inputs[LEFT]->w;
-    int height           = ctx->inputs[LEFT]->h;
-    AVRational time_base = ctx->inputs[LEFT]->time_base;
-
-
-    outlink->w         = width;
-    outlink->h         = height;
-    outlink->time_base = time_base;
-
-    return 0;
-}
-*/
-int fr;
 static int filter_frame(AVFilterLink *inlink, AVFrame *frame)
 {
     TiltandshiftContext *s = inlink->dst->priv;
-    list_add_frame(s, frame);
-    return 0;
+    return list_add_frame(s, frame);
 }
 
 static int request_frame(AVFilterLink *outlink)
 {
     AVFilterContext *ctx = outlink->src;
     TiltandshiftContext *s = ctx->priv;
-    const AVPixFmtDescriptor *pix_desc;
-    int ret = 0;
-    int ncol, nframe;
+    int ret;
+    int ncol;
     FrameList *head;
     AVFrame *dst;
 
@@ -153,37 +147,31 @@ static int request_frame(AVFilterLink *outlink)
         return AVERROR(ENOMEM);
     head = s->input;
     for (ncol = 0; ncol < s->list_size; ncol++) {
-        nframe = 0;
-        //for (ncol = 0; ncol < outlink->w; ncol++) {
-            uint8_t *dst_data[4];
-            const uint8_t *src_data[4];
-            AVFrame *src = head->frame;
+        uint8_t *dst_data[4];
+        const uint8_t *src_data[4];
+        AVFrame *src = head->frame;
 
-            dst_data[0] = dst->data[0] + ncol;
-            dst_data[1] = dst->data[1] + ncol/2;
-            dst_data[2] = dst->data[2] + ncol/2;
-            dst_data[3] = dst->data[3];
-            // ncol+nframe generates width-long seq
-            src_data[0] = src->data[0] + ncol + nframe;
-            src_data[1] = src->data[1] + (ncol + nframe) / 2;
-            src_data[2] = src->data[2] + (ncol + nframe) / 2;
-            src_data[3] = src->data[3];
+        dst_data[0] = dst->data[0] + ncol;
+        dst_data[1] = dst->data[1] + ncol / 2;
+        dst_data[2] = dst->data[2] + ncol / 2;
+        dst_data[3] = dst->data[3];
+        src_data[0] = src->data[0] + ncol;
+        src_data[1] = src->data[1] + ncol / 2;
+        src_data[2] = src->data[2] + ncol / 2;
+        src_data[3] = src->data[3];
 
-            av_image_copy(dst_data, dst->linesize,
-                          src_data, src->linesize,
-                          outlink->format, 1, outlink->h);
-            head = head->next;
-        //}
-        av_log(NULL, AV_LOG_INFO, "hit %d [%d / %d]\n", nframe, outlink->w, outlink->h);
+        av_image_copy(dst_data, dst->linesize,
+                      src_data, src->linesize,
+                      outlink->format, 1, outlink->h);
+        head = head->next;
     }
-    ret = ff_filter_frame(outlink, dst);
+    ret = av_frame_copy_props(dst, s->input->frame);
     if (ret < 0)
         return ret;
 
+    list_remove_head(s);
 
-    //list_empty(s);
-    av_log(ctx, AV_LOG_VERBOSE, "Completed ");
-    return ret;
+    return ff_filter_frame(outlink, dst);
 }
 
 #define OFFSET(x) offsetof(TiltandshiftContext, x)
