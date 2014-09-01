@@ -49,7 +49,10 @@ typedef struct TiltandshiftContext {
     const AVClass *class;
 
     int direction;
+
     int black;
+    uint8_t *black_buffers[4];
+    int black_linesizes[4];
 
     int list_size;
     FrameList *input;
@@ -115,9 +118,34 @@ static int query_formats(AVFilterContext *ctx)
     return 0;
 }
 
-static av_cold void tiltandshift_uninit(AVFilterContext *ctx)
+static av_cold int init(AVFilterContext *ctx)
 {
     TiltandshiftContext *s = ctx->priv;
+
+    // init black buffers that we are going to use later to pad the last frames
+    if (s->black) { //TODO leave it on always
+        int i, j, ret;
+        uint8_t black_data[] = { 16, 127, 127, 16 };
+        //if (s->input->frame->color_range == AVCOL_RANGE_JPEG)
+          //  black_data[0] = black_data[3] = 0;
+
+        ret = av_image_alloc(s->black_buffers, s->black_linesizes, 1,
+                            1080,AV_PIX_FMT_YUV420P, 1);// outlink->h, outlink->format, 1);
+        if (ret < 0)
+            return ret;
+        for (i = 0; i < 3; i++)
+            for (j = 0; j < 1080; j++)
+                memset(s->black_buffers[i] + j * s->black_linesizes[i], i ? 0x80 : 0x10, 1);
+//    s->black_buffers[i][j] = black_data[i];
+    }
+
+    return 0;
+}
+
+static av_cold void uninit(AVFilterContext *ctx)
+{
+    TiltandshiftContext *s = ctx->priv;
+    av_freep(&s->black_buffers);
     list_empty(s);
 }
 
@@ -127,51 +155,83 @@ static int filter_frame(AVFilterLink *inlink, AVFrame *frame)
     return list_add_frame(s, frame);
 }
 
+static void copy_column(uint8_t *dst_data[4], int dst_linesizes[4],
+                        const uint8_t *src_data[4], const int src_linesizes[4],
+                        enum AVPixelFormat format, int height, int ncol)
+{
+    uint8_t *dst[4];
+    const uint8_t *src[4];
+
+    dst[0] = dst_data[0] + ncol;
+    dst[1] = dst_data[1] + ncol / 2;
+    dst[2] = dst_data[2] + ncol / 2;
+    dst[3] = dst_data[3];
+
+    // disable this for static rendering
+    src[0] = src_data[0] + ncol;
+    src[1] = src_data[1] + ncol / 2;
+    src[2] = src_data[2] + ncol / 2;
+    src[3] = src_data[3];
+
+    av_image_copy(dst, dst_linesizes, src, src_linesizes, format, 1, height);
+}
+
 static int request_frame(AVFilterLink *outlink)
 {
     AVFilterContext *ctx = outlink->src;
     TiltandshiftContext *s = ctx->priv;
     int ret;
     int ncol;
-    FrameList *head;
+    FrameList *head = s->input;
     AVFrame *dst;
 
+    // load up enough frames to fill the buffer and keep it filled on subsequent
+    // calls, until we receive EOF, when we either pad or end
     while (s->list_size < outlink->w) {
         ret = ff_request_frame(ctx->inputs[0]);
-        if (ret < 0) //TODO handle eof
+        if (s->black && ret == AVERROR_EOF)
+            break;
+        if (ret < 0) //TODO handle eof so that if we have eof before first frame we pad anyway
             return ret;
     }
 
     dst = ff_get_video_buffer(outlink, outlink->w, outlink->h);
     if (!dst)
         return AVERROR(ENOMEM);
-    head = s->input;
+
+    // copy by column for each frame
     for (ncol = 0; ncol < s->list_size; ncol++) {
-        uint8_t *dst_data[4];
-        const uint8_t *src_data[4];
         AVFrame *src = head->frame;
 
-        dst_data[0] = dst->data[0] + ncol;
-        dst_data[1] = dst->data[1] + ncol / 2;
-        dst_data[2] = dst->data[2] + ncol / 2;
-        dst_data[3] = dst->data[3];
-        src_data[0] = src->data[0] + ncol;
-        src_data[1] = src->data[1] + ncol / 2;
-        src_data[2] = src->data[2] + ncol / 2;
-        src_data[3] = src->data[3];
+        copy_column(dst->data, dst->linesize, src->data, src->linesize,
+                    outlink->format, outlink->h, ncol);
 
-        av_image_copy(dst_data, dst->linesize,
-                      src_data, src->linesize,
-                      outlink->format, 1, outlink->h);
         head = head->next;
     }
-    ret = av_frame_copy_props(dst, s->input->frame);
+
+    // pad any remaining space with black
+    if (ret == AVERROR_EOF) {
+        for ( ; ncol < outlink->w; ncol++)
+            copy_column(dst->data, dst->linesize, s->black_buffers,
+                        s->black_linesizes, outlink->format, outlink->h, ncol);
+    }
+
+    if (s->list_size > 0) {
+        ret = av_frame_copy_props(dst, s->input->frame);
+        if (ret < 0)
+            return ret;
+        list_remove_head(s);
+    }
+
+    av_log(NULL, AV_LOG_INFO, "list size %d\n", s->list_size);
+    if (s->list_size == 0)
+        return AVERROR_EOF;
+
+    ret = ff_filter_frame(outlink, dst);
     if (ret < 0)
         return ret;
 
-    list_remove_head(s);
-
-    return ff_filter_frame(outlink, dst);
+    return 0;
 }
 
 #define OFFSET(x) offsetof(TiltandshiftContext, x)
@@ -213,7 +273,6 @@ static const AVFilterPad tiltandshift_outputs[] = {
     {
         .name          = "out",
         .type          = AVMEDIA_TYPE_VIDEO,
-      //  .config_props  = config_output,
         .request_frame = request_frame,
     },
     { NULL }
@@ -221,11 +280,13 @@ static const AVFilterPad tiltandshift_outputs[] = {
 
 AVFilter ff_vf_tiltandshift = {
     .name          = "tiltandshift",
-    .description   = NULL_IF_CONFIG_SMALL("Generate a tilt-and-shift style video."),
+    .description   = NULL_IF_CONFIG_SMALL("Generate a tilt-and-shift'd video."),
     .priv_size     = sizeof(TiltandshiftContext),
     .priv_class    = &tiltandshift_class,
     .query_formats = query_formats,
     .inputs        = tiltandshift_inputs,
     .outputs       = tiltandshift_outputs,
-    .uninit        = tiltandshift_uninit,
+
+    .init          = init,
+    .uninit        = uninit,
 };
