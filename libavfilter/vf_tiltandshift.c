@@ -40,6 +40,10 @@
 #define SHIFT_NONE   0
 #define SHIFT_RIGHT  1
 
+#define TILT_NONE  -1
+#define TILT_FRAME  0
+#define TILT_BLACK  1
+
 typedef struct FrameList {
     AVFrame *frame;
     struct FrameList *next;
@@ -49,8 +53,8 @@ typedef struct FrameList {
 typedef struct TiltandshiftContext {
     const AVClass *class;
 
-    int eof_received; // set when all input frames have been processed and we have
-                      // to empty buffers
+    int eof_recv; // set when all input frames have been processed and we have
+                  // to empty buffers and pad
 
     int direction;
 
@@ -111,7 +115,7 @@ static void list_empty(TiltandshiftContext *s)
 }
 
 static const enum AVPixelFormat formats_supported[] = {
-    AV_PIX_FMT_YUV420P,  AV_PIX_FMT_YUV422P,  AV_PIX_FMT_YUV444P,
+    AV_PIX_FMT_YUV420P, AV_PIX_FMT_YUV422P, AV_PIX_FMT_YUV444P,
     AV_PIX_FMT_YUV410P,
     AV_PIX_FMT_YUVJ420P, AV_PIX_FMT_YUVJ422P, AV_PIX_FMT_YUVJ444P,
     AV_PIX_FMT_YUVJ440P,
@@ -131,41 +135,44 @@ static av_cold void uninit(AVFilterContext *ctx)
     list_empty(s);
 }
 
-// Init black buffers that we are going to use later to pad the last frames.
-// We always need to have them initialized because we never know if there are
-// going to be enough input frames to fully fill an output one.
 static int config_props(AVFilterLink *outlink)
 {
-    int i, j, ret;
     AVFilterContext *ctx = outlink->src;
     TiltandshiftContext *s = ctx->priv;
-    uint8_t black_data[] = { 0x10, 0x80, 0x80, 0x10 };
-    const AVPixFmtDescriptor *desc;
 
     outlink->w = ctx->inputs[0]->w;
     outlink->h = ctx->inputs[0]->h;
     outlink->format = ctx->inputs[0]->format;
 
-    if (outlink->format == AV_PIX_FMT_YUVJ420P ||
-        outlink->format == AV_PIX_FMT_YUVJ422P ||
-        outlink->format == AV_PIX_FMT_YUVJ444P ||
-        outlink->format == AV_PIX_FMT_YUVJ440P)
-        black_data[0] = black_data[3] = 0;
+    // Init black buffers in case we do not pad with last frame.
+    // We always  have to do so because we never know if there are
+    // going to be enough input frames to fully fill an output one.
+    if (s->pad != TILT_FRAME) {
+        int i, j, ret;
+        uint8_t black_data[] = { 0x10, 0x80, 0x80, 0x10 };
+        const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(outlink->format);
+        if (!desc)
+            return AVERROR_BUG;
 
-    ret = av_image_alloc(s->black_buffers, s->black_linesizes, 1,
-                         outlink->h, outlink->format, 1);
-    if (ret < 0)
-        return ret;
+        if (outlink->format == AV_PIX_FMT_YUVJ420P ||
+            outlink->format == AV_PIX_FMT_YUVJ422P ||
+            outlink->format == AV_PIX_FMT_YUVJ444P ||
+            outlink->format == AV_PIX_FMT_YUVJ440P)
+            black_data[0] = black_data[3] = 0;
 
-    desc = av_pix_fmt_desc_get(outlink->format);
-    if (!desc)
-        return AVERROR_BUG;
+        ret = av_image_alloc(s->black_buffers, s->black_linesizes, 1,
+                             outlink->h, outlink->format, 1);
+        if (ret < 0)
+            return ret;
 
-    for (i = 0; i < FFMIN(desc->nb_components, 4); i++)
-        for (j = 0; j < (!i ? outlink->h
-                            : -((-outlink->h) >> desc->log2_chroma_h)); j++)
-            memset(s->black_buffers[i] + j * s->black_linesizes[i],
-                   black_data[i], 1);
+        for (i = 0; i < FFMIN(desc->nb_components, 4); i++)
+            for (j = 0; j < (!i ? outlink->h
+                                : -((-outlink->h) >> desc->log2_chroma_h)); j++)
+                memset(s->black_buffers[i] + j * s->black_linesizes[i],
+                       black_data[i], 1);
+
+        av_log(ctx, AV_LOG_VERBOSE, "Padding buffers initialized.\n");
+    }
 
     return 0;
 }
@@ -182,20 +189,22 @@ static void copy_column(uint8_t *dst_data[4], int dst_linesizes[4],
                         int tilt)
 {
     uint8_t *dst[4];
-    const uint8_t **src[4];
+    const uint8_t *src[4];
+    const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(format);
+    if (!desc)
+        return;
 
     dst[0] = dst_data[0] + ncol;
-    dst[1] = dst_data[1] + ncol / 2;
-    dst[2] = dst_data[2] + ncol / 2;
-//    dst[3] = dst_data[3];
+    dst[1] = dst_data[1] + (ncol >> desc->log2_chroma_h);
+    dst[2] = dst_data[2] + (ncol >> desc->log2_chroma_h);
+    dst[3] = dst_data[3];
 
-    // disable this for static rendering
     if (!tilt)
         ncol = 0;
     src[0] = src_data[0] + ncol;
-    src[1] = src_data[1] + ncol / 2;
-    src[2] = src_data[2] + ncol / 2;
-//    src[3] = src_data[3];
+    src[1] = src_data[1] + (ncol >> desc->log2_chroma_h);
+    src[2] = src_data[2] + (ncol >> desc->log2_chroma_h);
+    src[3] = src_data[3];
 
     av_image_copy(dst, dst_linesizes, src, src_linesizes, format, 1, height);
 }
@@ -204,69 +213,78 @@ static int request_frame(AVFilterLink *outlink)
 {
     AVFilterContext *ctx = outlink->src;
     TiltandshiftContext *s = ctx->priv;
-    int ret;
-    int ncol;
-    FrameList *head = s->input;
+    FrameList *prev, *head = s->input;
+    int ret, ncol;
     AVFrame *dst;
 
-    // load up enough frames to fill the buffer and keep it filled on subsequent
-    // calls, until we receive EOF, when we either pad or end
+    // signal job finished when list is empty or when padding is either
+    // limited or disabled and eof was received
+    if (s->list_size < 0 ||
+        (s->eof_recv && s->list_size == s->list_size - s->pad_amount) ||
+        (s->eof_recv && s->pad == TILT_NONE))
+        return AVERROR_EOF;
+
+    // load up enough frames to fill a frame and keep it filled on subsequent
+    // calls, until we receive EOF, and then we either pad or end
     while (s->list_size < outlink->w) {
         ret = ff_request_frame(ctx->inputs[0]);
-        if (ret == AVERROR_EOF)
+        if (ret == AVERROR_EOF) {
+            av_log(ctx, AV_LOG_VERBOSE, "Last frame, emptying buffers.\n");
+            s->eof_recv = 1;
             break;
+        }
         if (ret < 0)
             return ret;
     }
 
-    // signal job finished when list is empty or when eof is received and
-    // padding is either limited or disabled
-    if (s->list_size <= 0 ||
-        (ret == AVERROR_EOF && s->list_size == outlink->w - s->pad_amount) ||
-        (ret == AVERROR_EOF && s->pad == 0))
-        return AVERROR_EOF;
-
+    // new frame
     dst = ff_get_video_buffer(outlink, outlink->w, outlink->h);
     if (!dst)
         return AVERROR(ENOMEM);
 
-    // copy by column for each frame
+    // copy a column from each frame
     for (ncol = 0; ncol < s->list_size; ncol++) {
         AVFrame *src = head->frame;
 
         copy_column(dst->data, dst->linesize, src->data, src->linesize,
-                    outlink->format, outlink->h, ncol, 1);
+                    outlink->format, outlink->h, ncol,
+                    s->direction != SHIFT_NONE);
 
+        prev = head; // keep track of the last known frame in case we need it
         head = head->next;
     }
 
-    //TODO rebuild the last frame somehow
-    // pad any remaining space with black
-    for ( ; ncol < outlink->w; ncol++)
-        copy_column(dst->data, dst->linesize, s->black_buffers,
-                    s->black_linesizes, outlink->format, outlink->h, ncol, 0);
+    // pad any remaining space with black or last frame
+    if (s->pad == TILT_FRAME) {
+        for ( ; ncol < outlink->w; ncol++)
+            copy_column(dst->data, dst->linesize, prev->frame->data,
+                        prev->frame->linesize, outlink->format, outlink->h,
+                        ncol, 1);
+    } else { // pad or none
+        for ( ; ncol < outlink->w; ncol++)
+            copy_column(dst->data, dst->linesize, s->black_buffers,
+                        s->black_linesizes, outlink->format, outlink->h,
+                        ncol, 0);
+    }
 
+    // set correct timestamps and props as long as there is proper input
     if (s->list_size > 0) {
         ret = av_frame_copy_props(dst, s->input->frame);
         if (ret < 0)
             return ret;
+
         list_remove_head(s);
     }
 
-    av_log(NULL, AV_LOG_INFO, "list size %d\n", s->list_size);
-
-    ret = ff_filter_frame(outlink, dst);
-    if (ret < 0)
-        return ret;
-
-    return 0;
+    // output
+    return ff_filter_frame(outlink, dst);
 }
 
 #define OFFSET(x) offsetof(TiltandshiftContext, x)
 #define V AV_OPT_FLAG_VIDEO_PARAM
 static const AVOption options[] = {
     { "direction", "Shift the input video while tilting", OFFSET(direction), AV_OPT_TYPE_INT,
-        { .i64 = SHIFT_LEFT }, SHIFT_LEFT, SHIFT_RIGHT, .flags = V, .unit = "shift" },
+        { .i64 = SHIFT_LEFT }, -1, 1, .flags = V, .unit = "shift" },
     { "left", "shift leftward (default)", 0, AV_OPT_TYPE_CONST,
         { .i64 = SHIFT_LEFT }, INT_MIN, INT_MAX, .flags = V, .unit = "shift" },
     { "right", "shift rightward", 0, AV_OPT_TYPE_CONST,
@@ -274,10 +292,17 @@ static const AVOption options[] = {
     { "none", "no shift, one image only", 0, AV_OPT_TYPE_CONST,
         { .i64 = SHIFT_NONE }, INT_MIN, INT_MAX, .flags = V, .unit = "shift" },
 
-    { "pad", "Pad black at the end", OFFSET(pad), AV_OPT_TYPE_INT,
-        { .i64 = 1 }, 0, 1, .flags = V, .unit = "pad" },
-    { "pad_amount", "Number of black frames to pad at the end", OFFSET(pad_amount), AV_OPT_TYPE_INT,
-        { .i64 = 0 }, 0, 1, .flags = V, .unit = "pad" },
+    { "pad", "Action at the end of input", OFFSET(pad), AV_OPT_TYPE_INT,
+        { .i64 = TILT_FRAME }, -1, 1, .flags = V, .unit = "pad" },
+    { "frame", "Use the last frame (default)", 0, AV_OPT_TYPE_CONST,
+        { .i64 = TILT_FRAME }, INT_MIN, INT_MAX, .flags = V, .unit = "pad" },
+    { "black", "Fill with black", 0, AV_OPT_TYPE_CONST,
+        { .i64 = TILT_BLACK }, INT_MIN, INT_MAX, .flags = V, .unit = "pad" },
+    { "none", "Do not pad at all", 0, AV_OPT_TYPE_CONST,
+        { .i64 = TILT_NONE }, INT_MIN, INT_MAX, .flags = V, .unit = "pad" },
+
+    { "pad_amount", "Number of columns to pad at the end", OFFSET(pad_amount), AV_OPT_TYPE_INT,
+        { .i64 = 0 }, 0, INT_MAX, .flags = V, .unit = "pad_amount" },
 
     { NULL },
 };
