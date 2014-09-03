@@ -148,13 +148,15 @@ static int config_props(AVFilterLink *outlink)
     outlink->h = ctx->inputs[0]->h;
     outlink->format = ctx->inputs[0]->format;
 
-    if (s->start == TILT_FRAME)
+    // when we have to pad black or a frame at the start, skip navigating
+    // the list and use either the frame or black for the requested value
+    if (s->start != TILT_NONE)
         s->hold = outlink->w;
 
-    // Init black buffers in case we do not pad with last frame.
-    // We always  have to do so because we never know if there are
-    // going to be enough input frames to fully fill an output one.
-    if (s->end != TILT_FRAME) {
+    // Init black buffers if we pad with black at the start or at the end.
+    // For the end, we always have to init on NONE and BLACK because we never
+    // know if there are going to be enough input frames to fill an output one.
+    if (s->start == TILT_BLACK || s->end != TILT_FRAME) {
         int i, j, ret;
         uint8_t black_data[] = { 0x10, 0x80, 0x80, 0x10 };
         const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(outlink->format);
@@ -227,7 +229,7 @@ static int request_frame(AVFilterLink *outlink)
     // signal job finished when list is empty or when padding is either
     // limited or disabled and eof was received
     if (s->list_size < 0 ||
-        (s->eof_recv && s->list_size == s->list_size - s->pad_amount) ||
+        (s->eof_recv && s->list_size == outlink->w - s->pad_amount) ||
         (s->eof_recv && s->end == TILT_NONE))
         return AVERROR_EOF;
 
@@ -245,12 +247,21 @@ static int request_frame(AVFilterLink *outlink)
     }
 
     // new frame
+    ncol = 0;
     dst = ff_get_video_buffer(outlink, outlink->w, outlink->h);
     if (!dst)
         return AVERROR(ENOMEM);
 
-    // copy a column from each frame
-    for (ncol = 0; ncol < s->list_size; ncol++) {
+    // in case we have to do any initial black padding
+    if (s->start == TILT_BLACK) {
+        for ( ; ncol < s->hold; ncol++)
+            copy_column(dst->data, dst->linesize, s->black_buffers,
+                        s->black_linesizes, outlink->format, outlink->h,
+                        ncol, 0);
+    }
+
+    // copy a column from each input frame
+    for ( ; ncol < s->list_size; ncol++) {
         AVFrame *src = head->frame;
 
         copy_column(dst->data, dst->linesize, src->data, src->linesize,
@@ -270,7 +281,7 @@ static int request_frame(AVFilterLink *outlink)
             copy_column(dst->data, dst->linesize, prev->frame->data,
                         prev->frame->linesize, outlink->format, outlink->h,
                         ncol, 1);
-    } else { // pad or none
+    } else { // TILT_BLACK and TILT_NONE
         for ( ; ncol < outlink->w; ncol++)
             copy_column(dst->data, dst->linesize, s->black_buffers,
                         s->black_linesizes, outlink->format, outlink->h,
@@ -282,8 +293,9 @@ static int request_frame(AVFilterLink *outlink)
     if (ret < 0)
         return ret;
 
-    // discard top frame which has been completely processed
+    // discard frame at the top of the list since it has been fully processed
     list_remove_head(s);
+    // and it is safe to reduce the hold value
     s->hold--;
 
     // output
