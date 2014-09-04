@@ -47,28 +47,34 @@
 typedef struct FrameList {
     AVFrame *frame;
     struct FrameList *next;
-    int ready;  // a frame is ready when width columns have been processed
 } FrameList;
 
 typedef struct TiltandshiftContext {
     const AVClass *class;
 
-    int eof_recv; // set when all input frames have been processed and we have
-                  // to empty buffers and pad
+    /* set when all input frames have been processed and we have to
+     * empty buffers, pad and then return */
+    int eof_recv;
 
+    /* left or right or static */
     int direction;
-    int hold;
 
+    /* initial or final actions to perform (pad/hold a frame/black/nothing) */
     int start;
     int end;
 
-    int pad_amount;
-    
+    /* columns to hold or pad at the beginning or at the end (respectively) */
+    int hold;
+    int pad;
+
+    /* buffers for black columns */
     uint8_t *black_buffers[4];
     int black_linesizes[4];
 
+    /* list containing all input frames */
     int list_size;
     FrameList *input;
+    FrameList *prev;
 } TiltandshiftContext;
 
 static int list_add_frame(TiltandshiftContext *s, AVFrame *frame)
@@ -150,7 +156,7 @@ static int config_props(AVFilterLink *outlink)
 
     // when we have to pad black or a frame at the start, skip navigating
     // the list and use either the frame or black for the requested value
-    if (s->start != TILT_NONE)
+    if (s->start != TILT_NONE && !s->hold)
         s->hold = outlink->w;
 
     // Init black buffers if we pad with black at the start or at the end.
@@ -222,14 +228,14 @@ static int request_frame(AVFilterLink *outlink)
 {
     AVFilterContext *ctx = outlink->src;
     TiltandshiftContext *s = ctx->priv;
-    FrameList *prev, *head = s->input;
+    FrameList *head = s->input;
     int ret, ncol;
     AVFrame *dst;
 
     // signal job finished when list is empty or when padding is either
     // limited or disabled and eof was received
     if (s->list_size < 0 ||
-        (s->eof_recv && s->list_size == outlink->w - s->pad_amount) ||
+        (s->eof_recv && s->list_size == outlink->w - s->pad) ||
         (s->eof_recv && s->end == TILT_NONE))
         return AVERROR_EOF;
 
@@ -269,7 +275,7 @@ static int request_frame(AVFilterLink *outlink)
                     s->direction != SHIFT_NONE);
 
         // keep track of the last known frame in case we need it below
-        prev = head;
+        s->prev = head;
         // advance to the next frame unless we have to hold it
         if (s->hold <= ncol)
             head = head->next;
@@ -278,8 +284,8 @@ static int request_frame(AVFilterLink *outlink)
     // pad any remaining space with black or last frame
     if (s->end == TILT_FRAME) {
         for ( ; ncol < outlink->w; ncol++)
-            copy_column(dst->data, dst->linesize, prev->frame->data,
-                        prev->frame->linesize, outlink->format, outlink->h,
+            copy_column(dst->data, dst->linesize, s->prev->frame->data,
+                        s->prev->frame->linesize, outlink->format, outlink->h,
                         ncol, 1);
     } else { // TILT_BLACK and TILT_NONE
         for ( ; ncol < outlink->w; ncol++)
@@ -289,9 +295,11 @@ static int request_frame(AVFilterLink *outlink)
     }
 
     // set correct timestamps and props as long as there is proper input
-    ret = av_frame_copy_props(dst, s->input->frame);
-    if (ret < 0)
-        return ret;
+    if (s->input) {
+        ret = av_frame_copy_props(dst, s->input->frame);
+        if (ret < 0)
+            return ret;
+    }
 
     // discard frame at the top of the list since it has been fully processed
     list_remove_head(s);
@@ -332,8 +340,10 @@ static const AVOption options[] = {
     { "none", "Do not pad at the end", 0, AV_OPT_TYPE_CONST,
         { .i64 = TILT_NONE }, INT_MIN, INT_MAX, .flags = V, .unit = "end" },
 
-    { "pad_amount", "Number of columns to pad at the end", OFFSET(pad_amount), AV_OPT_TYPE_INT,
-        { .i64 = 0 }, 0, INT_MAX, .flags = V, .unit = "pad_amount" },
+    { "pad_start", "Number of columns to pad at the beginning", OFFSET(hold), AV_OPT_TYPE_INT,
+        { .i64 = 0 }, 0, INT_MAX, .flags = V, .unit = "pad_start" },
+    { "pad_end", "Number of columns to pad at the end", OFFSET(pad), AV_OPT_TYPE_INT,
+        { .i64 = 0 }, 0, INT_MAX, .flags = V, .unit = "pad_end" },
 
     { NULL },
 };
