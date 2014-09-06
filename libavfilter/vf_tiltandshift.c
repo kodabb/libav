@@ -36,10 +36,6 @@
 #include "internal.h"
 #include "video.h"
 
-#define SHIFT_LEFT  -1
-#define SHIFT_NONE   0
-#define SHIFT_RIGHT  1
-
 #define TILT_NONE  -1
 #define TILT_FRAME  0
 #define TILT_BLACK  1
@@ -234,14 +230,13 @@ static int request_frame(AVFilterLink *outlink)
 
     // signal job finished when list is empty or when padding is either
     // limited or disabled and eof was received
-    if (s->list_size < 0 ||
-        (s->eof_recv && s->list_size == outlink->w - s->pad) ||
-        (s->eof_recv && s->end == TILT_NONE))
+    if ((s->list_size <= 0 || s->list_size == outlink->w - s->pad ||
+         s->end == TILT_NONE) && s->eof_recv)
         return AVERROR_EOF;
 
     // load up enough frames to fill a frame and keep it filled on subsequent
     // calls, until we receive EOF, and then we either pad or end
-    while (s->list_size < outlink->w) {
+    while (!s->eof_recv && s->list_size < outlink->w) {
         ret = ff_request_frame(ctx->inputs[0]);
         if (ret == AVERROR_EOF) {
             av_log(ctx, AV_LOG_VERBOSE, "Last frame, emptying buffers.\n");
@@ -261,18 +256,18 @@ static int request_frame(AVFilterLink *outlink)
     // in case we have to do any initial black padding
     if (s->start == TILT_BLACK) {
         for ( ; ncol < s->hold; ncol++)
-            copy_column(dst->data, dst->linesize, s->black_buffers,
-                        s->black_linesizes, outlink->format, outlink->h,
-                        ncol, 0);
+            copy_column(dst->data, dst->linesize,
+                        (const uint8_t **)s->black_buffers, s->black_linesizes,
+                        outlink->format, outlink->h, ncol, 0);
     }
 
     // copy a column from each input frame
     for ( ; ncol < s->list_size; ncol++) {
         AVFrame *src = head->frame;
 
-        copy_column(dst->data, dst->linesize, src->data, src->linesize,
-                    outlink->format, outlink->h, ncol,
-                    s->direction != SHIFT_NONE);
+        copy_column(dst->data, dst->linesize,
+                    (const uint8_t **)src->data, src->linesize,
+                    outlink->format, outlink->h, ncol, s->direction);
 
         // keep track of the last known frame in case we need it below
         s->prev = head;
@@ -284,22 +279,21 @@ static int request_frame(AVFilterLink *outlink)
     // pad any remaining space with black or last frame
     if (s->end == TILT_FRAME) {
         for ( ; ncol < outlink->w; ncol++)
-            copy_column(dst->data, dst->linesize, s->prev->frame->data,
+            copy_column(dst->data, dst->linesize,
+                        (const uint8_t **)s->prev->frame->data,
                         s->prev->frame->linesize, outlink->format, outlink->h,
                         ncol, 1);
     } else { // TILT_BLACK and TILT_NONE
         for ( ; ncol < outlink->w; ncol++)
-            copy_column(dst->data, dst->linesize, s->black_buffers,
-                        s->black_linesizes, outlink->format, outlink->h,
-                        ncol, 0);
+            copy_column(dst->data, dst->linesize,
+                        (const uint8_t **)s->black_buffers, s->black_linesizes,
+                        outlink->format, outlink->h, ncol, 0);
     }
 
     // set correct timestamps and props as long as there is proper input
-    if (s->input) {
-        ret = av_frame_copy_props(dst, s->input->frame);
-        if (ret < 0)
-            return ret;
-    }
+    ret = av_frame_copy_props(dst, s->input->frame);
+    if (ret < 0)
+        return ret;
 
     // discard frame at the top of the list since it has been fully processed
     list_remove_head(s);
@@ -313,14 +307,8 @@ static int request_frame(AVFilterLink *outlink)
 #define OFFSET(x) offsetof(TiltandshiftContext, x)
 #define V AV_OPT_FLAG_VIDEO_PARAM
 static const AVOption options[] = {
-    { "shift", "Shift the input video while tilting", OFFSET(direction), AV_OPT_TYPE_INT,
-        { .i64 = SHIFT_LEFT }, -1, 1, .flags = V, .unit = "shift" },
-    { "left", "shift leftwards (default)", 0, AV_OPT_TYPE_CONST,
-        { .i64 = SHIFT_LEFT }, INT_MIN, INT_MAX, .flags = V, .unit = "shift" },
-    { "right", "shift rightwards", 0, AV_OPT_TYPE_CONST, //TODO
-        { .i64 = SHIFT_RIGHT }, INT_MIN, INT_MAX, .flags = V, .unit = "shift" },
-    { "none", "no shift, tilt only", 0, AV_OPT_TYPE_CONST,
-        { .i64 = SHIFT_NONE }, INT_MIN, INT_MAX, .flags = V, .unit = "shift" },
+    { "tilt", "Tilt the video horizontally while shifting", OFFSET(direction), AV_OPT_TYPE_INT,
+        { .i64 = 1 }, 0, 1, .flags = V, .unit = "shift" },
 
     { "start", "Action at the start of input", OFFSET(start), AV_OPT_TYPE_INT,
         { .i64 = TILT_NONE }, -1, 1, .flags = V, .unit = "start" },
@@ -340,9 +328,9 @@ static const AVOption options[] = {
     { "none", "Do not pad at the end", 0, AV_OPT_TYPE_CONST,
         { .i64 = TILT_NONE }, INT_MIN, INT_MAX, .flags = V, .unit = "end" },
 
-    { "pad_start", "Number of columns to pad at the beginning", OFFSET(hold), AV_OPT_TYPE_INT,
+    { "hold", "Number of columns to hold at the beginning", OFFSET(hold), AV_OPT_TYPE_INT,
         { .i64 = 0 }, 0, INT_MAX, .flags = V, .unit = "pad_start" },
-    { "pad_end", "Number of columns to pad at the end", OFFSET(pad), AV_OPT_TYPE_INT,
+    { "pad", "Number of columns to pad at the end", OFFSET(pad), AV_OPT_TYPE_INT,
         { .i64 = 0 }, 0, INT_MAX, .flags = V, .unit = "pad_end" },
 
     { NULL },
