@@ -52,8 +52,8 @@ typedef struct TiltandshiftContext {
      * empty buffers, pad and then return */
     int eof_recv;
 
-    /* left or right or static */
-    int direction;
+    /* live or static sliding */
+    int tilt;
 
     /* initial or final actions to perform (pad/hold a frame/black/nothing) */
     int start;
@@ -208,14 +208,12 @@ static void copy_column(uint8_t *dst_data[4], int dst_linesizes[4],
     dst[0] = dst_data[0] + ncol;
     dst[1] = dst_data[1] + (ncol >> desc->log2_chroma_h);
     dst[2] = dst_data[2] + (ncol >> desc->log2_chroma_h);
-    dst[3] = dst_data[3];
 
     if (!tilt)
         ncol = 0;
     src[0] = src_data[0] + ncol;
     src[1] = src_data[1] + (ncol >> desc->log2_chroma_h);
     src[2] = src_data[2] + (ncol >> desc->log2_chroma_h);
-    src[3] = src_data[3];
 
     av_image_copy(dst, dst_linesizes, src, src_linesizes, format, 1, height);
 }
@@ -267,7 +265,7 @@ static int request_frame(AVFilterLink *outlink)
 
         copy_column(dst->data, dst->linesize,
                     (const uint8_t **)src->data, src->linesize,
-                    outlink->format, outlink->h, ncol, s->direction);
+                    outlink->format, outlink->h, ncol, s->tilt);
 
         // keep track of the last known frame in case we need it below
         s->prev = head;
@@ -307,31 +305,31 @@ static int request_frame(AVFilterLink *outlink)
 #define OFFSET(x) offsetof(TiltandshiftContext, x)
 #define V AV_OPT_FLAG_VIDEO_PARAM
 static const AVOption options[] = {
-    { "tilt", "Tilt the video horizontally while shifting", OFFSET(direction), AV_OPT_TYPE_INT,
-        { .i64 = 1 }, 0, 1, .flags = V, .unit = "shift" },
+    { "tilt", "Tilt the video horizontally while shifting", OFFSET(tilt), AV_OPT_TYPE_INT,
+        { .i64 = 1 }, 0, 1, .flags = V, .unit = "tilt" },
 
     { "start", "Action at the start of input", OFFSET(start), AV_OPT_TYPE_INT,
         { .i64 = TILT_NONE }, -1, 1, .flags = V, .unit = "start" },
     { "none", "Start immediately (default)", 0, AV_OPT_TYPE_CONST,
         { .i64 = TILT_NONE }, INT_MIN, INT_MAX, .flags = V, .unit = "start" },
-    { "frame", "Use the first frame", 0, AV_OPT_TYPE_CONST,
+    { "frame", "Use the first frames", 0, AV_OPT_TYPE_CONST,
         { .i64 = TILT_FRAME }, INT_MIN, INT_MAX, .flags = V, .unit = "start" },
     { "black", "Fill with black", 0, AV_OPT_TYPE_CONST,
         { .i64 = TILT_BLACK }, INT_MIN, INT_MAX, .flags = V, .unit = "start" },
 
     { "end", "Action at the end of input", OFFSET(end), AV_OPT_TYPE_INT,
-        { .i64 = TILT_FRAME }, -1, 1, .flags = V, .unit = "end" },
-    { "frame", "Use the last frame (default)", 0, AV_OPT_TYPE_CONST,
+        { .i64 = TILT_NONE }, -1, 1, .flags = V, .unit = "end" },
+    { "none", "Do not pad at the end (default)", 0, AV_OPT_TYPE_CONST,
+        { .i64 = TILT_NONE }, INT_MIN, INT_MAX, .flags = V, .unit = "end" },
+    { "frame", "Use the last frame", 0, AV_OPT_TYPE_CONST,
         { .i64 = TILT_FRAME }, INT_MIN, INT_MAX, .flags = V, .unit = "end" },
     { "black", "Fill with black", 0, AV_OPT_TYPE_CONST,
         { .i64 = TILT_BLACK }, INT_MIN, INT_MAX, .flags = V, .unit = "end" },
-    { "none", "Do not pad at the end", 0, AV_OPT_TYPE_CONST,
-        { .i64 = TILT_NONE }, INT_MIN, INT_MAX, .flags = V, .unit = "end" },
 
     { "hold", "Number of columns to hold at the beginning", OFFSET(hold), AV_OPT_TYPE_INT,
-        { .i64 = 0 }, 0, INT_MAX, .flags = V, .unit = "pad_start" },
+        { .i64 = 0 }, 0, INT_MAX, .flags = V, .unit = "hold" },
     { "pad", "Number of columns to pad at the end", OFFSET(pad), AV_OPT_TYPE_INT,
-        { .i64 = 0 }, 0, INT_MAX, .flags = V, .unit = "pad_end" },
+        { .i64 = 0 }, 0, INT_MAX, .flags = V, .unit = "pad" },
 
     { NULL },
 };
