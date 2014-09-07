@@ -19,8 +19,8 @@
  */
 
 /**
- * @file
- * INSERT DESCRIPTION HERE
+ * @file vf_tiltandshift.c
+ * Simple time and space inverter.
  */
 
 #include <string.h>
@@ -295,7 +295,7 @@ static int request_frame(AVFilterLink *outlink)
 
     // discard frame at the top of the list since it has been fully processed
     list_remove_head(s);
-    // and it is safe to reduce the hold value
+    // and it is safe to reduce the hold value (even if unused)
     s->hold--;
 
     // output
