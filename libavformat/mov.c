@@ -966,6 +966,64 @@ static int mov_read_colr(MOVContext *c, AVIOContext *pb, MOVAtom atom)
     return 0;
 }
 
+static int mov_read_cspc(MOVContext *c, AVIOContext *pb, MOVAtom atom)
+{
+    AVStream *st;
+    uint32_t pixel_format = avio_rb32(pb);
+
+    if (c->fc->nb_streams < 1)
+        return 0;
+    st = c->fc->streams[c->fc->nb_streams - 1];
+    av_dlog(c->fc, "pixel_format %"PRIu32"\n", pixel_format);
+
+    /* derived by CoreVideo/CVPixelBuffer.h */
+    switch (av_bswap32(pixel_format)) {
+    case 0x00000001: st->codec->pix_fmt = AV_PIX_FMT_MONOBLACK; break;
+    case 0x00000021: st->codec->pix_fmt = AV_PIX_FMT_MONOWHITE; break;
+    case 0x00000018: st->codec->pix_fmt = AV_PIX_FMT_RGB24; break;
+    case MKTAG('2','4','B','G'): st->codec->pix_fmt = AV_PIX_FMT_BGR24; break;
+    case 0x00000020: st->codec->pix_fmt = AV_PIX_FMT_ARGB; break;
+    case MKTAG('B','G','R','A'): st->codec->pix_fmt = AV_PIX_FMT_BGRA; break;
+    case MKTAG('A','B','G','R'): st->codec->pix_fmt = AV_PIX_FMT_ABGR; break;
+    case MKTAG('R','G','B','A'): st->codec->pix_fmt = AV_PIX_FMT_RGBA; break;
+    //case MKTAG('b','6','4','a'): st->codec->pix_fmt = AV_PIX_FMT_ARGB64; break;
+    case MKTAG('b','4','8','r'): st->codec->pix_fmt = AV_PIX_FMT_RGB48BE; break;
+    case MKTAG('b','3','2','a'): st->codec->pix_fmt = AV_PIX_FMT_YA16BE; break;
+    case MKTAG('b','1','6','b'): st->codec->pix_fmt = AV_PIX_FMT_GRAY16BE; break;
+    case MKTAG('2','y','v','y'): st->codec->pix_fmt = AV_PIX_FMT_UYVY422; break;
+    case MKTAG('v','4','0','8'): st->codec->pix_fmt = AV_PIX_FMT_YUVA444P; break;
+    case MKTAG('r','4','0','8'):
+        st->codec->pix_fmt = AV_PIX_FMT_YUVA444P;
+        st->codec->color_range = AVCOL_RANGE_JPEG;
+        break;
+    case MKTAG('y','4','0','8'):
+        st->codec->pix_fmt = AV_PIX_FMT_YUVA444P;
+        st->codec->color_range = AVCOL_RANGE_MPEG;
+        break;
+    case MKTAG('y','4','1','6'):
+        st->codec->pix_fmt = AV_PIX_FMT_YUVA444P16LE;
+        st->codec->color_range = AVCOL_RANGE_MPEG;
+        break;
+    case MKTAG('v','3','0','8'): st->codec->pix_fmt = AV_PIX_FMT_YUV444P; break;
+    case MKTAG('v','2','1','6'): st->codec->pix_fmt = AV_PIX_FMT_YUV422P16BE; break;
+    case MKTAG('v','2','1','0'): st->codec->pix_fmt = AV_PIX_FMT_YUV422P10BE; break;
+    case MKTAG('v','4','1','0'): st->codec->pix_fmt = AV_PIX_FMT_YUV444P10BE; break;
+    case MKTAG('y','4','2','0'): st->codec->pix_fmt = AV_PIX_FMT_YUV420P; break;
+    case MKTAG('f','4','2','0'):
+        st->codec->pix_fmt = AV_PIX_FMT_YUVJ420P;
+        st->codec->color_range = AVCOL_RANGE_JPEG;
+        break;
+    case MKTAG('y','u','v','s'): st->codec->pix_fmt = AV_PIX_FMT_YUV444P; break;
+    case MKTAG('y','u','v','f'):
+        st->codec->pix_fmt = AV_PIX_FMT_YUVJ422P;
+        st->codec->color_range = AVCOL_RANGE_JPEG;
+        break;
+    }
+        av_log(NULL, AV_LOG_ERROR, "%d\n", '2vuy');
+
+    return 0;
+}
+
 static int mov_read_fiel(MOVContext *c, AVIOContext *pb, MOVAtom atom)
 {
     AVStream *st;
@@ -2845,6 +2903,7 @@ static const MOVParseTableEntry mov_default_parse_table[] = {
 { MKTAG('c','h','p','l'), mov_read_chpl },
 { MKTAG('c','o','6','4'), mov_read_stco },
 { MKTAG('c','o','l','r'), mov_read_colr },
+{ MKTAG('c','s','p','c'), mov_read_cspc },
 { MKTAG('c','t','t','s'), mov_read_ctts }, /* composition time to sample */
 { MKTAG('d','i','n','f'), mov_read_default },
 { MKTAG('d','r','e','f'), mov_read_dref },
