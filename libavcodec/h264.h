@@ -218,7 +218,6 @@ typedef struct SPS {
     int anchor_ref[2][MAX_VIEW_COUNT][16];
     int non_anchor_ref_lX[2][MAX_VIEW_COUNT][16];
     int view_id[MAX_VIEW_COUNT];
-    int inter_layer_deblocking_filter_control_present_flag;
 } SPS;
 
 /**

@@ -164,7 +164,6 @@ static int mvc_decode_vui_parameters(H264Context *h)
     int vui_mvc_nal_hrd_parameters_present_flag;
     int vui_mvc_vcl_hrd_parameters_present_flag;
 
-    h->ssps.inter_layer_deblocking_filter_control_present_flag = get_bits1(&h->gb);
     vui_mvc_num_ops = get_ue_golomb(&h->gb) + 1;
     for (i = 0; i < vui_mvc_num_ops; i++) {
         skip_bits(&h->gb, 3);           // vui_mvc_temporal_id[i]
