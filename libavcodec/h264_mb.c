@@ -483,7 +483,7 @@ static av_always_inline void prefetch_motion(H264Context *h, int list,
                         (my + (h->mb_x & 3) * 4) * h->mb_linesize +
                         (64 << pixel_shift);
         if (!h->ref_list[list][refn].tf.f)
- return;
+            return;
         h->vdsp.prefetch(src[0] + off, h->linesize, 4);
         if (chroma_idc == 3 /* yuv444 */) {
             h->vdsp.prefetch(src[1] + off, h->linesize, 4);

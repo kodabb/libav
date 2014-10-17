@@ -81,8 +81,8 @@ void ff_h264_draw_horiz_band(H264Context *h, int y, int height)
 {
     AVCodecContext *avctx = h->avctx;
     AVFrame *cur  = h->cur_pic.tf.f;
-    AVFrame *last = h->ref_list[0][0].tf.f->data[0] ? h->ref_list[0][0].tf.f
-                                                    : NULL;
+    AVFrame *last = h->ref_list[0][0].tf.f ? h->ref_list[0][0].tf.f
+                                           : NULL;
     const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(avctx->pix_fmt);
     int vshift = desc->log2_chroma_h;
     const int field_pic = h->picture_structure != PICT_FRAME;
@@ -451,9 +451,14 @@ int ff_h264_alloc_tables(H264Context *h)
         h->DPB = av_mallocz_array(H264_MAX_PICTURE_COUNT, sizeof(*h->DPB));
         if (!h->DPB)
             return AVERROR(ENOMEM);
-        for (i = 0; i < H264_MAX_PICTURE_COUNT; i++)
-            av_frame_unref(h->DPB[i].tf.f);
-        av_frame_unref(h->cur_pic.tf.f);
+        for (i = 0; i < H264_MAX_PICTURE_COUNT; i++) {
+            h->DPB[i].tf.f = av_frame_alloc();
+            if (!h->DPB[i].tf.f)
+                goto fail;
+        }
+        h->cur_pic.tf.f = av_frame_alloc();
+        if (!h->cur_pic.tf.f)
+            goto fail;
     }
 
     return 0;
