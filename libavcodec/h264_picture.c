@@ -48,7 +48,7 @@ void ff_h264_unref_picture(H264Context *h, H264Picture *pic)
     int off = offsetof(H264Picture, tf) + sizeof(pic->tf);
     int i;
 
-    if (!pic->f.buf[0])
+    if (!pic->tf.f->buf[0])
         return;
 
     ff_thread_release_buffer(h->avctx, &pic->tf);
@@ -68,11 +68,9 @@ int ff_h264_ref_picture(H264Context *h, H264Picture *dst, H264Picture *src)
 {
     int ret, i;
 
-    av_assert0(!dst->f.buf[0]);
-    av_assert0(src->f.buf[0]);
+    av_assert0(!dst->tf.f->buf[0]);
+    av_assert0(src->tf.f->buf[0]);
 
-    src->tf.f = &src->f;
-    dst->tf.f = &dst->f;
     ret = ff_thread_ref_frame(&dst->tf, &src->tf);
     if (ret < 0)
         goto fail;
@@ -131,7 +129,7 @@ static void h264_set_erpic(ERPicture *dst, H264Picture *src)
     if (!src)
         return;
 
-    dst->f = &src->f;
+    dst->f = src->tf.f;
     dst->tf = &src->tf;
 
     for (i = 0; i < 2; i++) {

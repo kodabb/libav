@@ -310,7 +310,7 @@ static inline void svq3_mc_dir_part(SVQ3Context *s,
         mx = av_clip(mx, -16, s->h_edge_pos - width  + 15);
         my = av_clip(my, -16, s->v_edge_pos - height + 15);
     }
-
+#if 0
     /* form component predictions */
     dest = h->cur_pic.f.data[0] + x + y * h->linesize;
     src  = pic->f.data[0] + mx + my * h->linesize;
@@ -362,6 +362,7 @@ static inline void svq3_mc_dir_part(SVQ3Context *s,
                                                                height);
         }
     }
+#endif
 }
 
 static inline int svq3_mc_dir(SVQ3Context *s, int size, int mode,
@@ -1047,7 +1048,7 @@ static void free_picture(AVCodecContext *avctx, H264Picture *pic)
     }
     av_buffer_unref(&pic->mb_type_buf);
 
-    av_frame_unref(&pic->f);
+    //av_frame_unref(&pic->f);
 }
 
 static int get_buffer(AVCodecContext *avctx, H264Picture *pic)
@@ -1082,11 +1083,12 @@ static int get_buffer(AVCodecContext *avctx, H264Picture *pic)
     }
     pic->reference = !(h->pict_type == AV_PICTURE_TYPE_B);
 
+#if 0
+
     ret = ff_get_buffer(avctx, &pic->f,
                         pic->reference ? AV_GET_BUFFER_FLAG_REF : 0);
     if (ret < 0)
         goto fail;
-
     if (!h->edge_emu_buffer) {
         h->edge_emu_buffer = av_mallocz(pic->f.linesize[0] * 17);
         if (!h->edge_emu_buffer)
@@ -1095,6 +1097,7 @@ static int get_buffer(AVCodecContext *avctx, H264Picture *pic)
 
     h->linesize   = pic->f.linesize[0];
     h->uvlinesize = pic->f.linesize[1];
+#endif
 
     return 0;
 fail:
@@ -1110,7 +1113,7 @@ static int svq3_decode_frame(AVCodecContext *avctx, void *data,
     H264Context *h     = &s->h;
     int buf_size       = avpkt->size;
     int ret, m, i;
-
+#if 0
     /* special case for last picture */
     if (buf_size == 0) {
         if (s->next_pic->f.data[0] && !h->low_delay && !s->last_frame_output) {
@@ -1297,7 +1300,7 @@ static int svq3_decode_frame(AVCodecContext *avctx, void *data,
     } else {
         av_frame_unref(&s->cur_pic->f);
     }
-
+#endif
     return buf_size;
 }
 
@@ -1313,7 +1316,7 @@ static av_cold int svq3_decode_end(AVCodecContext *avctx)
     av_freep(&s->next_pic);
     av_freep(&s->last_pic);
 
-    av_frame_unref(&h->cur_pic.f);
+    //av_frame_unref(&h->cur_pic.f);
 
     ff_h264_free_context(h);
 

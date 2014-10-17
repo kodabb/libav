@@ -186,7 +186,7 @@ static void release_unused_pictures(H264Context *h, int remove_current)
 
     /* release non reference frames */
     for (i = 0; i < H264_MAX_PICTURE_COUNT; i++) {
-        if (h->DPB[i].f.buf[0] && !h->DPB[i].reference &&
+        if (h->DPB[i].tf.f->buf[0] && !h->DPB[i].reference &&
             (remove_current || &h->DPB[i] != h->cur_pic_ptr)) {
             ff_h264_unref_picture(h, &h->DPB[i]);
         }
@@ -245,16 +245,15 @@ static int alloc_picture(H264Context *h, H264Picture *pic)
 {
     int i, ret = 0;
 
-    av_assert0(!pic->f.data[0]);
+    av_assert0(!pic->tf.f->data[0]);
 
-    pic->tf.f = &pic->f;
     ret = ff_thread_get_buffer(h->avctx, &pic->tf, pic->reference ?
                                                    AV_GET_BUFFER_FLAG_REF : 0);
     if (ret < 0)
         goto fail;
 
-    h->linesize   = pic->f.linesize[0];
-    h->uvlinesize = pic->f.linesize[1];
+    h->linesize   = pic->tf.f->linesize[0];
+    h->uvlinesize = pic->tf.f->linesize[1];
 
     if (h->avctx->hwaccel) {
         const AVHWAccel *hwaccel = h->avctx->hwaccel;
@@ -299,7 +298,7 @@ fail:
 
 static inline int pic_is_unused(H264Context *h, H264Picture *pic)
 {
-    if (!pic->f.buf[0])
+    if (!pic->tf.f->buf[0])
         return 1;
     if (pic->needs_realloc && !(pic->reference & DELAYED_PIC_REF))
         return 1;
@@ -536,8 +535,7 @@ int ff_h264_update_thread_context(AVCodecContext *dst,
         h->context_initialized = 0;
 
         memset(&h->cur_pic, 0, sizeof(h->cur_pic));
-        av_frame_unref(&h->cur_pic.f);
-        h->cur_pic.tf.f = &h->cur_pic.f;
+        av_frame_unref(h->cur_pic.tf.f);
 
         h->avctx             = dst;
         h->DPB               = NULL;
@@ -582,7 +580,7 @@ int ff_h264_update_thread_context(AVCodecContext *dst,
 
     for (i = 0; i < H264_MAX_PICTURE_COUNT; i++) {
         ff_h264_unref_picture(h, &h->DPB[i]);
-        if (h1->DPB[i].f.buf[0] &&
+        if (h1->DPB[i].tf.f->buf[0] &&
             (ret = ff_h264_ref_picture(h, &h->DPB[i], &h1->DPB[i])) < 0)
             return ret;
     }
@@ -682,14 +680,14 @@ static int h264_frame_start(H264Context *h)
     pic = &h->DPB[i];
 
     pic->reference              = h->droppable ? 0 : h->picture_structure;
-    pic->f.coded_picture_number = h->coded_picture_number++;
+    pic->tf.f->coded_picture_number = h->coded_picture_number++;
     pic->field_picture          = h->picture_structure != PICT_FRAME;
     /*
      * Zero key_frame here; IDR markings per slice in frame or fields are ORed
      * in later.
      * See decode_nal_units().
      */
-    pic->f.key_frame = 0;
+    pic->tf.f->key_frame = 0;
     pic->mmco_reset  = 0;
     pic->recovered   = 0;
 
@@ -1428,7 +1426,7 @@ int ff_h264_decode_slice_header(H264Context *h, H264Context *h0)
          * since that can modify s->current_picture_ptr. */
         if (h0->first_field) {
             assert(h0->cur_pic_ptr);
-            assert(h0->cur_pic_ptr->f.buf[0]);
+            assert(h0->cur_pic_ptr->tf.f->buf[0]);
             assert(h0->cur_pic_ptr->reference != DELAYED_PIC_REF);
 
             /* figure out if we have a complementary field pair */
@@ -1503,10 +1501,10 @@ int ff_h264_decode_slice_header(H264Context *h, H264Context *h0)
              * is not noticeable by comparison, but it should be fixed. */
             if (h->short_ref_count) {
                 if (prev) {
-                    av_image_copy(h->short_ref[0]->f.data,
-                                  h->short_ref[0]->f.linesize,
-                                  (const uint8_t **)prev->f.data,
-                                  prev->f.linesize,
+                    av_image_copy(h->short_ref[0]->tf.f->data,
+                                  h->short_ref[0]->tf.f->linesize,
+                                  (const uint8_t **)prev->tf.f->data,
+                                  prev->tf.f->linesize,
                                   h->avctx->pix_fmt,
                                   h->mb_width  * 16,
                                   h->mb_height * 16);
@@ -1521,7 +1519,7 @@ int ff_h264_decode_slice_header(H264Context *h, H264Context *h0)
          * frame, or to allocate a new one. */
         if (h0->first_field) {
             assert(h0->cur_pic_ptr);
-            assert(h0->cur_pic_ptr->f.buf[0]);
+            assert(h0->cur_pic_ptr->tf.f->buf[0]);
             assert(h0->cur_pic_ptr->reference != DELAYED_PIC_REF);
 
             /* figure out if we have a complementary field pair */
@@ -1764,16 +1762,16 @@ int ff_h264_decode_slice_header(H264Context *h, H264Context *h0)
         for (i = 0; i < 16; i++) {
             id_list[i] = 60;
             if (j < h->list_count && i < h->ref_count[j] &&
-                h->ref_list[j][i].f.buf[0]) {
+                h->ref_list[j][i].tf.f->buf[0]) {
                 int k;
-                AVBuffer *buf = h->ref_list[j][i].f.buf[0]->buffer;
+                AVBuffer *buf = h->ref_list[j][i].tf.f->buf[0]->buffer;
                 for (k = 0; k < h->short_ref_count; k++)
-                    if (h->short_ref[k]->f.buf[0]->buffer == buf) {
+                    if (h->short_ref[k]->tf.f->buf[0]->buffer == buf) {
                         id_list[i] = k;
                         break;
                     }
                 for (k = 0; k < h->long_ref_count; k++)
-                    if (h->long_ref[k] && h->long_ref[k]->f.buf[0]->buffer == buf) {
+                    if (h->long_ref[k] && h->long_ref[k]->tf.f->buf[0]->buffer == buf) {
                         id_list[i] = h->short_ref_count + k;
                         break;
                     }
@@ -2086,12 +2084,12 @@ static void loop_filter(H264Context *h, int start_x, int end_x)
 
                 h->mb_x = mb_x;
                 h->mb_y = mb_y;
-                dest_y  = h->cur_pic.f.data[0] +
+                dest_y  = h->cur_pic.tf.f->data[0] +
                           ((mb_x << pixel_shift) + mb_y * h->linesize) * 16;
-                dest_cb = h->cur_pic.f.data[1] +
+                dest_cb = h->cur_pic.tf.f->data[1] +
                           (mb_x << pixel_shift) * (8 << CHROMA444(h)) +
                           mb_y * h->uvlinesize * block_h;
-                dest_cr = h->cur_pic.f.data[2] +
+                dest_cr = h->cur_pic.tf.f->data[2] +
                           (mb_x << pixel_shift) * (8 << CHROMA444(h)) +
                           mb_y * h->uvlinesize * block_h;
                 // FIXME simplify above

@@ -57,9 +57,9 @@ static av_noinline void FUNC(hl_decode_mb)(H264Context *h)
     const int block_h   = 16 >> h->chroma_y_shift;
     const int chroma422 = CHROMA422(h);
 
-    dest_y  = h->cur_pic.f.data[0] + ((mb_x << PIXEL_SHIFT)     + mb_y * h->linesize)  * 16;
-    dest_cb = h->cur_pic.f.data[1] +  (mb_x << PIXEL_SHIFT) * 8 + mb_y * h->uvlinesize * block_h;
-    dest_cr = h->cur_pic.f.data[2] +  (mb_x << PIXEL_SHIFT) * 8 + mb_y * h->uvlinesize * block_h;
+    dest_y  = h->cur_pic.tf.f->data[0] + ((mb_x << PIXEL_SHIFT)     + mb_y * h->linesize)  * 16;
+    dest_cb = h->cur_pic.tf.f->data[1] +  (mb_x << PIXEL_SHIFT) * 8 + mb_y * h->uvlinesize * block_h;
+    dest_cr = h->cur_pic.tf.f->data[2] +  (mb_x << PIXEL_SHIFT) * 8 + mb_y * h->uvlinesize * block_h;
 
     h->vdsp.prefetch(dest_y  + (h->mb_x & 3) * 4 * h->linesize   + (64 << PIXEL_SHIFT), h->linesize,       4);
     h->vdsp.prefetch(dest_cb + (h->mb_x & 7)     * h->uvlinesize + (64 << PIXEL_SHIFT), dest_cr - dest_cb, 2);
@@ -286,7 +286,7 @@ static av_noinline void FUNC(hl_decode_mb_444)(H264Context *h)
     const int plane_count      = (SIMPLE || !CONFIG_GRAY || !(h->flags & CODEC_FLAG_GRAY)) ? 3 : 1;
 
     for (p = 0; p < plane_count; p++) {
-        dest[p] = h->cur_pic.f.data[p] +
+        dest[p] = h->cur_pic.tf.f->data[p] +
                   ((mb_x << PIXEL_SHIFT) + mb_y * h->linesize) * 16;
         h->vdsp.prefetch(dest[p] + (h->mb_x & 3) * 4 * h->linesize + (64 << PIXEL_SHIFT),
                          h->linesize, 4);

@@ -214,7 +214,7 @@ static av_always_inline void mc_dir_part(H264Context *h, H264Picture *pic,
     int my            = h->mv_cache[list][scan8[n]][1] + src_y_offset * 8;
     const int luma_xy = (mx & 3) + ((my & 3) << 2);
     ptrdiff_t offset  = ((mx >> 2) << pixel_shift) + (my >> 2) * h->mb_linesize;
-    uint8_t *src_y    = pic->f.data[0] + offset;
+    uint8_t *src_y    = pic->tf.f->data[0] + offset;
     uint8_t *src_cb, *src_cr;
     int extra_width  = 0;
     int extra_height = 0;
@@ -251,7 +251,7 @@ static av_always_inline void mc_dir_part(H264Context *h, H264Picture *pic,
         return;
 
     if (chroma_idc == 3 /* yuv444 */) {
-        src_cb = pic->f.data[1] + offset;
+        src_cb = pic->tf.f->data[1] + offset;
         if (emu) {
             h->vdsp.emulated_edge_mc(h->edge_emu_buffer,
                                      src_cb - (2 << pixel_shift) - 2 * h->mb_linesize,
@@ -265,7 +265,7 @@ static av_always_inline void mc_dir_part(H264Context *h, H264Picture *pic,
         if (!square)
             qpix_op[luma_xy](dest_cb + delta, src_cb + delta, h->mb_linesize);
 
-        src_cr = pic->f.data[2] + offset;
+        src_cr = pic->tf.f->data[2] + offset;
         if (emu) {
             h->vdsp.emulated_edge_mc(h->edge_emu_buffer,
                                      src_cr - (2 << pixel_shift) - 2 * h->mb_linesize,
@@ -288,9 +288,9 @@ static av_always_inline void mc_dir_part(H264Context *h, H264Picture *pic,
         emu |= (my >> 3) < 0 || (my >> 3) + 8 >= (pic_height >> 1);
     }
 
-    src_cb = pic->f.data[1] + ((mx >> 3) << pixel_shift) +
+    src_cb = pic->tf.f->data[1] + ((mx >> 3) << pixel_shift) +
              (my >> ysh) * h->mb_uvlinesize;
-    src_cr = pic->f.data[2] + ((mx >> 3) << pixel_shift) +
+    src_cr = pic->tf.f->data[2] + ((mx >> 3) << pixel_shift) +
              (my >> ysh) * h->mb_uvlinesize;
 
     if (emu) {
@@ -478,10 +478,12 @@ static av_always_inline void prefetch_motion(H264Context *h, int list,
     if (refn >= 0) {
         const int mx  = (h->mv_cache[list][scan8[0]][0] >> 2) + 16 * h->mb_x + 8;
         const int my  = (h->mv_cache[list][scan8[0]][1] >> 2) + 16 * h->mb_y;
-        uint8_t **src = h->ref_list[list][refn].f.data;
+        uint8_t **src = h->ref_list[list][refn].tf.f->data;
         int off       = (mx << pixel_shift) +
                         (my + (h->mb_x & 3) * 4) * h->mb_linesize +
                         (64 << pixel_shift);
+        if (!h->ref_list[list][refn].tf.f)
+ return;
         h->vdsp.prefetch(src[0] + off, h->linesize, 4);
         if (chroma_idc == 3 /* yuv444 */) {
             h->vdsp.prefetch(src[1] + off, h->linesize, 4);

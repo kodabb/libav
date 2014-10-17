@@ -38,8 +38,7 @@
 #define COPY_PICTURE(dst, src) \
 do {\
     *(dst) = *(src);\
-    (dst)->f.extended_data = (dst)->f.data;\
-    (dst)->tf.f = &(dst)->f;\
+    (dst)->tf.f->extended_data = (dst)->tf.f->data;\
 } while (0)
 
 
@@ -47,9 +46,9 @@ static void pic_as_field(H264Picture *pic, const int parity){
     int i;
     for (i = 0; i < 4; ++i) {
         if (parity == PICT_BOTTOM_FIELD)
-            pic->f.data[i] += pic->f.linesize[i];
+            pic->tf.f->data[i] += pic->tf.f->linesize[i];
         pic->reference      = parity;
-        pic->f.linesize[i] *= 2;
+        pic->tf.f->linesize[i] *= 2;
     }
     pic->poc= pic->field_poc[parity == PICT_BOTTOM_FIELD];
 }
@@ -148,8 +147,8 @@ int ff_h264_fill_default_ref_list(H264Context *h)
 
         if (lens[0] == lens[1] && lens[1] > 1) {
             for (i = 0; i < lens[0] &&
-                        h->default_ref_list[0][i].f.buf[0]->buffer ==
-                        h->default_ref_list[1][i].f.buf[0]->buffer; i++);
+                        h->default_ref_list[0][i].tf.f->buf[0]->buffer ==
+                        h->default_ref_list[1][i].tf.f->buf[0]->buffer; i++);
             if (i == lens[0]) {
                 H264Picture tmp;
                 COPY_PICTURE(&tmp, &h->default_ref_list[1][0]);
@@ -172,14 +171,14 @@ int ff_h264_fill_default_ref_list(H264Context *h)
         tprintf(h->avctx, "List0: %s fn:%d 0x%p\n",
                 (h->default_ref_list[0][i].long_ref ? "LT" : "ST"),
                 h->default_ref_list[0][i].pic_id,
-                h->default_ref_list[0][i].f.data[0]);
+                h->default_ref_list[0][i].tf.f->data[0]);
     }
     if (h->slice_type_nos == AV_PICTURE_TYPE_B) {
         for (i = 0; i < h->ref_count[1]; i++) {
             tprintf(h->avctx, "List1: %s fn:%d 0x%p\n",
                     (h->default_ref_list[1][i].long_ref ? "LT" : "ST"),
                     h->default_ref_list[1][i].pic_id,
-                    h->default_ref_list[1][i].f.data[0]);
+                    h->default_ref_list[1][i].tf.f->data[0]);
         }
     }
 #endif
@@ -324,9 +323,9 @@ int ff_h264_decode_ref_pic_list_reordering(H264Context *h)
     }
     for (list = 0; list < h->list_count; list++) {
         for (index = 0; index < h->ref_count[list]; index++) {
-            if (!h->ref_list[list][index].f.buf[0]) {
+            if (!h->ref_list[list][index].tf.f->buf[0]) {
                 av_log(h->avctx, AV_LOG_ERROR, "Missing reference picture\n");
-                if (h->default_ref_list[list][0].f.buf[0])
+                if (h->default_ref_list[list][0].tf.f->buf[0])
                     COPY_PICTURE(&h->ref_list[list][index], &h->default_ref_list[list][0]);
                 else
                     return -1;
@@ -346,12 +345,12 @@ void ff_h264_fill_mbaff_ref_list(H264Context *h)
             H264Picture *field = &h->ref_list[list][16 + 2 * i];
             COPY_PICTURE(field, frame);
             for (j = 0; j < 3; j++)
-                field[0].f.linesize[j] <<= 1;
+                field[0].tf.f->linesize[j] <<= 1;
             field[0].reference = PICT_TOP_FIELD;
             field[0].poc       = field[0].field_poc[0];
             COPY_PICTURE(field + 1, field);
             for (j = 0; j < 3; j++)
-                field[1].f.data[j] += frame->f.linesize[j];
+                field[1].tf.f->data[j] += frame->tf.f->linesize[j];
             field[1].reference = PICT_BOTTOM_FIELD;
             field[1].poc       = field[1].field_poc[1];
 
@@ -500,7 +499,7 @@ static void print_short_term(H264Context *h)
         for (i = 0; i < h->short_ref_count; i++) {
             H264Picture *pic = h->short_ref[i];
             av_log(h->avctx, AV_LOG_DEBUG, "%"PRIu32" fn:%d poc:%d %p\n",
-                   i, pic->frame_num, pic->poc, pic->f.data[0]);
+                   i, pic->frame_num, pic->poc, pic->tf.f->data[0]);
         }
     }
 }
@@ -517,7 +516,7 @@ static void print_long_term(H264Context *h)
             H264Picture *pic = h->long_ref[i];
             if (pic) {
                 av_log(h->avctx, AV_LOG_DEBUG, "%"PRIu32" fn:%d poc:%d %p\n",
-                       i, pic->frame_num, pic->poc, pic->f.data[0]);
+                       i, pic->frame_num, pic->poc, pic->tf.f->data[0]);
             }
         }
     }
@@ -707,7 +706,7 @@ int ff_h264_execute_ref_pic_marking(H264Context *h, MMCO *mmco, int mmco_count)
 
         /* We have too many reference frames, probably due to corrupted
          * stream. Need to discard one frame. Prevents overrun of the
-         * short_ref and long_ref buffers.
+         * short_ref and long_retf.f->buffers.
          */
         av_log(h->avctx, AV_LOG_ERROR,
                "number of reference frames (%d+%d) exceeds max (%d; probably "
