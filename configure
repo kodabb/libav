@@ -139,6 +139,7 @@ Hardware accelerators:
   --enable-vdpau           enable VDPAU code
 
 Individual component options:
+  --enable-everything      enable all components allowed by the license
   --disable-everything     disable all components listed below
   --disable-encoder=NAME   disable encoder NAME
   --enable-encoder=NAME    enable encoder NAME
@@ -470,6 +471,12 @@ enable(){
 
 disable(){
     set_all no $*
+}
+
+enable_all(){
+    for opt; do
+        enable $opt
+    done
 }
 
 enable_weak(){
@@ -1034,7 +1041,7 @@ require(){
     header="$2"
     func="$3"
     shift 3
-    check_lib $header $func "$@" || die "ERROR: $name not found"
+    check_lib $header $func "$@" || test_everything $name || die "ERROR: $name not found"
 }
 
 require2(){
@@ -1042,12 +1049,20 @@ require2(){
     headers="$2"
     func="$3"
     shift 3
-    check_lib2 "$headers" $func "$@" || die "ERROR: $name not found"
+    check_lib2 "$headers" $func "$@" || test_everything $name || die "ERROR: $name not found"
 }
 
 require_pkg_config(){
     pkg="$1"
-    check_pkg_config "$@" || die "ERROR: $pkg not found"
+    check_pkg_config "$@" || test_everything "$1" || die "ERROR: $pkg not found"
+    add_cflags    $(get_safe ${pkg}_cflags)
+    add_extralibs $(get_safe ${pkg}_libs)
+}
+
+# needed by packages with different project name and library name
+require_pkg_config_diff(){
+    pkg="$2"
+    check_pkg_config "$@" || test_everything "$1" || die "ERROR: $pkg not found"
     add_cflags    $(get_safe ${pkg}_cflags)
     add_extralibs $(get_safe ${pkg}_libs)
 }
@@ -1112,6 +1127,10 @@ cp_if_changed(){
     cmp -s "$1" "$2" && echo "$2 is unchanged" && return
     mkdir -p "$(dirname $2)"
     $cp_f "$1" "$2"
+}
+
+test_everything() {
+    test -n $everything && disable $1
 }
 
 # CONFIG_LIST contains configurable options, while HAVE_LIST is for
@@ -1610,6 +1629,7 @@ CMDLINE_SELECT="
     asm
     cross_compile
     debug
+    everything
     extra_warnings
     logging
     lto
@@ -2410,6 +2430,9 @@ for opt do
         ;;
         --disable-programs)
             disable $PROGRAM_LIST
+        ;;
+        --enable-everything)
+            enable_all $EXTERNAL_LIBRARY_LIST
         ;;
         --disable-everything)
             map 'eval unset \${$(toupper ${v%s})_LIST}' $COMPONENT_LIST
@@ -3737,7 +3760,7 @@ EOF
 fi
 
 die_license_disabled() {
-    enabled $1 || { enabled $2 && die "$2 is $1 and --enable-$1 is not specified."; }
+    enabled $1 || test_everything $2 || { enabled $2 && die "$2 is $1 and --enable-$1 is not specified."; }
 }
 
 die_license_disabled gpl libcdio
@@ -4176,30 +4199,31 @@ done
 # these are off by default, so fail if requested and not available
 enabled avisynth          && { { check_header "avisynth/avisynth_c.h" && check_lib2 "windows.h" LoadLibrary; } ||
                                { check_header "avxsynth/avxsynth_c.h" && check_lib2 "dlfcn.h" dlopen -ldl; } ||
+                               { test_everything avisynth; } ||
                                die "ERROR: LoadLibrary/dlopen not found, or avisynth header not found"; }
-enabled frei0r            && { check_header frei0r.h || die "ERROR: frei0r.h header not found"; }
+enabled frei0r            && { check_header frei0r.h || test_everything frei0r || die "ERROR: frei0r.h header not found"; }
 enabled gnutls            && require_pkg_config gnutls gnutls/gnutls.h gnutls_global_init
 enabled libbs2b           && require_pkg_config libbs2b bs2b.h bs2b_open
 enabled libfaac           && require2 libfaac "stdint.h faac.h" faacEncGetVersion -lfaac
 enabled libfdk_aac        && require libfdk_aac fdk-aac/aacenc_lib.h aacEncOpen -lfdk-aac
-enabled libfontconfig     && require_pkg_config fontconfig "fontconfig/fontconfig.h" FcInit
-enabled libfreetype       && require_pkg_config freetype2 "ft2build.h FT_FREETYPE_H" FT_Init_FreeType
+enabled libfontconfig     && require_pkg_config_diff libfontconfig fontconfig "fontconfig/fontconfig.h" FcInit
+enabled libfreetype       && require_pkg_config_diff libfreetype freetype2 "ft2build.h FT_FREETYPE_H" FT_Init_FreeType
 enabled libgsm            && { for gsm_hdr in "gsm.h" "gsm/gsm.h"; do
                                    check_lib "${gsm_hdr}" gsm_create -lgsm && break;
-                               done || die "ERROR: libgsm not found"; }
+                               done || test_everything libgsm || die "ERROR: libgsm not found"; }
 enabled libilbc           && require libilbc ilbc.h WebRtcIlbcfix_InitDecode -lilbc
 enabled libmp3lame        && require "libmp3lame >= 3.98.3" lame/lame.h lame_set_VBR_quality -lmp3lame
 enabled libopencore_amrnb && require libopencore_amrnb opencore-amrnb/interf_dec.h Decoder_Interface_init -lopencore-amrnb
 enabled libopencore_amrwb && require libopencore_amrwb opencore-amrwb/dec_if.h D_IF_init -lopencore-amrwb
-enabled libopencv         && require_pkg_config opencv opencv/cv.h cvCreateImageHeader
-enabled libopenh264       && require_pkg_config openh264 wels/codec_api.h WelsGetCodecVersion
+enabled libopencv         && require_pkg_config_diff opencv opencv/cv.h cvCreateImageHeader
+enabled libopenh264       && require_pkg_config_diff openh264 wels/codec_api.h WelsGetCodecVersion
 enabled libopenjpeg       && { { check_header openjpeg.h && check_lib2 openjpeg.h opj_version -lopenjpeg -DOPJ_STATIC; } ||
-                               { require_pkg_config libopenjpeg1 openjpeg.h opj_version -DOPJ_STATIC; } }
+                               { require_pkg_config_diff libopenjpeg libopenjpeg1 openjpeg.h opj_version -DOPJ_STATIC; } }
 enabled libopus           && require_pkg_config opus opus_multistream.h opus_multistream_decoder_create
-enabled libpulse          && require_pkg_config libpulse-simple pulse/simple.h pa_simple_new
+enabled libpulse          && require_pkg_config_diff libpulse libpulse-simple pulse/simple.h pa_simple_new
 enabled librtmp           && require_pkg_config librtmp librtmp/rtmp.h RTMP_Socket
-enabled libschroedinger   && require_pkg_config schroedinger-1.0 schroedinger/schro.h schro_init
-enabled libspeex          && require_pkg_config speex speex/speex.h speex_decoder_init -lspeex
+enabled libschroedinger   && require_pkg_config_diff libschroedinger schroedinger-1.0 schroedinger/schro.h schro_init
+enabled libspeex          && require_pkg_config_diff libspeex speex speex/speex.h speex_decoder_init -lspeex
 enabled libtheora         && require libtheora theora/theoraenc.h th_info_init -ltheoraenc -ltheoradec -logg
 enabled libtwolame        && require libtwolame twolame.h twolame_init -ltwolame
 enabled libvo_aacenc      && require libvo_aacenc vo-aacenc/voAAC.h voGetAACEncAPI -lvo-aacenc
@@ -4207,24 +4231,29 @@ enabled libvo_amrwbenc    && require libvo_amrwbenc vo-amrwbenc/enc_if.h E_IF_in
 enabled libvorbis         && require libvorbis vorbis/vorbisenc.h vorbis_info_init -lvorbisenc -lvorbis -logg
 enabled libvpx            && {
     enabled libvpx_vp8_decoder && { check_lib2 "vpx/vpx_decoder.h vpx/vp8dx.h" vpx_codec_dec_init_ver -lvpx ||
+                                    test_everything libvpx_vp8_decoder ||
                                     die "ERROR: libvpx decoder version must be >=0.9.1"; }
     enabled libvpx_vp8_encoder && { check_lib2 "vpx/vpx_encoder.h vpx/vp8cx.h" "vpx_codec_enc_init_ver VPX_CQ" -lvpx ||
+                                    test_everything libvpx_vp8_encoder ||
                                     die "ERROR: libvpx encoder version must be >=0.9.6"; }
     enabled libvpx_vp9_decoder && { check_lib2 "vpx/vpx_decoder.h vpx/vp8dx.h" "vpx_codec_vp9_dx" -lvpx || disable libvpx_vp9_decoder; }
     enabled libvpx_vp9_encoder && { check_lib2 "vpx/vpx_encoder.h vpx/vp8cx.h" "vpx_codec_vp9_cx" -lvpx || disable libvpx_vp9_encoder; } }
 enabled libwavpack        && require libwavpack wavpack/wavpack.h WavpackOpenFileOutput  -lwavpack
 enabled libwebp           && require_pkg_config libwebp webp/encode.h WebPGetEncoderVersion
-enabled libx264           && require_pkg_config x264 "stdint.h x264.h" x264_encoder_encode &&
+enabled libx264           && require_pkg_config_diff x264 "stdint.h x264.h" x264_encoder_encode &&
                              { check_cpp_condition x264.h "X264_BUILD >= 118" ||
+                               test_everything libx264 ||
                                die "ERROR: libx264 version must be >= 0.118."; }
-enabled libx265           && require_pkg_config x265 x265.h x265_encoder_encode &&
+enabled libx265           && require_pkg_config_diff x265 x265.h x265_encoder_encode &&
                              { check_cpp_condition x265.h "X265_BUILD >= 17" ||
+                               test_everything libx265 ||
                                die "ERROR: libx265 version must be >= 17."; }
 enabled libxavs           && require libxavs xavs.h xavs_encoder_encode -lxavs
 enabled libxvid           && require libxvid xvid.h xvid_global -lxvidcore
 enabled openssl           && { check_lib openssl/ssl.h SSL_library_init -lssl -lcrypto ||
                                check_lib openssl/ssl.h SSL_library_init -lssl32 -leay32 ||
                                check_lib openssl/ssl.h SSL_library_init -lssl -lcrypto -lws2_32 -lgdi32 ||
+                               test_everything openssl ||
                                die "ERROR: openssl not found"; }
 
 if enabled gnutls; then
@@ -4238,6 +4267,7 @@ if enabled libdc1394; then
         enable libdc1394_2; } ||
     { check_lib libdc1394/dc1394_control.h dc1394_create_handle -ldc1394_control -lraw1394 &&
         enable libdc1394_1; } ||
+    test_everything libdc1394 ||
     die "ERROR: No version of libdc1394 found "
 fi
 
@@ -4284,24 +4314,25 @@ enabled_any sndio_indev sndio_outdev && check_lib2 sndio.h sio_open -lsndio
 
 if enabled libcdio; then
     check_lib2 "cdio/cdda.h cdio/paranoia.h" cdio_cddap_open -lcdio_paranoia -lcdio_cdda -lcdio ||
-    check_lib2 "cdio/paranoia/cdda.h cdio/paranoia/paranoia.h" cdio_cddap_open -lcdio_paranoia -lcdio_cdda -lcdio
+    check_lib2 "cdio/paranoia/cdda.h cdio/paranoia/paranoia.h" cdio_cddap_open -lcdio_paranoia -lcdio_cdda -lcdio ||
+    test_everything libcdio
 fi
 
 check_lib X11/Xlib.h XOpenDisplay -lX11 && enable xlib
 
 if enabled libxcb || enabled x11grab && ! disabled libxcb; then
     check_pkg_config xcb xcb/xcb.h xcb_connect || {
-        enabled libxcb && die "ERROR: libxcb not found";
+        enabled libxcb && disable libxcb || die "ERROR: libxcb not found";
     } && disable x11grab && enable libxcb
 
     disabled libxcb_shm ||
         check_pkg_config xcb-shm xcb/shm.h xcb_shm_attach || {
-            enabled libxcb_shm && die "ERROR: libxcb_shm not found";
+            enabled libxcb_shm && disable libxcb_shm || die "ERROR: libxcb_shm not found";
         } && check_header sys/shm.h && enable libxcb_shm
 
     disabled libxcb_xfixes ||
         check_pkg_config xcb-xfixes xcb/xfixes.h xcb_xfixes_get_cursor_image || {
-            enabled libxcb_xfixes && die "ERROR: libxcb_xfixes not found";
+            enabled libxcb_xfixes && disable libxcb_xfixes || die "ERROR: libxcb_xfixes not found";
         } && enable libxcb_xfixes
 
     add_cflags "$xcb_event_cflags $xcb_shm_cflags $xcb_xfixes_cflags"
@@ -4309,7 +4340,7 @@ if enabled libxcb || enabled x11grab && ! disabled libxcb; then
 fi
 
 if enabled x11grab; then
-    enabled xlib || die "ERROR: Xlib not found"
+    enabled xlib || test_everything xlib || die "ERROR: Xlib not found"
     require Xext X11/extensions/XShm.h XShmCreateImage -lXext
     require Xfixes X11/extensions/Xfixes.h XFixesGetCursorImage -lXfixes
 fi
