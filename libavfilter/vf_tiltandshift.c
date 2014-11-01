@@ -109,20 +109,6 @@ static void list_remove_head(TiltandshiftContext *s)
     s->list_size--;
 }
 
-static void list_empty(TiltandshiftContext *s)
-{
-    FrameList *next = s->input;
-    FrameList *tmp;
-
-    while (next) {
-        tmp = next;
-        next = tmp->next;
-        av_free(tmp);
-    }
-    s->input = NULL;
-    s->list_size = 0;
-}
-
 static const enum AVPixelFormat formats_supported[] = {
     AV_PIX_FMT_YUV420P, AV_PIX_FMT_YUV422P, AV_PIX_FMT_YUV444P,
     AV_PIX_FMT_YUV410P,
@@ -140,8 +126,9 @@ static int query_formats(AVFilterContext *ctx)
 static av_cold void uninit(AVFilterContext *ctx)
 {
     TiltandshiftContext *s = ctx->priv;
+    while (s->input)
+        list_remove_head(s);
     av_freep(&s->black_buffers);
-    list_empty(s);
 }
 
 static int config_props(AVFilterLink *outlink)
