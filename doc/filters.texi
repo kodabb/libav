@@ -2593,6 +2593,21 @@ Create 5 copies of the input video:
 avconv -i INPUT -filter_complex split=5 OUTPUT
 @end example
 
+@section threshold
+
+Convert the image to black or white pixels, using a threshold percentage value.
+The implemented method is categorized as local, where each pixel is analyzed
+with no correlation between them.
+
+The following parameter is accepted:
+
+@table @option
+
+@item level
+Percentage value selecting the color.
+
+@end table
+
 @section transpose
 
 Transpose rows with columns in the input video and optionally flip it.
