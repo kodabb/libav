@@ -101,6 +101,7 @@ static void list_remove_head(TiltandshiftContext *s)
     FrameList *head = s->input;
 
     if (head) {
+        av_frame_free(head->frame);
         s->input = head->next;
         av_freep(&head);
     }
