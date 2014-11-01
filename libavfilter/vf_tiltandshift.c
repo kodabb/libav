@@ -71,6 +71,8 @@ typedef struct TiltandshiftContext {
     int list_size;
     FrameList *input;
     FrameList *prev;
+
+    const AVPixFmtDescriptor *desc;
 } TiltandshiftContext;
 
 static int list_add_frame(TiltandshiftContext *s, AVFrame *frame)
@@ -185,6 +187,10 @@ static int config_props(AVFilterLink *outlink)
         av_log(ctx, AV_LOG_VERBOSE, "Padding buffers initialized.\n");
     }
 
+    s->desc = av_pix_fmt_desc_get(outlink->format);
+    if (!s->desc)
+        return AVERROR_BUG;
+
     return 0;
 }
 
@@ -194,28 +200,28 @@ static int filter_frame(AVFilterLink *inlink, AVFrame *frame)
     return list_add_frame(s, frame);
 }
 
-static void copy_column(uint8_t *dst_data[4], int dst_linesizes[4],
+static void copy_column(AVFilterLink *outlink,
+                        uint8_t *dst_data[4], int dst_linesizes[4],
                         const uint8_t *src_data[4], const int src_linesizes[4],
-                        enum AVPixelFormat format, int height, int ncol,
-                        int tilt)
+                        int ncol, int tilt)
 {
+    AVFilterContext *ctx = outlink->src;
+    TiltandshiftContext *s = ctx->priv;
     uint8_t *dst[4];
     const uint8_t *src[4];
-    const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(format);
-    if (!desc)
-        return;
 
     dst[0] = dst_data[0] + ncol;
-    dst[1] = dst_data[1] + (ncol >> desc->log2_chroma_h);
-    dst[2] = dst_data[2] + (ncol >> desc->log2_chroma_h);
+    dst[1] = dst_data[1] + (ncol >> s->desc->log2_chroma_h);
+    dst[2] = dst_data[2] + (ncol >> s->desc->log2_chroma_h);
 
     if (!tilt)
         ncol = 0;
     src[0] = src_data[0] + ncol;
-    src[1] = src_data[1] + (ncol >> desc->log2_chroma_h);
-    src[2] = src_data[2] + (ncol >> desc->log2_chroma_h);
+    src[1] = src_data[1] + (ncol >> s->desc->log2_chroma_h);
+    src[2] = src_data[2] + (ncol >> s->desc->log2_chroma_h);
 
-    av_image_copy(dst, dst_linesizes, src, src_linesizes, format, 1, height);
+    av_image_copy(dst, dst_linesizes, src, src_linesizes,
+                  outlink->format, 1, outlink->h);
 }
 
 static int request_frame(AVFilterLink *outlink)
@@ -254,18 +260,18 @@ static int request_frame(AVFilterLink *outlink)
     // in case we have to do any initial black padding
     if (s->start == TILT_BLACK) {
         for ( ; ncol < s->hold; ncol++)
-            copy_column(dst->data, dst->linesize,
+            copy_column(outlink, dst->data, dst->linesize,
                         (const uint8_t **)s->black_buffers, s->black_linesizes,
-                        outlink->format, outlink->h, ncol, 0);
+                        ncol, 0);
     }
 
     // copy a column from each input frame
     for ( ; ncol < s->list_size; ncol++) {
         AVFrame *src = head->frame;
 
-        copy_column(dst->data, dst->linesize,
+        copy_column(outlink, dst->data, dst->linesize,
                     (const uint8_t **)src->data, src->linesize,
-                    outlink->format, outlink->h, ncol, s->tilt);
+                    ncol, s->tilt);
 
         // keep track of the last known frame in case we need it below
         s->prev = head;
@@ -277,15 +283,14 @@ static int request_frame(AVFilterLink *outlink)
     // pad any remaining space with black or last frame
     if (s->end == TILT_FRAME) {
         for ( ; ncol < outlink->w; ncol++)
-            copy_column(dst->data, dst->linesize,
+            copy_column(outlink, dst->data, dst->linesize,
                         (const uint8_t **)s->prev->frame->data,
-                        s->prev->frame->linesize, outlink->format, outlink->h,
-                        ncol, 1);
+                        s->prev->frame->linesize, ncol, 1);
     } else { // TILT_BLACK and TILT_NONE
         for ( ; ncol < outlink->w; ncol++)
-            copy_column(dst->data, dst->linesize,
+            copy_column(outlink, dst->data, dst->linesize,
                         (const uint8_t **)s->black_buffers, s->black_linesizes,
-                        outlink->format, outlink->h, ncol, 0);
+                        ncol, 0);
     }
 
     // set correct timestamps and props as long as there is proper input
