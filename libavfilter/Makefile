@@ -77,6 +77,7 @@ OBJS-$(CONFIG_SETTB_FILTER)                  += settb.o
 OBJS-$(CONFIG_SHOWINFO_FILTER)               += vf_showinfo.o
 OBJS-$(CONFIG_SHUFFLEPLANES_FILTER)          += vf_shuffleplanes.o
 OBJS-$(CONFIG_SPLIT_FILTER)                  += split.o
+OBJS-$(CONFIG_STEREO2MONO_FILTER)            += vf_stereo2mono.o
 OBJS-$(CONFIG_TRANSPOSE_FILTER)              += vf_transpose.o
 OBJS-$(CONFIG_TRIM_FILTER)                   += trim.o
 OBJS-$(CONFIG_UNSHARP_FILTER)                += vf_unsharp.o
