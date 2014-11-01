@@ -1426,6 +1426,7 @@ frames with a negative PTS.
 
 @end table
 
+@anchor{framepack}
 @section framepack
 
 Pack two different video streams into a stereoscopic video, setting proper
@@ -2591,6 +2592,65 @@ unspecified, it defaults to 2.
 Create 5 copies of the input video:
 @example
 avconv -i INPUT -filter_complex split=5 OUTPUT
+@end example
+
+@section stereo2mono
+
+This filter is the exact opposite of @ref{framepack} filter. It extracts
+one view from a stereoscopic video, removing any 3d-related information found.
+
+No scaling operation is perfomed, use the @ref{scale} filter to set
+the desired size, while pts are correctly adjusted in case of frame alternate.
+
+It accepts the following parameters:
+@table @option
+
+@item format
+The input frame packing format. When no format is selected, the filter acts as
+a passthrough and just removes 3d-related information. Supported values are:
+
+@table @option
+
+@item sbs
+The views are next to each other.
+
+@item tab
+The views are on top of each other.
+
+@item lines
+The views are packed by line.
+
+@item columns
+The views are packed by column.
+
+@item frameseq
+The views are temporally interleaved.
+
+@end table
+
+@item view
+Select which one of the two view is to be output. In the rare case your stream
+has inverted S3D, you can adjust this parameter to select the desired output.
+Default is the left view.
+
+@table @option
+
+@item left
+@item right
+
+@end table
+
+
+@end table
+
+Some examples:
+
+@example
+# Convert left and right views into a frame-sequential video
+avconv -i LEFT -i RIGHT -filter_complex framepack=frameseq OUTPUT
+
+# Convert views into a side-by-side video with the same output resolution as the input
+avconv -i LEFT -i RIGHT -filter_complex [0:v]scale=w=iw/2[left],[1:v]scale=w=iw/2[right],[left][right]framepack=sbs OUTPUT
 @end example
 
 @section transpose
