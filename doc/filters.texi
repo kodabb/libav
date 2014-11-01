@@ -1437,6 +1437,7 @@ frames with a negative PTS.
 
 @end table
 
+@anchor{framepack}
 @section framepack
 
 Pack two different video streams into a stereoscopic video, setting proper
@@ -1480,6 +1481,59 @@ avconv -i LEFT -i RIGHT -filter_complex framepack=frameseq OUTPUT
 
 # Convert views into a side-by-side video with the same output resolution as the input
 avconv -i LEFT -i RIGHT -filter_complex [0:v]scale=w=iw/2[left],[1:v]scale=w=iw/2[right],[left][right]framepack=sbs OUTPUT
+@end example
+
+@section frameunpack
+
+This filter is the exact opposite of @ref{framepack} filter. It extracts
+one view from a stereoscopic video, removing any 3d-related information found.
+Remember that if you need only a single view, you can just link one output to
+a null sink and not request any frames from it.
+
+No scaling operation is perfomed, use the @ref{scale} filter to set
+the desired size with your preferred algorithm. On the other hand pts are
+correctly adjusted in case of frame alternate.
+
+It accepts the following parameters:
+@table @option
+
+@item format
+The input frame packing format. When no format is selected, the filter acts as
+a passthrough and just removes 3d-related information. Supported values are:
+
+@table @option
+
+@item sbs
+The views are next to each other.
+
+@item tab
+The views are on top of each other.
+
+@item lines
+The views are packed by line.
+
+@item columns
+The views are packed by column.
+
+@item frameseq
+The views are temporally interleaved.
+
+@end table
+
+@end table
+
+Some examples:
+
+@example
+# Convert a frame-sequential video to the original left and right streams
+avconv -i INPUT -filter_complex frameunpack=frameseq[left][right] -map [left] LEFT -map [right] RIGTH
+
+# Extract the left view from a side-by-side video
+avconv -i INPUT -filter_complex frameunpack=sbs[left][right],[right]nullsink -map [left] LEFT
+
+# Create a two-stream video from a top-and-bottom stream, restoring the original view size
+avconv -i INPUT -filter_complex frameunpack=sbs[left][right],[left]scale=h=ih*2[out1],[right]scale=h=ih*2[out2] -y -map [out1] -map [out2] OUTPUT
+
 @end example
 
 @anchor{frei0r}
