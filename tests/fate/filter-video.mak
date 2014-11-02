@@ -32,6 +32,17 @@ endef
 FPMODES = columns frameseq lines sbs tab
 $(foreach MODE,$(FPMODES),$(eval $(call FATE_FPFILTER_SUITE,$(MODE))))
 
+define FATE_S2MFILTER_SUITE
+FATE_FILTER_VSYNTH-$(CONFIG_STEREO2MONO_FILTER) += fate-filter-stereo2mono-$(1)-$(2)
+fate-filter-stereo2mono-$(1): CMD = framecrc -c:v pgmyuv -i $(TARGET_PATH)/tests/vsynth1/%02d.pgm -c:v pgmyuv -i $(TARGET_PATH)/tests/vsynth1/%02d.pgm -vf stereo2mono=format=$(1):view=$(2) -frames 5
+endef
+
+S2MMODES = columns frameseq lines sbs tab
+S2MVIEWS = left right
+$(foreach MODE,$(S2MMODES), \
+    $(foreach VIEW,$(S2MVIEWS), \
+        $(eval $(call FATE_S2MFILTER_SUITE,$(MODE),$(VIEW)))))
+
 FATE_FILTER_VSYNTH-$(CONFIG_GRADFUN_FILTER) += fate-filter-gradfun
 fate-filter-gradfun: CMD = framecrc -c:v pgmyuv -i $(SRC) -vf gradfun
 
