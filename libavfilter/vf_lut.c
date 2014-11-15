@@ -74,6 +74,7 @@ typedef struct LutContext {
     int rgba_map[4];
     int step;
     int negate_alpha; /* only used by negate */
+    int threshold;    /* only used by threshold */
 } LutContext;
 
 #define Y 0
@@ -110,8 +111,10 @@ static av_cold int init(AVFilterContext *ctx)
     s->var_values[VAR_PI]  = M_PI;
     s->var_values[VAR_E ]  = M_E;
 
-    s->is_rgb = !strcmp(ctx->filter->name, "lutrgb");
-    s->is_yuv = !strcmp(ctx->filter->name, "lutyuv");
+    if (!s->is_rgb)
+        s->is_rgb = !strcmp(ctx->filter->name, "lutrgb");
+    if (!s->is_yuv)
+        s->is_yuv = !strcmp(ctx->filter->name, "lutyuv");
 
     return 0;
 }
@@ -409,5 +412,50 @@ static av_cold int negate_init(AVFilterContext *ctx)
 }
 
 DEFINE_LUT_FILTER(negate, "Negate input video.", negate_init, negate_options);
+
+#endif
+
+#if CONFIG_THRESHOLD_FILTER
+
+static const AVOption threshold_options[] = {
+    { "threshold", NULL, OFFSET(threshold), AV_OPT_TYPE_INT,
+        { .i64 = 60 }, -100, 100, .flags = FLAGS },
+    { NULL },
+};
+
+static av_cold int threshold_init(AVFilterContext *ctx)
+{
+    LutContext *s = ctx->priv;
+    char threshold[32];
+    const char *op = "gt";
+    int i;
+
+    if (s->threshold < 0) {
+        s->threshold *= -1;
+        op = "lte";
+    }
+
+    av_log(ctx, AV_LOG_DEBUG, "threshold: %d%%\n", s->threshold);
+    snprintf(threshold, sizeof(threshold),
+             "%s(val,%d*maxval/100)*maxval", op, s->threshold);
+
+    for (i = 0; i < 4; i++) {
+        s->comp_expr_str[i] = av_strdup(i ? i == 3 ? "val"
+                                                   : "maxval/2"
+                                          : threshold);
+        if (!s->comp_expr_str[i]) {
+            uninit(ctx);
+            return AVERROR(ENOMEM);
+        }
+    }
+
+    // only yuv supported
+    s->is_yuv = 1;
+    return init(ctx);
+}
+
+DEFINE_LUT_FILTER(threshold,
+                  "Color pixels black or white, depending on the input value.",
+                  threshold_init, threshold_options);
 
 #endif

@@ -64,6 +64,9 @@ fate-filter-shuffleplanes-swapuv: CMD = framecrc -c:v pgmyuv -i $(SRC) -vf shuff
 
 FATE_FILTER_VSYNTH-$(CONFIG_SHUFFLEPLANES_FILTER) += $(FATE_SHUFFLEPLANES)
 
+FATE_FILTER_VSYNTH-$(CONFIG_THRESHOLD_FILTER) += fate-filter-threshold
+fate-filter-threshold: CMD = framecrc -c:v pgmyuv -i $(SRC) -vf threshold=65
+
 FATE_FILTER_VSYNTH-$(CONFIG_TRANSPOSE_FILTER) += fate-filter-transpose
 fate-filter-transpose: CMD = framecrc -c:v pgmyuv -i $(SRC) -vf transpose
 

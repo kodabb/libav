@@ -1729,6 +1729,9 @@ format=rgba,lutrgb=a="maxval-minval/2"
 
 # Correct luminance gamma by a factor of 0.5
 lutyuv=y=gammaval(0.5)
+
+# Threshold input video (if luma is greater than 60%)
+lutyuv="gt(val,60*maxval/100)*maxval:u=128:v=128"
 @end example
 
 @section negate
@@ -2652,6 +2655,17 @@ avconv -i LEFT -i RIGHT -filter_complex framepack=frameseq OUTPUT
 # Convert views into a side-by-side video with the same output resolution as the input
 avconv -i LEFT -i RIGHT -filter_complex [0:v]scale=w=iw/2[left],[1:v]scale=w=iw/2[right],[left][right]framepack=sbs OUTPUT
 @end example
+
+@section threshold
+
+Color input video white or black depending on the threshold valude.
+
+It accepts an positive or negative integer as input representing the percentace
+value of the pixel: when input is positive the comparison against the luma value
+is "greater than", otherwise it is "less than or equal".
+
+The threshold algorithm type is local (no correlation between pixels) and
+implemented with a look-up table.
 
 @section transpose
 

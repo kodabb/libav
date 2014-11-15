@@ -7,6 +7,7 @@ version <next>:
 - avplay now exits by default at the end of playback
 - XCB-based screen-grabber
 - frameunpack filter
+- threshold filter
 
 
 version 11:
