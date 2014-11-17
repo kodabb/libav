@@ -126,6 +126,7 @@ static int vc1_parse(AVCodecParserContext *s,
     int start_code_found = 0;
     int next = END_NOT_FOUND;
     int i = vpc->bytes_to_skip;
+    int ret;
 
     if (pic_found && buf_size == 0) {
         /* EOF considered as end of frame */
@@ -217,12 +218,14 @@ static int vc1_parse(AVCodecParserContext *s,
     if (s->flags & PARSER_FLAG_COMPLETE_FRAMES) {
         next = buf_size;
     } else {
-        if (ff_combine_frame(&vpc->pc, next, &buf, &buf_size) < 0) {
+        ret = ff_parser_combine_data(&vpc->pc, next, &buf, &buf_size,
+                                     poutbuf, poutbuf_size);
+        if (ret == AVERROR(EAGAIN)) {
             vpc->bytes_to_skip = 0;
-            *poutbuf = NULL;
-            *poutbuf_size = 0;
             return buf_size;
         }
+        if (ret == AVERROR(ENOMEM))
+            return ret;
     }
 
     /* If we return with a valid pointer to a combined frame buffer
