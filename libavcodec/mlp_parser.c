@@ -246,7 +246,7 @@ static int mlp_parse(AVCodecParserContext *s,
     MLPParseContext *mp = s->priv_data;
     int sync_present;
     uint8_t parity_bits;
-    int next;
+    int next, ret;
     int i, p = 0;
 
     *poutbuf_size = 0;
@@ -268,11 +268,16 @@ static int mlp_parse(AVCodecParserContext *s,
         }
 
         if (!mp->in_sync) {
-            ff_combine_frame(&mp->pc, END_NOT_FOUND, &buf, &buf_size);
+            ret = ff_combine_frame(&mp->pc, END_NOT_FOUND, &buf, &buf_size);
+            if (ret == AVERROR(ENOMEM))
+                return ret;
+
             return buf_size;
         }
 
-        ff_combine_frame(&mp->pc, i - 7, &buf, &buf_size);
+        ret = ff_combine_frame(&mp->pc, i - 7, &buf, &buf_size);
+        if (ret == AVERROR(ENOMEM))
+            return ret;
 
         return i - 7;
     }
@@ -286,7 +291,9 @@ static int mlp_parse(AVCodecParserContext *s,
         }
 
         if (mp->pc.index + buf_size < 2) {
-            ff_combine_frame(&mp->pc, END_NOT_FOUND, &buf, &buf_size);
+            ret = ff_combine_frame(&mp->pc, END_NOT_FOUND, &buf, &buf_size);
+            if (ret == AVERROR(ENOMEM))
+                return ret;
             return buf_size;
         }
 
@@ -298,10 +305,13 @@ static int mlp_parse(AVCodecParserContext *s,
 
     next = (mp->bytes_left > buf_size) ? END_NOT_FOUND : mp->bytes_left;
 
-    if (ff_combine_frame(&mp->pc, next, &buf, &buf_size) < 0) {
+    ret = ff_combine_frame(&mp->pc, next, &buf, &buf_size);
+    if (ret == AVERROR(EAGAIN)) {
         mp->bytes_left -= buf_size;
         return buf_size;
     }
+    if (ret == AVERROR(ENOMEM))
+        return ret;
 
     mp->bytes_left = 0;
 
