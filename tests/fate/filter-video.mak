@@ -27,6 +27,9 @@ fate-filter-fieldorder: CMD = framecrc -c:v pgmyuv -i $(SRC) -vf interlace=tff,f
 define FATE_FPFILTER_SUITE
 FATE_FILTER_VSYNTH-$(CONFIG_FRAMEPACK_FILTER) += fate-filter-framepack-$(1)
 fate-filter-framepack-$(1): CMD = framecrc -c:v pgmyuv -i $(TARGET_PATH)/tests/vsynth1/%02d.pgm -c:v pgmyuv -i $(TARGET_PATH)/tests/vsynth1/%02d.pgm -filter_complex framepack=$(1) -frames 15
+
+FATE_FILTER_VSYNTH-$(CONFIG_FRAMEUNPACK_FILTER) += fate-filter-frameunpack-$(1)
+fate-filter-frameunpack-$(1): CMD = framecrc -i $(TARGET_PATH)/tests/vsynth1/%02d.pgm -c:v pgmyuv -filter_complex frameunpack=$(1) -frames 15
 endef
 
 FPMODES = columns frameseq lines sbs tab
