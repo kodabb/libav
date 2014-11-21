@@ -7,7 +7,7 @@ version <next>:
 - avplay now exits by default at the end of playback
 - XCB-based screen-grabber
 - creating DASH compatible fragmented MP4, MPEG-DASH segmenting muxer
-- DSS decoder (sp/lp)
+- DSS decoder (sp/lp) and demuxer
 
 
 version 11:
