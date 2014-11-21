@@ -113,7 +113,7 @@ static void tnput(uint8_t **p, int n, const uint8_t *val, enum TiffTypes type,
  * @param ptr_val Pointer to values
  */
 static void add_entry(TiffEncoderContext *s, enum TiffTags tag,
-                      enum TiffTypes type, int count, const void *ptr_val)
+                      enum TiffTypes type, uint64_t count, const void *ptr_val)
 {
     uint8_t *entries_ptr = s->entries + 12 * s->num_entries;
 
