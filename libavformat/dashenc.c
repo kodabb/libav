@@ -463,7 +463,7 @@ static int write_manifest(AVFormatContext *s, int final)
             avio_printf(out, "\tavailabilityStartTime=\"%s\"\n", c->availability_start_time);
         if (c->window_size && c->use_template) {
             avio_printf(out, "\ttimeShiftBufferDepth=\"");
-            write_time(out, c->last_duration * c->window_size);
+            write_time(out, (int64_t) c->last_duration * c->window_size);
             avio_printf(out, "\"\n");
         }
     }
