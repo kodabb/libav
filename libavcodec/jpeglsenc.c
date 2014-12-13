@@ -270,6 +270,8 @@ static int encode_picture_ls(AVCodecContext *avctx, AVPacket *pkt,
     }
 
     buf2 = av_malloc(pkt->size);
+    if (!buf2)
+        return AVERROR(ENOMEM);
 
     init_put_bits(&pb, pkt->data, pkt->size);
     init_put_bits(&pb2, buf2, pkt->size);
@@ -300,6 +302,8 @@ static int encode_picture_ls(AVCodecContext *avctx, AVPacket *pkt,
     put_bits(&pb, 8, 0);  // point transform: none
 
     state = av_mallocz(sizeof(JLSState));
+    if (!state)
+        return AVERROR(ENOMEM);
     /* initialize JPEG-LS state from JPEG parameters */
     state->near = near;
     state->bpp  = (avctx->pix_fmt == AV_PIX_FMT_GRAY16) ? 16 : 8;
@@ -309,6 +313,8 @@ static int encode_picture_ls(AVCodecContext *avctx, AVPacket *pkt,
     ls_store_lse(state, &pb);
 
     zero = av_mallocz(p->linesize[0]);
+    if (!zero)
+        return AVERROR(ENOMEM);
     last = zero;
     cur  = p->data[0];
     if (avctx->pix_fmt == AV_PIX_FMT_GRAY8) {

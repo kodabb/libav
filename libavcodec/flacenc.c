@@ -626,6 +626,8 @@ static uint64_t calc_rice_params(RiceContext *rc, int pmin, int pmax,
     tmp_rc.coding_mode = rc->coding_mode;
 
     udata = av_malloc(n * sizeof(uint32_t));
+    if (!udata)
+        return AVERROR(ENOMEM);
     for (i = 0; i < n; i++)
         udata[i] = (2*data[i]) ^ (data[i]>>31);
 

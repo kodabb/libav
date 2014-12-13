@@ -931,6 +931,11 @@ static int init_pass2(MpegEncContext *s)
 
     qscale         = av_malloc(sizeof(double) * rcc->num_entries);
     blurred_qscale = av_malloc(sizeof(double) * rcc->num_entries);
+    if (!qscale || !blurred_qscale) {
+        av_freep(&qscale);
+        av_freep(&blurred_qscale);
+        return AVERROR(ENOMEM);
+    }
     toobig = 0;
 
     for (step = 256 * 256; step > 0.0000001; step *= 0.5) {
