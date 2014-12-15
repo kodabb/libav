@@ -315,6 +315,7 @@ static int query_formats(AVFilterGraph *graph, AVClass *log_ctx)
             }
 
             if (convert_needed) {
+                AVFilterFormats *informats, *outformats;
                 AVFilterContext *convert;
                 AVFilter *filter;
                 AVFilterLink *inlink, *outlink;
@@ -366,9 +367,15 @@ static int query_formats(AVFilterGraph *graph, AVClass *log_ctx)
                 convert->filter->query_formats(convert);
                 inlink  = convert->inputs[0];
                 outlink = convert->outputs[0];
-                if (!ff_merge_formats( inlink->in_formats,  inlink->out_formats) ||
-                    !ff_merge_formats(outlink->in_formats, outlink->out_formats))
+                informats  = ff_merge_formats(inlink->in_formats,
+                                              inlink->out_formats);
+                outformats = ff_merge_formats(outlink->in_formats,
+                                              outlink->out_formats);
+                if (!informats || !outformats) {
+                    av_freep(&informats);
+                    av_freep(&outformats);
                     ret |= AVERROR(ENOSYS);
+                }
                 if (inlink->type == AVMEDIA_TYPE_AUDIO &&
                     (!ff_merge_samplerates(inlink->in_samplerates,
                                            inlink->out_samplerates) ||
