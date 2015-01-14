@@ -176,7 +176,7 @@ static int open_null_ctx(AVIOContext **ctx)
         return AVERROR(ENOMEM);
     *ctx = avio_alloc_context(buf, buf_size, AVIO_FLAG_WRITE, NULL, NULL, NULL, NULL);
     if (!*ctx) {
-        av_free(buf);
+        av_freep(&buf);
         return AVERROR(ENOMEM);
     }
     return 0;
@@ -184,8 +184,8 @@ static int open_null_ctx(AVIOContext **ctx)
 
 static void close_null_ctx(AVIOContext *pb)
 {
-    av_free(pb->buffer);
-    av_free(pb);
+    av_freep(&pb->buffer);
+    av_freep(&pb);
 }
 
 static void seg_free_context(SegmentContext *seg)

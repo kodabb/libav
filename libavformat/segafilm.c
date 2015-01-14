@@ -293,7 +293,7 @@ static int film_read_packet(AVFormatContext *s,
 
         /* make sure the interleave buffer is large enough */
         if (sample->sample_size > film->stereo_buffer_size) {
-            av_free(film->stereo_buffer);
+            av_freep(&film->stereo_buffer);
             film->stereo_buffer_size = sample->sample_size;
             film->stereo_buffer = av_malloc(film->stereo_buffer_size);
             if (!film->stereo_buffer) {

@@ -177,7 +177,7 @@ static char *extradata2psets(AVCodecContext *c)
     psets = av_mallocz(MAX_PSET_SIZE);
     if (!psets) {
         av_log(c, AV_LOG_ERROR, "Cannot allocate memory for the parameter sets.\n");
-        av_free(tmpbuf);
+        av_freep(&tmpbuf);
         return NULL;
     }
     memcpy(psets, pset_string, strlen(pset_string));
@@ -204,8 +204,8 @@ static char *extradata2psets(AVCodecContext *c)
         }
         if (!av_base64_encode(p, MAX_PSET_SIZE - (p - psets), r, r1 - r)) {
             av_log(c, AV_LOG_ERROR, "Cannot Base64-encode %td %td!\n", MAX_PSET_SIZE - (p - psets), r1 - r);
-            av_free(psets);
-            av_free(tmpbuf);
+            av_freep(&psets);
+            av_freep(&tmpbuf);
 
             return NULL;
         }
@@ -218,7 +218,7 @@ static char *extradata2psets(AVCodecContext *c)
         ff_data_to_hex(p, sps + 1, 3, 0);
         p[6] = '\0';
     }
-    av_free(tmpbuf);
+    av_freep(&tmpbuf);
 
     return psets;
 }
@@ -309,18 +309,18 @@ static char *extradata2psets_hevc(AVCodecContext *c)
             strpos = strlen(psets);
             if (!av_base64_encode(psets + strpos, MAX_PSET_SIZE - strpos,
                                   &extradata[pos], len)) {
-                av_free(psets);
+                av_freep(&psets);
                 goto err;
             }
             pos += len;
         }
     }
-    av_free(tmpbuf);
+    av_freep(&tmpbuf);
 
     return psets;
 
 err:
-    av_free(tmpbuf);
+    av_freep(&tmpbuf);
     return NULL;
 }
 
@@ -385,7 +385,7 @@ static char *xiph_extradata2config(AVCodecContext *c)
 
     encoded_config = av_malloc(AV_BASE64_SIZE(config_len));
     if (!encoded_config) {
-        av_free(config);
+        av_freep(&config);
         goto xiph_fail;
     }
 
@@ -404,7 +404,7 @@ static char *xiph_extradata2config(AVCodecContext *c)
 
     av_base64_encode(encoded_config, AV_BASE64_SIZE(config_len),
                      config, config_len);
-    av_free(config);
+    av_freep(&config);
 
     return encoded_config;
 
@@ -701,7 +701,7 @@ static char *sdp_write_media_attributes(char *buff, int size, AVCodecContext *c,
             break;
     }
 
-    av_free(config);
+    av_freep(&config);
 
     return buff;
 }
@@ -793,8 +793,8 @@ int av_sdp_create(AVFormatContext *ac[], int n_files, char *buf, int size)
                     av_strlcatf(buf, size,
                                 "a=crypto:1 %s inline:%s\r\n",
                                 crypto_suite, crypto_params);
-                av_free(crypto_suite);
-                av_free(crypto_params);
+                av_freep(&crypto_suite);
+                av_freep(&crypto_params);
             }
         }
     }

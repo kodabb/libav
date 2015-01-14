@@ -107,7 +107,7 @@ void ff_tls_deinit(void)
             CRYPTO_set_locking_callback(NULL);
             for (i = 0; i < CRYPTO_num_locks(); i++)
                 pthread_mutex_destroy(&openssl_mutexes[i]);
-            av_free(openssl_mutexes);
+            av_freep(&openssl_mutexes);
         }
 #endif
     }
@@ -352,6 +352,6 @@ int ff_http_match_no_proxy(const char *no_proxy, const char *hostname)
         }
         start = next;
     }
-    av_free(buf);
+    av_freep(&buf);
     return ret;
 }

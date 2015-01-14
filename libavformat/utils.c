@@ -392,7 +392,7 @@ int ff_read_packet(AVFormatContext *s, AVPacket *pkt)
                 pd->buf_size = 0;
                 s->raw_packet_buffer                 = pktl->next;
                 s->raw_packet_buffer_remaining_size += pkt->size;
-                av_free(pktl);
+                av_freep(&pktl);
                 return 0;
             }
         }
@@ -2457,13 +2457,13 @@ void avformat_free_context(AVFormatContext *s)
             av_free_packet(&st->attached_pic);
         av_dict_free(&st->metadata);
         av_freep(&st->probe_data.buf);
-        av_free(st->index_entries);
-        av_free(st->codec->extradata);
-        av_free(st->codec->subtitle_header);
-        av_free(st->codec);
-        av_free(st->priv_data);
-        av_free(st->info);
-        av_free(st);
+        av_freep(&st->index_entries);
+        av_freep(&st->codec->extradata);
+        av_freep(&st->codec->subtitle_header);
+        av_freep(&st->codec);
+        av_freep(&st->priv_data);
+        av_freep(&st->info);
+        av_freep(&st);
     }
     for (i = s->nb_programs - 1; i >= 0; i--) {
         av_dict_free(&s->programs[i]->metadata);
@@ -2474,13 +2474,13 @@ void avformat_free_context(AVFormatContext *s)
     av_freep(&s->priv_data);
     while (s->nb_chapters--) {
         av_dict_free(&s->chapters[s->nb_chapters]->metadata);
-        av_free(s->chapters[s->nb_chapters]);
+        av_freep(&s->chapters[s->nb_chapters]);
     }
     av_freep(&s->chapters);
     av_dict_free(&s->metadata);
     av_freep(&s->streams);
     av_freep(&s->internal);
-    av_free(s);
+    av_freep(&s);
 }
 
 void avformat_close_input(AVFormatContext **ps)
@@ -2520,14 +2520,14 @@ AVStream *avformat_new_stream(AVFormatContext *s, const AVCodec *c)
     if (!st)
         return NULL;
     if (!(st->info = av_mallocz(sizeof(*st->info)))) {
-        av_free(st);
+        av_freep(&st);
         return NULL;
     }
 
     st->codec = avcodec_alloc_context3(c);
     if (!st->codec) {
-        av_free(st->info);
-        av_free(st);
+        av_freep(&st->info);
+        av_freep(&st);
         return NULL;
     }
     if (s->iformat) {

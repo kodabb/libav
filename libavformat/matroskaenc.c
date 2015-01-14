@@ -370,8 +370,8 @@ static int64_t mkv_write_seekhead(AVIOContext *pb, mkv_seekhead *seekhead)
         currentpos = seekhead->filepos;
     }
 fail:
-    av_free(seekhead->entries);
-    av_free(seekhead);
+    av_freep(&seekhead->entries);
+    av_freep(&seekhead);
 
     return currentpos;
 }
@@ -622,7 +622,7 @@ static int mkv_write_codecprivate(AVFormatContext *s, AVIOContext *pb,
     if (codecpriv_size)
         put_ebml_binary(pb, MATROSKA_ID_CODECPRIVATE, codecpriv,
                         codecpriv_size);
-    av_free(codecpriv);
+    av_freep(&codecpriv);
     return ret;
 }
 
@@ -1414,7 +1414,7 @@ static void mkv_write_block(AVFormatContext *s, AVIOContext *pb,
     avio_w8(pb, flags);
     avio_write(pb, data + offset, size);
     if (data != pkt->data)
-        av_free(data);
+        av_freep(&data);
 }
 
 static int srt_get_duration(uint8_t **buf)
@@ -1469,7 +1469,7 @@ static void mkv_flush_dynbuf(AVFormatContext *s)
 
     bufsize = avio_close_dyn_buf(mkv->dyn_bc, &dyn_buf);
     avio_write(s->pb, dyn_buf, bufsize);
-    av_free(dyn_buf);
+    av_freep(&dyn_buf);
     mkv->dyn_bc = NULL;
 }
 
@@ -1698,7 +1698,7 @@ static int mkv_write_trailer(AVFormatContext *s)
     }
 
     end_ebml_master(pb, mkv->segment);
-    av_free(mkv->tracks);
+    av_freep(&mkv->tracks);
     av_freep(&mkv->cues->entries);
     av_freep(&mkv->cues);
 

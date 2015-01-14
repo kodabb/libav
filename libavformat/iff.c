@@ -92,7 +92,7 @@ static int get_metadata(AVFormatContext *s,
         return AVERROR(ENOMEM);
 
     if (avio_read(s->pb, buf, data_size) < 0) {
-        av_free(buf);
+        av_freep(&buf);
         return AVERROR(EIO);
     }
     buf[data_size] = 0;

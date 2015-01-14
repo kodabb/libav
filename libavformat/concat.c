@@ -109,7 +109,7 @@ static av_cold int concat_open(URLContext *h, const char *uri, int flags)
         nodes[i].uc   = uc;
         nodes[i].size = size;
     }
-    av_free(node_uri);
+    av_freep(&node_uri);
     data->length = i;
 
     if (err < 0)

@@ -153,7 +153,7 @@ int ff_isom_write_avcc(AVIOContext *pb, const uint8_t *data, int len)
             avio_w8(pb, 1); /* number of pps */
             avio_wb16(pb, pps_size);
             avio_write(pb, pps, pps_size);
-            av_free(start);
+            av_freep(&start);
         } else {
             avio_write(pb, data, len);
         }

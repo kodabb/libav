@@ -54,7 +54,7 @@ static PayloadContext *qcelp_new_context(void)
 
 static void qcelp_free_context(PayloadContext *data)
 {
-    av_free(data);
+    av_freep(&data);
 }
 
 static int return_stored_frame(AVFormatContext *ctx, PayloadContext *data,

@@ -694,7 +694,7 @@ int ffio_fdopen(AVIOContext **s, URLContext *h)
     *s = avio_alloc_context(buffer, buffer_size, h->flags & AVIO_FLAG_WRITE, h,
                             ffurl_read, ffurl_write, ffurl_seek);
     if (!*s) {
-        av_free(buffer);
+        av_freep(&buffer);
         return AVERROR(ENOMEM);
     }
     (*s)->seekable = h->is_streamed ? 0 : AVIO_SEEKABLE_NORMAL;
@@ -714,7 +714,7 @@ int ffio_set_buf_size(AVIOContext *s, int buf_size)
     if (!buffer)
         return AVERROR(ENOMEM);
 
-    av_free(s->buffer);
+    av_freep(&s->buffer);
     s->buffer = buffer;
     s->buffer_size = buf_size;
     s->buf_ptr = buffer;
@@ -764,7 +764,7 @@ int ffio_rewind_with_probe_data(AVIOContext *s, unsigned char *buf, int buf_size
         buf_size = new_size;
     }
 
-    av_free(s->buffer);
+    av_freep(&s->buffer);
     s->buf_ptr = s->buffer = buf;
     s->buffer_size = alloc_size;
     s->pos = buf_size;
@@ -807,7 +807,7 @@ int avio_close(AVIOContext *s)
     avio_flush(s);
     h = s->opaque;
     av_freep(&s->buffer);
-    av_free(s);
+    av_freep(&s);
     return ffurl_close(h);
 }
 
@@ -944,7 +944,7 @@ static int url_open_dyn_buf_internal(AVIOContext **s, int max_packet_size)
                             max_packet_size ? dyn_packet_buf_write : dyn_buf_write,
                             max_packet_size ? NULL : dyn_buf_seek);
     if(!*s) {
-        av_free(d);
+        av_freep(&d);
         return AVERROR(ENOMEM);
     }
     (*s)->max_packet_size = max_packet_size;
@@ -986,8 +986,8 @@ int avio_close_dyn_buf(AVIOContext *s, uint8_t **pbuffer)
     d = s->opaque;
     *pbuffer = d->buffer;
     size = d->size;
-    av_free(d);
-    av_free(s);
+    av_freep(&d);
+    av_freep(&s);
     return size - padding;
 }
 
@@ -1019,7 +1019,7 @@ int ffio_close_null_buf(AVIOContext *s)
     avio_flush(s);
 
     size = d->size;
-    av_free(d);
-    av_free(s);
+    av_freep(&d);
+    av_freep(&s);
     return size;
 }

@@ -470,7 +470,7 @@ static int mov_write_dvc1_structs(MOVTrack *track, uint8_t *buf)
         if (AV_RB32(start) == VC1_CODE_SEQHDR) {
             int profile = get_bits(&gb, 2);
             if (profile != PROFILE_ADVANCED) {
-                av_free(unescaped);
+                av_freep(&unescaped);
                 return AVERROR(ENOSYS);
             }
             seq_found = 1;
@@ -484,7 +484,7 @@ static int mov_write_dvc1_structs(MOVTrack *track, uint8_t *buf)
         }
     }
     if (!seq_found) {
-        av_free(unescaped);
+        av_freep(&unescaped);
         return AVERROR(ENOSYS);
     }
 
@@ -512,7 +512,7 @@ static int mov_write_dvc1_structs(MOVTrack *track, uint8_t *buf)
 
     flush_put_bits(&pbc);
 
-    av_free(unescaped);
+    av_freep(&unescaped);
 
     return 0;
 }
@@ -1188,7 +1188,7 @@ static int mov_write_ctts_tag(AVIOContext *pb, MOVTrack *track)
         avio_wb32(pb, ctts_entries[i].count);
         avio_wb32(pb, ctts_entries[i].duration);
     }
-    av_free(ctts_entries);
+    av_freep(&ctts_entries);
     return atom_size;
 }
 
@@ -1230,7 +1230,7 @@ static int mov_write_stts_tag(AVIOContext *pb, MOVTrack *track)
         avio_wb32(pb, stts_entries[i].count);
         avio_wb32(pb, stts_entries[i].duration);
     }
-    av_free(stts_entries);
+    av_freep(&stts_entries);
     return atom_size;
 }
 
@@ -1764,7 +1764,7 @@ static int mov_write_track_udta_tag(AVIOContext *pb, MOVMuxContext *mov,
         ffio_wfourcc(pb, "udta");
         avio_write(pb, buf, size);
     }
-    av_free(buf);
+    av_freep(&buf);
 
     return 0;
 }
@@ -2186,7 +2186,7 @@ static int mov_write_udta_tag(AVIOContext *pb, MOVMuxContext *mov,
         ffio_wfourcc(pb, "udta");
         avio_write(pb, buf, size);
     }
-    av_free(buf);
+    av_freep(&buf);
 
     return 0;
 }
@@ -2357,7 +2357,7 @@ static int mov_write_isml_manifest(AVIOContext *pb, MOVMuxContext *mov)
                     param_write_hex(pb, "CodecPrivateData",
                                     ptr ? ptr : track->enc->extradata,
                                     size);
-                    av_free(ptr);
+                    av_freep(&ptr);
                 }
                 param_write_string(pb, "FourCC", "H264");
             } else if (track->enc->codec_id == AV_CODEC_ID_VC1) {
@@ -3142,7 +3142,7 @@ static int mov_flush_fragment(AVFormatContext *s)
         avio_wb32(s->pb, buf_size + 8);
         ffio_wfourcc(s->pb, "mdat");
         avio_write(s->pb, buf, buf_size);
-        av_free(buf);
+        av_freep(&buf);
 
         mov->fragments++;
         mov->mdat_size = 0;
@@ -3210,7 +3210,7 @@ static int mov_flush_fragment(AVFormatContext *s)
         track->mdat_buf = NULL;
 
         avio_write(s->pb, buf, buf_size);
-        av_free(buf);
+        av_freep(&buf);
     }
 
     mov->mdat_size = 0;
@@ -3415,7 +3415,7 @@ int ff_mov_write_packet(AVFormatContext *s, AVPacket *pkt)
                                  reformatted_data, size);
 
 err:
-    av_free(reformatted_data);
+    av_freep(&reformatted_data);
     return ret;
 }
 
@@ -3571,7 +3571,7 @@ static void mov_free(AVFormatContext *s)
 
     if (mov->chapter_track) {
         if (mov->tracks[mov->chapter_track].enc)
-            av_free(mov->tracks[mov->chapter_track].enc->extradata);
+            av_freep(&mov->tracks[mov->chapter_track].enc->extradata);
         av_freep(&mov->tracks[mov->chapter_track].enc);
     }
 
@@ -3582,7 +3582,7 @@ static void mov_free(AVFormatContext *s)
         av_freep(&mov->tracks[i].frag_info);
 
         if (mov->tracks[i].vos_len)
-            av_free(mov->tracks[i].vos_data);
+            av_freep(&mov->tracks[i].vos_data);
     }
 
     av_freep(&mov->tracks);
@@ -4020,7 +4020,7 @@ static int shift_data(AVFormatContext *s)
     avio_close(read_pb);
 
 end:
-    av_free(buf);
+    av_freep(&buf);
     return ret;
 }
 

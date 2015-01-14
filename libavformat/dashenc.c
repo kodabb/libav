@@ -156,7 +156,7 @@ static void set_codec_str(AVFormatContext *s, AVCodecContext *codec,
                 return;
             if (ff_isom_write_avcc(pb, extradata, extradata_size) < 0) {
                 avio_close_dyn_buf(pb, &tmpbuf);
-                av_free(tmpbuf);
+                av_freep(&tmpbuf);
                 return;
             }
             extradata_size = avio_close_dyn_buf(pb, &extradata);
@@ -166,7 +166,7 @@ static void set_codec_str(AVFormatContext *s, AVCodecContext *codec,
         if (extradata_size >= 4)
             av_strlcatf(str, size, ".%02x%02x%02x",
                         extradata[1], extradata[2], extradata[3]);
-        av_free(tmpbuf);
+        av_freep(&tmpbuf);
     }
 }
 
@@ -181,14 +181,14 @@ static void dash_free(AVFormatContext *s)
         if (os->ctx && os->ctx_inited)
             av_write_trailer(os->ctx);
         if (os->ctx && os->ctx->pb)
-            av_free(os->ctx->pb);
+            av_freep(&os->ctx->pb);
         ffurl_close(os->out);
         os->out =  NULL;
         if (os->ctx)
             avformat_free_context(os->ctx);
         for (j = 0; j < os->nb_segments; j++)
-            av_free(os->segments[j]);
-        av_free(os->segments);
+            av_freep(&os->segments[j]);
+        av_freep(&os->segments);
     }
     av_freep(&c->streams);
 }
@@ -380,7 +380,7 @@ static char *xmlescape(const char *str) {
             outlen = 2 * outlen + 6;
             tmp = av_realloc(out, outlen + 1);
             if (!tmp) {
-                av_free(out);
+                av_freep(&out);
                 return NULL;
             }
             out = tmp;
@@ -480,7 +480,7 @@ static int write_manifest(AVFormatContext *s, int final)
     if (title) {
         char *escaped = xmlescape(title->value);
         avio_printf(out, "\t\t<Title>%s</Title>\n", escaped);
-        av_free(escaped);
+        av_freep(&escaped);
     }
     avio_printf(out, "\t</ProgramInformation>\n");
     if (c->window_size && s->nb_streams > 0 && c->streams[0].nb_segments > 0 && !c->use_template) {
@@ -813,7 +813,7 @@ static int dash_flush(AVFormatContext *s, int final, int stream)
                     char filename[1024];
                     snprintf(filename, sizeof(filename), "%s%s", c->dirname, os->segments[j]->file);
                     unlink(filename);
-                    av_free(os->segments[j]);
+                    av_freep(&os->segments[j]);
                 }
                 os->nb_segments -= remove;
                 memmove(os->segments, os->segments + remove, os->nb_segments * sizeof(*os->segments));

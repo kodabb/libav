@@ -153,7 +153,7 @@ static inline int win32_##name(const char *filename_utf8) \
         goto fallback;                                    \
                                                           \
     ret = wfunc(filename_w);                              \
-    av_free(filename_w);                                  \
+    av_freep(&filename_w);                                \
     return ret;                                           \
                                                           \
 fallback:                                                 \
@@ -173,18 +173,18 @@ static inline int win32_rename(const char *src_utf8, const char *dest_utf8)
     if (utf8towchar(src_utf8, &src_w))
         return -1;
     if (utf8towchar(dest_utf8, &dest_w)) {
-        av_free(src_w);
+        av_freep(&src_w);
         return -1;
     }
     if (!src_w || !dest_w) {
-        av_free(src_w);
-        av_free(dest_w);
+        av_freep(&src_w);
+        av_freep(&dest_w);
         goto fallback;
     }
 
     ret = MoveFileExW(src_w, dest_w, MOVEFILE_REPLACE_EXISTING);
-    av_free(src_w);
-    av_free(dest_w);
+    av_freep(&src_w);
+    av_freep(&dest_w);
     // Lacking proper mapping from GetLastError() error codes to errno codes
     if (ret)
         errno = EPERM;

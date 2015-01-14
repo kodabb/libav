@@ -91,7 +91,7 @@ int ff_rtp_chain_mux_open(AVFormatContext **out, AVFormatContext *s,
         } else if (rtpctx->pb) {
             uint8_t *ptr;
             avio_close_dyn_buf(rtpctx->pb, &ptr);
-            av_free(ptr);
+            av_freep(&ptr);
         }
         avformat_free_context(rtpctx);
         return ret;
@@ -101,7 +101,7 @@ int ff_rtp_chain_mux_open(AVFormatContext **out, AVFormatContext *s,
     return 0;
 
 fail:
-    av_free(rtpctx);
+    av_freep(&rtpctx);
     if (handle)
         ffurl_close(handle);
     return ret;

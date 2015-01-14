@@ -43,10 +43,10 @@ static void latm_free_context(PayloadContext *data)
     if (data->dyn_buf) {
         uint8_t *p;
         avio_close_dyn_buf(data->dyn_buf, &p);
-        av_free(p);
+        av_freep(&p);
     }
-    av_free(data->buf);
-    av_free(data);
+    av_freep(&data->buf);
+    av_freep(&data);
 }
 
 static int latm_parse_packet(AVFormatContext *ctx, PayloadContext *data,
@@ -72,7 +72,7 @@ static int latm_parse_packet(AVFormatContext *ctx, PayloadContext *data,
 
         if (!(flags & RTP_FLAG_MARKER))
             return AVERROR(EAGAIN);
-        av_free(data->buf);
+        av_freep(&data->buf);
         data->len = avio_close_dyn_buf(data->dyn_buf, &data->buf);
         data->dyn_buf = NULL;
         data->pos = 0;
@@ -141,7 +141,7 @@ static int parse_fmtp_config(AVStream *st, char *value)
         st->codec->extradata[i] = get_bits(&gb, 8);
 
 end:
-    av_free(config);
+    av_freep(&config);
     return ret;
 }
 

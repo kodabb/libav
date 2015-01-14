@@ -144,7 +144,7 @@ static int sdp_parse_fmtp_config_h264(AVFormatContext *s,
                 }
                 if (codec->extradata_size) {
                     memcpy(dest, codec->extradata, codec->extradata_size);
-                    av_free(codec->extradata);
+                    av_freep(&codec->extradata);
                 }
 
                 memcpy(dest + codec->extradata_size, start_sequence,
@@ -341,7 +341,7 @@ static void h264_free_context(PayloadContext *data)
     }
 #endif
 
-    av_free(data);
+    av_freep(&data);
 }
 
 static av_cold int h264_init(AVFormatContext *s, int st_index,

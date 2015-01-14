@@ -282,7 +282,7 @@ static int gif_write_header(AVFormatContext *s)
     }
 
     if (!video_enc) {
-        av_free(gif);
+        av_freep(&gif);
         return -1;
     } else {
         width  = video_enc->width;

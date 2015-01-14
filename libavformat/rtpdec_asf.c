@@ -121,7 +121,7 @@ int ff_wms_parse_sdp_a_line(AVFormatContext *s, const char *p)
             return ret;
         av_dict_copy(&s->metadata, rt->asf_ctx->metadata, 0);
         rt->asf_pb_pos = avio_tell(&pb);
-        av_free(buf);
+        av_freep(&buf);
         rt->asf_ctx->pb = NULL;
     }
     return ret;
@@ -216,7 +216,7 @@ static int asfrtp_parse_packet(AVFormatContext *s, PayloadContext *asf,
                     uint8_t *p;
                     avio_close_dyn_buf(asf->pktbuf, &p);
                     asf->pktbuf = NULL;
-                    av_free(p);
+                    av_freep(&p);
                 }
                 if (!len_off && !asf->pktbuf &&
                     (res = avio_open_dyn_buf(&asf->pktbuf)) < 0)
@@ -288,10 +288,10 @@ static void asfrtp_free_context(PayloadContext *asf)
         uint8_t *p = NULL;
         avio_close_dyn_buf(asf->pktbuf, &p);
         asf->pktbuf = NULL;
-        av_free(p);
+        av_freep(&p);
     }
     av_freep(&asf->buf);
-    av_free(asf);
+    av_freep(&asf);
 }
 
 #define RTP_ASF_HANDLER(n, s, t) \

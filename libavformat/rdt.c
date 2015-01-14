@@ -77,7 +77,7 @@ ff_rdt_parse_open(AVFormatContext *ic, int first_stream_of_set_idx,
 void
 ff_rdt_parse_close(RDTDemuxContext *s)
 {
-    av_free(s);
+    av_freep(&s);
 }
 
 struct PayloadContext {
@@ -528,7 +528,7 @@ rdt_new_context (void)
         return NULL;
     ret = avformat_open_input(&rdt->rmctx, "", &ff_rdt_demuxer, NULL);
     if (ret < 0) {
-        av_free(rdt);
+        av_freep(&rdt);
         return NULL;
     }
 
@@ -549,7 +549,7 @@ rdt_free_context (PayloadContext *rdt)
         avformat_close_input(&rdt->rmctx);
     av_freep(&rdt->mlti_data);
     av_freep(&rdt->rmst);
-    av_free(rdt);
+    av_freep(&rdt);
 }
 
 #define RDT_HANDLER(n, s, t) \

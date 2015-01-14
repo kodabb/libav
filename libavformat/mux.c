@@ -421,7 +421,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
     pkt->buf       = NULL;
     // Duplicate the packet if it uses non-allocated memory
     if ((ret = av_dup_packet(&this_pktl->pkt)) < 0) {
-        av_free(this_pktl);
+        av_freep(&this_pktl);
         return ret;
     }
 

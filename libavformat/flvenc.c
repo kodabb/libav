@@ -566,7 +566,7 @@ static int flv_write_packet(AVFormatContext *s, AVPacket *pkt)
                               pkt->pts + flv->delay + pkt->duration);
     }
 
-    av_free(data);
+    av_freep(&data);
 
     return pb->error;
 }

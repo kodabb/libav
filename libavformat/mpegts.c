@@ -374,7 +374,7 @@ static MpegTSFilter *mpegts_open_section_filter(MpegTSContext *ts,
     sec->section_buf = av_malloc(MAX_SECTION_SIZE);
     sec->check_crc   = check_crc;
     if (!sec->section_buf) {
-        av_free(filter);
+        av_freep(&filter);
         return NULL;
     }
     return filter;
@@ -422,7 +422,7 @@ static void mpegts_close_filter(MpegTSContext *ts, MpegTSFilter *filter)
         }
     }
 
-    av_free(filter);
+    av_freep(&filter);
     ts->pids[pid] = NULL;
 }
 
@@ -673,7 +673,7 @@ static int mpegts_set_stream_info(AVStream *st, PESContext *pes,
 
             sub_st = avformat_new_stream(pes->stream, NULL);
             if (!sub_st) {
-                av_free(sub_pes);
+                av_freep(&sub_pes);
                 return AVERROR(ENOMEM);
             }
 
@@ -1018,7 +1018,7 @@ static PESContext *add_pes_stream(MpegTSContext *ts, int pid, int pcr_pid)
     pes->dts     = AV_NOPTS_VALUE;
     tss          = mpegts_open_pes_filter(ts, pid, mpegts_push_data, pes);
     if (!tss) {
-        av_free(pes);
+        av_freep(&pes);
         return 0;
     }
     return pes;
@@ -1313,7 +1313,7 @@ static void m4sl_cb(MpegTSFilter *filter, const uint8_t *section,
         }
     }
     for (i = 0; i < mp4_descr_count; i++)
-        av_free(mp4_descr[i].dec_config_descr);
+        av_freep(&mp4_descr[i].dec_config_descr);
 }
 
 static const uint8_t opus_coupled_stream_cnt[9] = {
@@ -1650,7 +1650,7 @@ static void pmt_cb(MpegTSFilter *filter, const uint8_t *section, int section_len
 
 out:
     for (i = 0; i < mp4_descr_count; i++)
-        av_free(mp4_descr[i].dec_config_descr);
+        av_freep(&mp4_descr[i].dec_config_descr);
 }
 
 static void pat_cb(MpegTSFilter *filter, const uint8_t *section, int section_len)
@@ -1762,8 +1762,8 @@ static void sdt_cb(MpegTSFilter *filter, const uint8_t *section, int section_len
                                     provider_name, 0);
                     }
                 }
-                av_free(name);
-                av_free(provider_name);
+                av_freep(&name);
+                av_freep(&provider_name);
                 break;
             default:
                 break;
@@ -2345,7 +2345,7 @@ int ff_mpegts_parse_packet(MpegTSContext *ts, AVPacket *pkt,
 void ff_mpegts_parse_close(MpegTSContext *ts)
 {
     mpegts_free(ts);
-    av_free(ts);
+    av_freep(&ts);
 }
 
 AVInputFormat ff_mpegts_demuxer = {

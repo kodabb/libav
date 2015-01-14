@@ -198,7 +198,7 @@ static int read_frame(BVID_DemuxContext *vid, AVIOContext *pb, AVPacket *pkt,
 
     vid->nframes--;  // used to check if all the frames were read
 fail:
-    av_free(vidbuf_start);
+    av_freep(&vidbuf_start);
     return ret;
 }
 

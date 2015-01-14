@@ -168,9 +168,9 @@ static av_cold int rl2_read_header(AVFormatContext *s)
     chunk_offset = av_malloc(frame_count * sizeof(uint32_t));
 
     if(!chunk_size || !audio_size || !chunk_offset){
-        av_free(chunk_size);
-        av_free(audio_size);
-        av_free(chunk_offset);
+        av_freep(&chunk_size);
+        av_freep(&audio_size);
+        av_freep(&chunk_offset);
         return AVERROR(ENOMEM);
     }
 
@@ -200,9 +200,9 @@ static av_cold int rl2_read_header(AVFormatContext *s)
     }
 
 
-    av_free(chunk_size);
-    av_free(audio_size);
-    av_free(chunk_offset);
+    av_freep(&chunk_size);
+    av_freep(&audio_size);
+    av_freep(&chunk_offset);
 
     return ret;
 }

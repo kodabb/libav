@@ -72,7 +72,7 @@ static void sample_queue_pop(HintSampleQueue *queue)
     if (queue->len <= 0)
         return;
     if (queue->samples[0].own_data)
-        av_free(queue->samples[0].data);
+        av_freep(&queue->samples[0].data);
     queue->len--;
     memmove(queue->samples, queue->samples + 1, sizeof(HintSample)*queue->len);
 }
@@ -85,7 +85,7 @@ static void sample_queue_free(HintSampleQueue *queue)
     int i;
     for (i = 0; i < queue->len; i++)
         if (queue->samples[i].own_data)
-            av_free(queue->samples[i].data);
+            av_freep(&queue->samples[i].data);
     av_freep(&queue->samples);
     queue->len  = 0;
     queue->size = 0;
@@ -450,7 +450,7 @@ int ff_mov_add_hinted_packet(AVFormatContext *s, AVPacket *pkt,
     if (count > 0)
         ff_mov_write_packet(s, &hint_pkt);
 done:
-    av_free(buf);
+    av_freep(&buf);
     sample_queue_retain(&trk->sample_queue);
     return ret;
 }
@@ -467,7 +467,7 @@ void ff_mov_close_hinting(MOVTrack *track)
     if (rtp_ctx->pb) {
         av_write_trailer(rtp_ctx);
         avio_close_dyn_buf(rtp_ctx->pb, &ptr);
-        av_free(ptr);
+        av_freep(&ptr);
     }
     avformat_free_context(rtp_ctx);
 }

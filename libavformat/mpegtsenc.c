@@ -457,9 +457,9 @@ static MpegTSService *mpegts_add_service(MpegTSWrite *ts, int sid,
     service->provider_name = av_strdup(provider_name);
     service->name          = av_strdup(name);
     if (!service->provider_name || !service->name) {
-        av_free(service->provider_name);
-        av_free(service->name);
-        av_free(service);
+        av_freep(&service->provider_name);
+        av_freep(&service->name);
+        av_freep(&service);
         return NULL;
     }
     dynarray_add(&ts->services, &ts->nb_services, service);
@@ -543,7 +543,7 @@ static int mpegts_write_header(AVFormatContext *s)
 
     pids = av_malloc(s->nb_streams * sizeof(*pids));
     if (!pids) {
-        av_free(service);
+        av_freep(&service);
         return AVERROR(ENOMEM);
     }
 
@@ -631,7 +631,7 @@ static int mpegts_write_header(AVFormatContext *s)
         }
     }
 
-    av_free(pids);
+    av_freep(&pids);
 
     /* if no video stream, use the first stream as PCR */
     if (service->pcr_pid == 0x1fff && s->nb_streams > 0) {
@@ -698,8 +698,8 @@ static int mpegts_write_header(AVFormatContext *s)
     return 0;
 
 fail:
-    av_free(service);
-    av_free(pids);
+    av_freep(&service);
+    av_freep(&pids);
     for (i = 0; i < s->nb_streams; i++) {
         st    = s->streams[i];
         ts_st = st->priv_data;
@@ -1112,7 +1112,7 @@ static int mpegts_write_packet_internal(AVFormatContext *s, AVPacket *pkt)
             if (ret < 0) {
                 avio_close_dyn_buf(ts_st->amux->pb, &data);
                 ts_st->amux->pb = NULL;
-                av_free(data);
+                av_freep(&data);
                 return ret;
             }
             size            = avio_close_dyn_buf(ts_st->amux->pb, &data);
@@ -1125,7 +1125,7 @@ static int mpegts_write_packet_internal(AVFormatContext *s, AVPacket *pkt)
         // for video and subtitle, write a single pes packet
         mpegts_write_pes(s, st, buf, size, pts, dts,
                          pkt->flags & AV_PKT_FLAG_KEY);
-        av_free(data);
+        av_freep(&data);
         return 0;
     }
 
@@ -1139,7 +1139,7 @@ static int mpegts_write_packet_internal(AVFormatContext *s, AVPacket *pkt)
         if (size > ts->pes_payload_size) {
             mpegts_write_pes(s, st, buf, size, pts, dts,
                              pkt->flags & AV_PKT_FLAG_KEY);
-            av_free(data);
+            av_freep(&data);
             return 0;
         }
     }
@@ -1153,7 +1153,7 @@ static int mpegts_write_packet_internal(AVFormatContext *s, AVPacket *pkt)
     memcpy(ts_st->payload + ts_st->payload_size, buf, size);
     ts_st->payload_size += size;
 
-    av_free(data);
+    av_freep(&data);
 
     return 0;
 }
@@ -1209,9 +1209,9 @@ static int mpegts_write_end(AVFormatContext *s)
         service = ts->services[i];
         av_freep(&service->provider_name);
         av_freep(&service->name);
-        av_free(service);
+        av_freep(&service);
     }
-    av_free(ts->services);
+    av_freep(&ts->services);
 
     return 0;
 }

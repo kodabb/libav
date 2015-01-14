@@ -48,7 +48,7 @@ static av_cold PayloadContext *hevc_new_context(void)
 
 static av_cold void hevc_free_context(PayloadContext *data)
 {
-    av_free(data);
+    av_freep(&data);
 }
 
 static av_cold int hevc_init(AVFormatContext *ctx, int st_index,

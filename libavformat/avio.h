@@ -135,7 +135,7 @@ int avio_check(const char *url, int flags);
 
 /**
  * Allocate and initialize an AVIOContext for buffered I/O. It must be later
- * freed with av_free().
+ * freed with av_freep().
  *
  * @param buffer Memory block for input/output operations via AVIOContext.
  *        The buffer must be allocated with av_malloc() and friends.
@@ -383,7 +383,7 @@ int avio_open_dyn_buf(AVIOContext **s);
 
 /**
  * Return the written size and a pointer to the buffer. The buffer
- * must be freed with av_free().
+ * must be freed with av_freep().
  * Padding of FF_INPUT_BUFFER_PADDING_SIZE is added to the buffer.
  *
  * @param s IO context

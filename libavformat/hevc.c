@@ -780,7 +780,7 @@ static int hvcc_add_nal_unit(uint8_t *nal_buf, uint32_t nal_size,
     }
 
 end:
-    av_free(rbsp_buf);
+    av_freep(&rbsp_buf);
     return ret;
 }
 
@@ -1056,7 +1056,7 @@ int ff_hevc_annexb2mp4(AVIOContext *pb, const uint8_t *buf_in,
     }
 
 end:
-    av_free(start);
+    av_freep(&start);
     if (ps_count)
         *ps_count = num_ps;
     return ret;
@@ -1135,6 +1135,6 @@ int ff_isom_write_hvcc(AVIOContext *pb, const uint8_t *data,
 
 end:
     hvcc_close(&hvcc);
-    av_free(start);
+    av_freep(&start);
     return ret;
 }

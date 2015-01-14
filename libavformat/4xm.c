@@ -214,7 +214,7 @@ static int fourxm_read_header(AVFormatContext *s)
     if (!header)
         return AVERROR(ENOMEM);
     if (avio_read(pb, header, header_size) != header_size) {
-        av_free(header);
+        av_freep(&header);
         return AVERROR(EIO);
     }
 
@@ -251,14 +251,14 @@ static int fourxm_read_header(AVFormatContext *s)
         goto fail;
     }
 
-    av_free(header);
+    av_freep(&header);
     /* initialize context members */
     fourxm->video_pts = -1;  /* first frame will push to 0 */
 
     return 0;
 fail:
     av_freep(&fourxm->tracks);
-    av_free(header);
+    av_freep(&header);
     return ret;
 }
 

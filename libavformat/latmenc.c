@@ -172,7 +172,7 @@ static int latm_write_packet(AVFormatContext *s, AVPacket *pkt)
     avio_write(pb, loas_header, 3);
     avio_write(pb, buf, len);
 
-    av_free(buf);
+    av_freep(&buf);
 
     return 0;
 }

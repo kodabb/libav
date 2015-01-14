@@ -175,7 +175,7 @@ static AVIOContext * wtvfile_open_sector(int first_sector, uint64_t length, int 
     if (depth == 0) {
         wf->sectors = av_malloc(sizeof(uint32_t));
         if (!wf->sectors) {
-            av_free(wf);
+            av_freep(&wf);
             return NULL;
         }
         wf->sectors[0]  = first_sector;
@@ -184,7 +184,7 @@ static AVIOContext * wtvfile_open_sector(int first_sector, uint64_t length, int 
     } else if (depth == 1) {
         wf->sectors = av_malloc(WTV_SECTOR_SIZE);
         if (!wf->sectors) {
-            av_free(wf);
+            av_freep(&wf);
             return NULL;
         }
         wf->nb_sectors  = read_ints(s->pb, wf->sectors, WTV_SECTOR_SIZE / 4);
@@ -196,7 +196,7 @@ static AVIOContext * wtvfile_open_sector(int first_sector, uint64_t length, int 
 
         wf->sectors = av_malloc(SHIFT_SECTOR_BITS(nb_sectors1));
         if (!wf->sectors) {
-            av_free(wf);
+            av_freep(&wf);
             return NULL;
         }
         wf->nb_sectors = 0;
@@ -208,13 +208,13 @@ static AVIOContext * wtvfile_open_sector(int first_sector, uint64_t length, int 
         wf->sector_bits = length & (1ULL<<63) ? WTV_SECTOR_BITS : WTV_BIGSECTOR_BITS;
     } else {
         av_log(s, AV_LOG_ERROR, "unsupported file allocation table depth (0x%x)\n", depth);
-        av_free(wf);
+        av_freep(&wf);
         return NULL;
     }
 
     if (!wf->nb_sectors) {
-        av_free(wf->sectors);
-        av_free(wf);
+        av_freep(&wf->sectors);
+        av_freep(&wf);
         return NULL;
     }
 
@@ -229,25 +229,25 @@ static AVIOContext * wtvfile_open_sector(int first_sector, uint64_t length, int 
     /* seek to initial sector */
     wf->position = 0;
     if (seek_by_sector(s->pb, wf->sectors[0], 0) < 0) {
-        av_free(wf->sectors);
-        av_free(wf);
+        av_freep(&wf->sectors);
+        av_freep(&wf);
         return NULL;
     }
 
     wf->pb_filesystem = s->pb;
     buffer = av_malloc(1 << wf->sector_bits);
     if (!buffer) {
-        av_free(wf->sectors);
-        av_free(wf);
+        av_freep(&wf->sectors);
+        av_freep(&wf);
         return NULL;
     }
 
     pb = avio_alloc_context(buffer, 1 << wf->sector_bits, 0, wf,
                            wtvfile_read_packet, NULL, wtvfile_seek);
     if (!pb) {
-        av_free(buffer);
-        av_free(wf->sectors);
-        av_free(wf);
+        av_freep(&buffer);
+        av_freep(&wf->sectors);
+        av_freep(&wf);
     }
     return pb;
 }
@@ -312,10 +312,10 @@ static AVIOContext * wtvfile_open2(AVFormatContext *s, const uint8_t *buf, int b
 static void wtvfile_close(AVIOContext *pb)
 {
     WtvFile *wf = pb->opaque;
-    av_free(wf->sectors);
-    av_free(wf);
-    av_free(pb->buffer);
-    av_free(pb);
+    av_freep(&wf->sectors);
+    av_freep(&wf);
+    av_freep(&pb->buffer);
+    av_freep(&pb);
 }
 
 /*
@@ -514,7 +514,7 @@ static void get_tag(AVFormatContext *s, AVIOContext *pb, const char *key, int ty
     } else if (type == 1) {
         avio_get_str16le(pb, length, buf, buf_size);
         if (!strlen(buf)) {
-           av_free(buf);
+           av_freep(&buf);
            return;
         }
     } else if (type == 3 && length == 4) {
@@ -640,7 +640,7 @@ static AVStream * new_stream(AVFormatContext *s, AVStream *st, int sid, int code
             return NULL;
         st = avformat_new_stream(s, NULL);
         if (!st) {
-            av_free(wst);
+            av_freep(&wst);
             return NULL;
         }
         st->id = sid;
@@ -1110,7 +1110,7 @@ static int read_seek(AVFormatContext *s, int stream_index,
 static int read_close(AVFormatContext *s)
 {
     WtvContext *wtv = s->priv_data;
-    av_free(wtv->index_entries);
+    av_freep(&wtv->index_entries);
     wtvfile_close(wtv->pb);
     return 0;
 }

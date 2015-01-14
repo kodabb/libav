@@ -134,7 +134,7 @@ static int qt_rtp_parse_packet(AVFormatContext *s, PayloadContext *qt,
                 mc->fc = s;
                 st->priv_data = msc = av_mallocz(sizeof(MOVStreamContext));
                 if (!msc) {
-                    av_free(mc);
+                    av_freep(&mc);
                     st->priv_data = priv_data;
                     return AVERROR(ENOMEM);
                 }
@@ -143,8 +143,8 @@ static int qt_rtp_parse_packet(AVFormatContext *s, PayloadContext *qt,
                 s->nb_streams = st->index + 1;
                 ff_mov_read_stsd_entries(mc, &pb, 1);
                 qt->bytes_per_frame = msc->bytes_per_frame;
-                av_free(msc);
-                av_free(mc);
+                av_freep(&msc);
+                av_freep(&mc);
                 st->priv_data = priv_data;
                 s->nb_streams = nb_streams;
                 break;
@@ -243,7 +243,7 @@ static PayloadContext *qt_rtp_new(void)
 static void qt_rtp_free(PayloadContext *qt)
 {
     av_freep(&qt->pkt.data);
-    av_free(qt);
+    av_freep(&qt);
 }
 
 #define RTP_QT_HANDLER(m, n, s, t) \

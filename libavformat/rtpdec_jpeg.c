@@ -69,7 +69,7 @@ static inline void free_frame_if_needed(PayloadContext *jpeg)
     if (jpeg->frame) {
         uint8_t *p;
         avio_close_dyn_buf(jpeg->frame, &p);
-        av_free(p);
+        av_freep(&p);
         jpeg->frame = NULL;
     }
 }
@@ -77,7 +77,7 @@ static inline void free_frame_if_needed(PayloadContext *jpeg)
 static void jpeg_free_context(PayloadContext *jpeg)
 {
     free_frame_if_needed(jpeg);
-    av_free(jpeg);
+    av_freep(&jpeg);
 }
 
 static int jpeg_create_huffman_table(PutByteContext *p, int table_class,

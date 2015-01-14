@@ -161,11 +161,11 @@ static unsigned int get_size(AVIOContext *s, int len)
 static void free_geobtag(void *obj)
 {
     ID3v2ExtraMetaGEOB *geob = obj;
-    av_free(geob->mime_type);
-    av_free(geob->file_name);
-    av_free(geob->description);
-    av_free(geob->data);
-    av_free(geob);
+    av_freep(&geob->mime_type);
+    av_freep(&geob->file_name);
+    av_freep(&geob->description);
+    av_freep(&geob->data);
+    av_freep(&geob);
 }
 
 /**
@@ -372,7 +372,7 @@ static void read_geobtag(AVFormatContext *s, AVIOContext *pb, int taglen,
 fail:
     av_log(s, AV_LOG_ERROR, "Error reading frame %s, skipped\n", tag);
     free_geobtag(geob_data);
-    av_free(new_extra);
+    av_freep(&new_extra);
     return;
 }
 
@@ -695,7 +695,7 @@ error:
         av_log(s, AV_LOG_INFO, "ID3v2.%d tag skipped, cannot handle %s\n",
                version, reason);
     avio_seek(s->pb, end, SEEK_SET);
-    av_free(buffer);
+    av_freep(&buffer);
     return;
 }
 

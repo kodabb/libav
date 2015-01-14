@@ -179,7 +179,7 @@ static void mpc8_parse_seektable(AVFormatContext *s, int64_t off)
         ppos[1] = ppos[0];
         ppos[0] = pos;
     }
-    av_free(buf);
+    av_freep(&buf);
 }
 
 static void mpc8_handle_chunk(AVFormatContext *s, int tag, int64_t chunk_pos, int64_t size)

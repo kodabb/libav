@@ -51,9 +51,9 @@ static void h263_free_context(PayloadContext *data)
     if (data->buf) {
         uint8_t *p;
         avio_close_dyn_buf(data->buf, &p);
-        av_free(p);
+        av_freep(&p);
     }
-    av_free(data);
+    av_freep(&data);
 }
 
 static av_cold int h263_init(AVFormatContext *ctx, int st_index, PayloadContext *data)
@@ -81,7 +81,7 @@ static int h263_handle_packet(AVFormatContext *ctx, PayloadContext *data,
         /* Dropping old buffered, unfinished data */
         uint8_t *p;
         avio_close_dyn_buf(data->buf, &p);
-        av_free(p);
+        av_freep(&p);
         data->buf = NULL;
         data->endbyte_bits = 0;
     }

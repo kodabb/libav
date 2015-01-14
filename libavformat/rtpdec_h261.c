@@ -41,7 +41,7 @@ static void h261_free_dyn_buffer(AVIOContext **dyn_buf)
 {
     uint8_t *ptr_dyn_buffer;
     avio_close_dyn_buf(*dyn_buf, &ptr_dyn_buffer);
-    av_free(ptr_dyn_buffer);
+    av_freep(&ptr_dyn_buffer);
     *dyn_buf = NULL;
 }
 
@@ -57,7 +57,7 @@ static av_cold void h261_free_context(PayloadContext *pl_ctx)
     }
 
     /* free context */
-    av_free(pl_ctx);
+    av_freep(&pl_ctx);
 }
 
 static av_cold int h261_init(AVFormatContext *ctx, int st_index,

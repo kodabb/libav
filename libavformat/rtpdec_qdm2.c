@@ -305,7 +305,7 @@ static PayloadContext *qdm2_extradata_new(void)
 
 static void qdm2_extradata_free(PayloadContext *qdm)
 {
-    av_free(qdm);
+    av_freep(&qdm);
 }
 
 RTPDynamicProtocolHandler ff_qdm2_dynamic_handler = {

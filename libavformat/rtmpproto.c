@@ -217,8 +217,8 @@ static void free_tracked_methods(RTMPContext *rt)
     int i;
 
     for (i = 0; i < rt->nb_tracked_methods; i ++)
-        av_free(rt->tracked_methods[i].name);
-    av_free(rt->tracked_methods);
+        av_freep(&rt->tracked_methods[i].name);
+    av_freep(&rt->tracked_methods);
     rt->tracked_methods      = NULL;
     rt->tracked_methods_size = 0;
     rt->nb_tracked_methods   = 0;
@@ -990,7 +990,7 @@ int ff_rtmp_calc_digest(const uint8_t *src, int len, int gap,
     av_sha_update(sha, hmac_buf, 64+32);
     av_sha_final(sha, dst);
 
-    av_free(sha);
+    av_freep(&sha);
 
     return 0;
 }
@@ -1646,7 +1646,7 @@ static int do_adobe_auth(RTMPContext *rt, const char *user, const char *salt,
         av_strlcatf(rt->auth_params, sizeof(rt->auth_params),
                     "&opaque=%s", opaque);
 
-    av_free(md5);
+    av_freep(&md5);
     return 0;
 }
 
@@ -1705,7 +1705,7 @@ static int do_llnw_auth(RTMPContext *rt, const char *user, const char *nonce)
              "?authmod=%s&user=%s&nonce=%s&cnonce=%s&nc=%s&response=%s",
              "llnw", user, nonce, cnonce, nc, hashstr1);
 
-    av_free(md5);
+    av_freep(&md5);
     return 0;
 }
 
@@ -1830,7 +1830,7 @@ static int handle_invoke_error(URLContext *s, RTMPPacket *pkt)
         av_log(s, level, "Server error: %s\n", tmpstr);
     }
 
-    av_free(tracked_method);
+    av_freep(&tracked_method);
     return ret;
 }
 
@@ -2113,7 +2113,7 @@ static int handle_invoke_result(URLContext *s, RTMPPacket *pkt)
     }
 
 fail:
-    av_free(tracked_method);
+    av_freep(&tracked_method);
     return ret;
 }
 
@@ -2546,7 +2546,7 @@ static int inject_fake_duration_metadata(RTMPContext *rt)
     // Increase the size by the injected packet
     rt->flv_size += 55;
     // Delete the old FLV data
-    av_free(old_flv_data);
+    av_freep(&old_flv_data);
 
     p = rt->flv_data + 13;
     bytestream_put_byte(&p, FLV_TAG_TYPE_META);
@@ -2727,7 +2727,7 @@ reconnect:
 
     if (old_app) {
         // The name of application has been defined by the user, override it.
-        av_free(rt->app);
+        av_freep(&rt->app);
         rt->app = old_app;
     }
 

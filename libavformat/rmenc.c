@@ -373,7 +373,7 @@ static int rm_write_audio(AVFormatContext *s, const uint8_t *buf, int size, int 
         avio_write(pb, buf, size);
     }
     stream->nb_frames++;
-    av_free(buf1);
+    av_freep(&buf1);
     return 0;
 }
 

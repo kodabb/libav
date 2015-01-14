@@ -48,7 +48,7 @@ static PayloadContext *amr_new_context(void)
 
 static void amr_free_context(PayloadContext *data)
 {
-    av_free(data);
+    av_freep(&data);
 }
 
 static int amr_handle_packet(AVFormatContext *ctx, PayloadContext *data,

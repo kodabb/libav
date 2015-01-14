@@ -73,7 +73,7 @@ static int var_read_int(AVIOContext *pb, int size)
     if (!s)
         return 0;
     v = strtol(s, NULL, 10);
-    av_free(s);
+    av_freep(&s);
     return v;
 }
 
@@ -84,7 +84,7 @@ static AVRational var_read_float(AVIOContext *pb, int size)
     if (!s)
         return (AVRational) { 0, 0 };
     v = av_d2q(av_strtod(s, NULL), INT_MAX);
-    av_free(s);
+    av_freep(&s);
     return v;
 }
 
@@ -189,7 +189,7 @@ static int parse_video_var(AVFormatContext *avctx, AVStream *st,
         } else {
             avpriv_request_sample(avctx, "Video compression %s", str);
         }
-        av_free(str);
+        av_freep(&str);
     } else if (!strcmp(name, "FPS")) {
         AVRational fps = var_read_float(pb, size);
         avpriv_set_pts_info(st, 64, fps.den, fps.num);

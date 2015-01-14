@@ -158,7 +158,7 @@ static int smush_read_header(AVFormatContext *ctx)
     vst->codec->height     = height;
 
     if (!smush->version) {
-        av_free(vst->codec->extradata);
+        av_freep(&vst->codec->extradata);
         vst->codec->extradata_size = 1024 + 2;
         vst->codec->extradata = av_malloc(vst->codec->extradata_size +
                                           FF_INPUT_BUFFER_PADDING_SIZE);

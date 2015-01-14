@@ -893,7 +893,7 @@ static int mxf_read_generic_descriptor(void *arg, AVIOContext *pb, int tag, int 
     default:
         /* Private uid used by SONY C0023S01.mxf */
         if (IS_KLV_KEY(uid, mxf_sony_mpeg4_extradata)) {
-            av_free(descriptor->extradata);
+            av_freep(&descriptor->extradata);
             descriptor->extradata_size = 0;
             descriptor->extradata = av_malloc(size + FF_INPUT_BUFFER_PADDING_SIZE);
             if (!descriptor->extradata)
@@ -1003,7 +1003,7 @@ static int mxf_get_sorted_table_segments(MXFContext *mxf, int *nb_sorted_segment
     unsorted_segments = av_mallocz(nb_segments * sizeof(*unsorted_segments));
     if (!*sorted_segments || !unsorted_segments) {
         av_freep(sorted_segments);
-        av_free(unsorted_segments);
+        av_freep(&unsorted_segments);
         return AVERROR(ENOMEM);
     }
 
@@ -1046,7 +1046,7 @@ static int mxf_get_sorted_table_segments(MXFContext *mxf, int *nb_sorted_segment
         last_index_start = best_index_start;
     }
 
-    av_free(unsorted_segments);
+    av_freep(&unsorted_segments);
 
     return 0;
 }
@@ -1351,7 +1351,7 @@ static int mxf_compute_index_tables(MXFContext *mxf)
 
     ret = 0;
 finish_decoding_index:
-    av_free(sorted_segments);
+    av_freep(&sorted_segments);
     return ret;
 }
 
@@ -1874,7 +1874,7 @@ static int mxf_read_local_tags(MXFContext *mxf, KLVPacket *klv, MXFMetadataReadF
          * it extending past the end of the KLV though (zzuf5.mxf). */
         if (avio_tell(pb) > klv_end) {
             if (ctx_size)
-                av_free(ctx);
+                av_freep(&ctx);
 
             av_log(mxf->fc, AV_LOG_ERROR,
                    "local tag %#04x extends past end of local set @ %#"PRIx64"\n",

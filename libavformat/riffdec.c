@@ -107,7 +107,7 @@ int ff_get_wav_header(AVIOContext *pb, AVCodecContext *codec, int size)
         }
         codec->extradata_size = cbSize;
         if (cbSize > 0) {
-            av_free(codec->extradata);
+            av_freep(&codec->extradata);
             codec->extradata = av_mallocz(codec->extradata_size +
                                           FF_INPUT_BUFFER_PADDING_SIZE);
             if (!codec->extradata)
@@ -219,7 +219,7 @@ int ff_read_riff_info(AVFormatContext *s, int64_t size)
         AV_WL32(key, chunk_code);
 
         if (avio_read(pb, value, chunk_size) != chunk_size) {
-            av_free(value);
+            av_freep(&value);
             av_log(s, AV_LOG_WARNING,
                    "premature end of file while reading INFO tag\n");
             break;

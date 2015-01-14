@@ -205,8 +205,8 @@ int ff_nut_add_sp(NUTContext *nut, int64_t pos, int64_t back_ptr, int64_t ts)
     sp->ts       = ts;
     av_tree_insert(&nut->syncpoints, sp, (void *) ff_nut_sp_pos_cmp, &node);
     if (node) {
-        av_free(sp);
-        av_free(node);
+        av_freep(&sp);
+        av_freep(&node);
     }
 
     return 0;
@@ -214,7 +214,7 @@ int ff_nut_add_sp(NUTContext *nut, int64_t pos, int64_t back_ptr, int64_t ts)
 
 static int enu_free(void *opaque, void *elem)
 {
-    av_free(elem);
+    av_freep(&elem);
     return 0;
 }
 

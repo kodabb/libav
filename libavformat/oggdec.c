@@ -96,7 +96,7 @@ static int ogg_restore(AVFormatContext *s, int discard)
     if (!discard) {
 
         for (i = 0; i < ogg->nstreams; i++)
-            av_free(ogg->streams[i].buf);
+            av_freep(&ogg->streams[i].buf);
 
         avio_seek(bc, ost->pos, SEEK_SET);
         ogg->curidx   = ost->curidx;
@@ -110,7 +110,7 @@ static int ogg_restore(AVFormatContext *s, int discard)
                    ost->nstreams * sizeof(*ogg->streams));
     }
 
-    av_free(ost);
+    av_freep(&ost);
 
     return 0;
 }
@@ -194,7 +194,7 @@ static int ogg_new_buf(struct ogg *ogg, int idx)
 
     if (os->buf) {
         memcpy(nb, os->buf + os->pstart, size);
-        av_free(os->buf);
+        av_freep(&os->buf);
     }
 
     os->buf    = nb;
@@ -311,7 +311,7 @@ static int ogg_read_page(AVFormatContext *s, int *str)
         if (!nb)
             return AVERROR(ENOMEM);
         memcpy(nb, os->buf, os->bufpos);
-        av_free(os->buf);
+        av_freep(&os->buf);
         os->buf = nb;
     }
 
@@ -537,14 +537,14 @@ static int ogg_read_close(AVFormatContext *s)
     int i;
 
     for (i = 0; i < ogg->nstreams; i++) {
-        av_free(ogg->streams[i].buf);
+        av_freep(&ogg->streams[i].buf);
         if (ogg->streams[i].codec &&
             ogg->streams[i].codec->cleanup) {
             ogg->streams[i].codec->cleanup(s, i);
         }
-        av_free(ogg->streams[i].private);
+        av_freep(&ogg->streams[i].private);
     }
-    av_free(ogg->streams);
+    av_freep(&ogg->streams);
     return 0;
 }
 

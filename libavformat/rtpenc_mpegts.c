@@ -36,7 +36,7 @@ static int rtp_mpegts_write_close(AVFormatContext *s)
         if (chain->mpegts_ctx->pb) {
             uint8_t *buf;
             avio_close_dyn_buf(chain->mpegts_ctx->pb, &buf);
-            av_free(buf);
+            av_freep(&buf);
         }
         avformat_free_context(chain->mpegts_ctx);
     }
@@ -104,7 +104,7 @@ fail:
         if (mpegts_ctx->pb) {
             uint8_t *buf;
             avio_close_dyn_buf(mpegts_ctx->pb, &buf);
-            av_free(buf);
+            av_freep(&buf);
         }
         avformat_free_context(mpegts_ctx);
     }
@@ -130,7 +130,7 @@ static int rtp_mpegts_write_packet(AVFormatContext *s, AVPacket *pkt)
     size = avio_close_dyn_buf(chain->mpegts_ctx->pb, &buf);
     chain->mpegts_ctx->pb = NULL;
     if (size == 0) {
-        av_free(buf);
+        av_freep(&buf);
         return 0;
     }
     av_init_packet(&local_pkt);
@@ -146,7 +146,7 @@ static int rtp_mpegts_write_packet(AVFormatContext *s, AVPacket *pkt)
                                      s->streams[pkt->stream_index]->time_base,
                                      chain->rtp_ctx->streams[0]->time_base);
     ret = av_write_frame(chain->rtp_ctx, &local_pkt);
-    av_free(buf);
+    av_freep(&buf);
 
     return ret;
 }

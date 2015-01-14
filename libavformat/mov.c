@@ -461,7 +461,7 @@ static int mov_read_dref(MOVContext *c, AVIOContext *pb, MOVAtom atom)
     if (entries >  (atom.size - 1) / MIN_DATA_ENTRY_BOX_SIZE + 1 ||
         entries >= UINT_MAX / sizeof(*sc->drefs))
         return AVERROR_INVALIDDATA;
-    av_free(sc->drefs);
+    av_freep(&sc->drefs);
     sc->drefs = av_mallocz(entries * sizeof(*sc->drefs));
     if (!sc->drefs)
         return AVERROR(ENOMEM);
@@ -519,7 +519,7 @@ static int mov_read_dref(MOVContext *c, AVIOContext *pb, MOVAtom atom)
                 if (len&1)
                     len += 1;
                 if (type == 2) { // absolute path
-                    av_free(dref->path);
+                    av_freep(&dref->path);
                     dref->path = av_mallocz(len+1);
                     if (!dref->path)
                         return AVERROR(ENOMEM);
@@ -534,7 +534,7 @@ static int mov_read_dref(MOVContext *c, AVIOContext *pb, MOVAtom atom)
                             dref->path[j] = '/';
                     av_log(c->fc, AV_LOG_DEBUG, "path %s\n", dref->path);
                 } else if (type == 0) { // directory name
-                    av_free(dref->dir);
+                    av_freep(&dref->dir);
                     dref->dir = av_malloc(len+1);
                     if (!dref->dir)
                         return AVERROR(ENOMEM);
@@ -892,7 +892,7 @@ static int mov_read_smi(MOVContext *c, AVIOContext *pb, MOVAtom atom)
 
     // currently SVQ3 decoder expect full STSD header - so let's fake it
     // this should be fixed and just SMI header should be passed
-    av_free(st->codec->extradata);
+    av_freep(&st->codec->extradata);
     st->codec->extradata = av_mallocz(atom.size + 0x5a + FF_INPUT_BUFFER_PADDING_SIZE);
     if (!st->codec->extradata)
         return AVERROR(ENOMEM);
@@ -1077,7 +1077,7 @@ static int mov_read_wave(MOVContext *c, AVIOContext *pb, MOVAtom atom)
 
     if (st->codec->codec_id == AV_CODEC_ID_QDM2 || st->codec->codec_id == AV_CODEC_ID_QDMC) {
         // pass all frma atom to codec, needed at least for QDMC and QDM2
-        av_free(st->codec->extradata);
+        av_freep(&st->codec->extradata);
         st->codec->extradata = av_mallocz(atom.size + FF_INPUT_BUFFER_PADDING_SIZE);
         if (!st->codec->extradata)
             return AVERROR(ENOMEM);
@@ -1116,7 +1116,7 @@ static int mov_read_glbl(MOVContext *c, AVIOContext *pb, MOVAtom atom)
         if (type == MKTAG('f','i','e','l') && size == atom.size)
             return mov_read_default(c, pb, atom);
     }
-    av_free(st->codec->extradata);
+    av_freep(&st->codec->extradata);
     st->codec->extradata = av_mallocz(atom.size + FF_INPUT_BUFFER_PADDING_SIZE);
     if (!st->codec->extradata)
         return AVERROR(ENOMEM);
@@ -1141,7 +1141,7 @@ static int mov_read_dvc1(MOVContext *c, AVIOContext *pb, MOVAtom atom)
     if ((profile_level & 0xf0) != 0xc0)
         return 0;
 
-    av_free(st->codec->extradata);
+    av_freep(&st->codec->extradata);
     st->codec->extradata = av_mallocz(atom.size - 7 + FF_INPUT_BUFFER_PADDING_SIZE);
     if (!st->codec->extradata)
         return AVERROR(ENOMEM);
@@ -1169,7 +1169,7 @@ static int mov_read_strf(MOVContext *c, AVIOContext *pb, MOVAtom atom)
     if ((uint64_t)atom.size > (1<<30))
         return AVERROR_INVALIDDATA;
 
-    av_free(st->codec->extradata);
+    av_freep(&st->codec->extradata);
     st->codec->extradata = av_mallocz(atom.size - 40 + FF_INPUT_BUFFER_PADDING_SIZE);
     if (!st->codec->extradata)
         return AVERROR(ENOMEM);
@@ -1894,7 +1894,7 @@ static int mov_read_stsz(MOVContext *c, AVIOContext *pb, MOVAtom atom)
 
     if (avio_read(pb, buf, num_bytes) < num_bytes) {
         av_freep(&sc->sample_sizes);
-        av_free(buf);
+        av_freep(&buf);
         return AVERROR_INVALIDDATA;
     }
 
@@ -1910,7 +1910,7 @@ static int mov_read_stsz(MOVContext *c, AVIOContext *pb, MOVAtom atom)
     if (pb->eof_reached)
         return AVERROR_EOF;
 
-    av_free(buf);
+    av_freep(&buf);
     return 0;
 }
 
@@ -1939,7 +1939,7 @@ static int mov_read_stts(MOVContext *c, AVIOContext *pb, MOVAtom atom)
     if (entries >= UINT_MAX / sizeof(*sc->stts_data))
         return AVERROR(EINVAL);
 
-    av_free(sc->stts_data);
+    av_freep(&sc->stts_data);
     sc->stts_data = av_malloc(entries * sizeof(*sc->stts_data));
     if (!sc->stts_data)
         return AVERROR(ENOMEM);
@@ -2842,7 +2842,7 @@ static int mov_read_cmov(MOVContext *c, AVIOContext *pb, MOVAtom atom)
         return AVERROR(ENOMEM);
     moov_data = av_malloc(moov_len);
     if (!moov_data) {
-        av_free(cmov_data);
+        av_freep(&cmov_data);
         return AVERROR(ENOMEM);
     }
     avio_read(pb, cmov_data, cmov_len);
@@ -2854,8 +2854,8 @@ static int mov_read_cmov(MOVContext *c, AVIOContext *pb, MOVAtom atom)
     atom.size = moov_len;
     ret = mov_read_default(c, &ctx, atom);
 free_and_return:
-    av_free(moov_data);
-    av_free(cmov_data);
+    av_freep(&moov_data);
+    av_freep(&cmov_data);
     return ret;
 #else
     av_log(c->fc, AV_LOG_ERROR, "this file requires zlib support compiled in\n");
@@ -3367,7 +3367,7 @@ static int mov_read_packet(AVFormatContext *s, AVPacket *pkt)
 #if CONFIG_DV_DEMUXER
         if (mov->dv_demux && sc->dv_audio_container) {
             avpriv_dv_produce_packet(mov->dv_demux, pkt, pkt->data, pkt->size);
-            av_free(pkt->data);
+            av_freep(&pkt->data);
             pkt->size = 0;
             ret = avpriv_dv_get_packet(mov->dv_demux, pkt);
             if (ret < 0)

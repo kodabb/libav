@@ -41,7 +41,7 @@ static void mpegts_free_context(PayloadContext *data)
         return;
     if (data->ts)
         ff_mpegts_parse_close(data->ts);
-    av_free(data);
+    av_freep(&data);
 }
 
 static av_cold int mpegts_init(AVFormatContext *ctx, int st_index,

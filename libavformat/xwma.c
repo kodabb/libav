@@ -246,7 +246,7 @@ static int xwma_read_header(AVFormatContext *s)
     }
 
 fail:
-    av_free(dpds_table);
+    av_freep(&dpds_table);
 
     return ret;
 }

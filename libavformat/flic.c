@@ -176,7 +176,7 @@ static int flic_read_header(AVFormatContext *s)
         avio_seek(pb, 12, SEEK_SET);
 
         /* send over abbreviated FLIC header chunk */
-        av_free(st->codec->extradata);
+        av_freep(&st->codec->extradata);
         st->codec->extradata_size = 12;
         st->codec->extradata = av_malloc(12);
         memcpy(st->codec->extradata, header, 12);

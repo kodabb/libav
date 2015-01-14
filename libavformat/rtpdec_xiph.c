@@ -59,7 +59,7 @@ static inline void free_fragment_if_needed(PayloadContext * data)
     if (data->fragment) {
         uint8_t* p;
         avio_close_dyn_buf(data->fragment, &p);
-        av_free(p);
+        av_freep(&p);
         data->fragment = NULL;
     }
 }
@@ -67,8 +67,8 @@ static inline void free_fragment_if_needed(PayloadContext * data)
 static void xiph_free_context(PayloadContext * data)
 {
     free_fragment_if_needed(data);
-    av_free(data->split_buf);
-    av_free(data);
+    av_freep(&data->split_buf);
+    av_freep(&data);
 }
 
 static av_cold int xiph_vorbis_init(AVFormatContext *ctx, int st_index,
@@ -369,7 +369,7 @@ static int xiph_parse_fmtp_pair(AVFormatContext *s,
             av_log(s, AV_LOG_ERROR, "Packet too large\n");
             result = AVERROR_INVALIDDATA;
         }
-        av_free(decoded_packet);
+        av_freep(&decoded_packet);
     }
     return result;
 }

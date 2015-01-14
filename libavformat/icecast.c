@@ -146,7 +146,7 @@ static int icecast_open(URLContext *h, const char *uri, int flags)
             *sep = 0;
             sep++;
             if (s->pass) {
-                av_free(s->pass);
+                av_freep(&s->pass);
                 av_log(h, AV_LOG_WARNING, "Overwriting -password <pass> with URI password!\n");
             }
             if (!(s->pass = av_strdup(sep))) {

@@ -115,7 +115,7 @@ static int read_tag(uint8_t *line, AVDictionary **m)
     if (!(key = unescape(line, p - line)))
         return AVERROR(ENOMEM);
     if (!(value = unescape(p + 1, strlen(p + 1)))) {
-        av_free(key);
+        av_freep(&key);
         return AVERROR(ENOMEM);
     }
 

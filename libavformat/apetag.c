@@ -110,7 +110,7 @@ static int ape_tag_read_field(AVFormatContext *s)
             return AVERROR(ENOMEM);
         c = avio_read(pb, value, size);
         if (c < 0) {
-            av_free(value);
+            av_freep(&value);
             return c;
         }
         value[c] = 0;

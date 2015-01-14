@@ -648,10 +648,10 @@ int ff_sdp_parse(AVFormatContext *s, const char *content)
     }
 
     for (i = 0; i < s1->nb_default_include_source_addrs; i++)
-        av_free(s1->default_include_source_addrs[i]);
+        av_freep(&s1->default_include_source_addrs[i]);
     av_freep(&s1->default_include_source_addrs);
     for (i = 0; i < s1->nb_default_exclude_source_addrs; i++)
-        av_free(s1->default_exclude_source_addrs[i]);
+        av_freep(&s1->default_exclude_source_addrs[i]);
     av_freep(&s1->default_exclude_source_addrs);
 
     rt->p = av_malloc(sizeof(struct pollfd)*2*(rt->nb_rtsp_streams+1));
@@ -678,7 +678,7 @@ void ff_rtsp_undo_setup(AVFormatContext *s, int send_packets)
                     if (CONFIG_RTSP_MUXER && rtpctx->pb && send_packets)
                         ff_rtsp_tcp_write_packet(s, rtsp_st);
                     avio_close_dyn_buf(rtpctx->pb, &ptr);
-                    av_free(ptr);
+                    av_freep(&ptr);
                 } else {
                     avio_close(rtpctx->pb);
                 }
@@ -710,23 +710,23 @@ void ff_rtsp_close_streams(AVFormatContext *s)
                 rtsp_st->dynamic_handler->free(
                     rtsp_st->dynamic_protocol_context);
             for (j = 0; j < rtsp_st->nb_include_source_addrs; j++)
-                av_free(rtsp_st->include_source_addrs[j]);
+                av_freep(&rtsp_st->include_source_addrs[j]);
             av_freep(&rtsp_st->include_source_addrs);
             for (j = 0; j < rtsp_st->nb_exclude_source_addrs; j++)
-                av_free(rtsp_st->exclude_source_addrs[j]);
+                av_freep(&rtsp_st->exclude_source_addrs[j]);
             av_freep(&rtsp_st->exclude_source_addrs);
 
-            av_free(rtsp_st);
+            av_freep(&rtsp_st);
         }
     }
-    av_free(rt->rtsp_streams);
+    av_freep(&rt->rtsp_streams);
     if (rt->asf_ctx) {
         avformat_close_input(&rt->asf_ctx);
     }
     if (CONFIG_RTPDEC && rt->ts)
         ff_mpegts_parse_close(rt->ts);
-    av_free(rt->p);
-    av_free(rt->recvbuf);
+    av_freep(&rt->p);
+    av_freep(&rt->recvbuf);
 }
 
 int ff_rtsp_open_transport_ctx(AVFormatContext *s, RTSPStream *rtsp_st)
@@ -1154,7 +1154,7 @@ start:
     if (content_ptr)
         *content_ptr = content;
     else
-        av_free(content);
+        av_freep(&content);
 
     if (request) {
         char buf[1024];
@@ -1253,7 +1253,7 @@ static int rtsp_send_cmd_with_content_async(AVFormatContext *s,
                                                  rt->auth, url, method);
         if (str)
             av_strlcat(buf, str, sizeof(buf));
-        av_free(str);
+        av_freep(&str);
     }
     if (send_content_length > 0 && send_content)
         av_strlcatf(buf, sizeof(buf), "Content-Length: %d\r\n", send_content_length);
@@ -1882,7 +1882,7 @@ static int udp_read_packet(AVFormatContext *s, RTSPStream **prtsp_st,
                     p[max_p].fd       = fds[fdsidx];
                     p[max_p++].events = POLLIN;
                 }
-                av_free(fds);
+                av_freep(&fds);
             }
         }
         n = poll(p, max_p, POLL_TIMEOUT_MS);
@@ -2198,13 +2198,13 @@ static int sdp_read_header(AVFormatContext *s)
     content = av_malloc(SDP_MAX_SIZE);
     size = avio_read(s->pb, content, SDP_MAX_SIZE - 1);
     if (size <= 0) {
-        av_free(content);
+        av_freep(&content);
         return AVERROR_INVALIDDATA;
     }
     content[size] ='\0';
 
     err = ff_sdp_parse(s, content);
-    av_free(content);
+    av_freep(&content);
     if (err) goto fail;
 
     /* open each RTP stream */

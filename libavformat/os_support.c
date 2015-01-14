@@ -93,12 +93,12 @@ int ff_getaddrinfo(const char *node, const char *service,
     if (node) {
         if (!ff_inet_aton(node, &sin->sin_addr)) {
             if (hints && (hints->ai_flags & AI_NUMERICHOST)) {
-                av_free(sin);
+                av_freep(&sin);
                 return EAI_FAIL;
             }
             h = gethostbyname(node);
             if (!h) {
-                av_free(sin);
+                av_freep(&sin);
                 return EAI_FAIL;
             }
             memcpy(&sin->sin_addr, h->h_addr_list[0], sizeof(struct in_addr));
@@ -117,7 +117,7 @@ int ff_getaddrinfo(const char *node, const char *service,
 
     ai = av_mallocz(sizeof(struct addrinfo));
     if (!ai) {
-        av_free(sin);
+        av_freep(&sin);
         return EAI_FAIL;
     }
 
@@ -158,9 +158,9 @@ void ff_freeaddrinfo(struct addrinfo *res)
     }
 #endif /* HAVE_WINSOCK2_H */
 
-    av_free(res->ai_canonname);
-    av_free(res->ai_addr);
-    av_free(res);
+    av_freep(&res->ai_canonname);
+    av_freep(&res->ai_addr);
+    av_freep(&res);
 }
 
 int ff_getnameinfo(const struct sockaddr *sa, int salen,

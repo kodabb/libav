@@ -95,16 +95,16 @@ static PayloadContext *new_context(void)
 
 static void free_context(PayloadContext *data)
 {
-    av_free(data->au_headers);
-    av_free(data->mode);
-    av_free(data);
+    av_freep(&data->au_headers);
+    av_freep(&data->mode);
+    av_freep(&data);
 }
 
 static int parse_fmtp_config(AVCodecContext *codec, char *value)
 {
     /* decode the hexa encoded parameter */
     int len = ff_hex_to_data(NULL, value);
-    av_free(codec->extradata);
+    av_freep(&codec->extradata);
     codec->extradata = av_mallocz(len + FF_INPUT_BUFFER_PADDING_SIZE);
     if (!codec->extradata)
         return AVERROR(ENOMEM);
@@ -146,7 +146,7 @@ static int rtp_parse_mp4_au(PayloadContext *data, const uint8_t *buf, int len)
 
     data->nb_au_headers = au_headers_length / au_header_size;
     if (!data->au_headers || data->au_headers_allocated < data->nb_au_headers) {
-        av_free(data->au_headers);
+        av_freep(&data->au_headers);
         data->au_headers = av_malloc(sizeof(struct AUHeaders) * data->nb_au_headers);
         if (!data->au_headers)
             return AVERROR(ENOMEM);

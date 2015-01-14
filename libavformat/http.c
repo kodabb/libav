@@ -259,7 +259,7 @@ int ff_http_do_new_request(URLContext *h, const char *uri)
 
     s->off           = 0;
     s->icy_data_read = 0;
-    av_free(s->location);
+    av_freep(&s->location);
     s->location = av_strdup(uri);
     if (!s->location)
         return AVERROR(ENOMEM);
@@ -362,7 +362,7 @@ static int parse_location(HTTPContext *s, const char *p)
     new_loc = av_strdup(redirected_location);
     if (!new_loc)
         return AVERROR(ENOMEM);
-    av_free(s->location);
+    av_freep(&s->location);
     s->location = new_loc;
     return 0;
 }
@@ -500,7 +500,7 @@ static int process_line(URLContext *h, char *line, int line_count,
             if (!strcmp(p, "close"))
                 s->willclose = 1;
         } else if (!av_strcasecmp(tag, "Content-Type")) {
-            av_free(s->mime_type);
+            av_freep(&s->mime_type);
             s->mime_type = av_strdup(p);
         } else if (!av_strcasecmp(tag, "Icy-MetaInt")) {
             s->icy_metaint = strtoll(p, NULL, 10);

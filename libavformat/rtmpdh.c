@@ -57,7 +57,7 @@
 #define bn_free(bn)     \
     do {                \
         mpz_clear(bn);  \
-        av_free(bn);    \
+        av_freep(&bn);  \
     } while (0)
 #define bn_set_word(bn, w)          mpz_set_ui(bn, w)
 #define bn_cmp(a, b)                mpz_cmp(a, b)
@@ -159,7 +159,7 @@ void ff_dh_free(FF_DH *dh)
     bn_free(dh->g);
     bn_free(dh->pub_key);
     bn_free(dh->priv_key);
-    av_free(dh);
+    av_freep(&dh);
 }
 #elif CONFIG_OPENSSL
 #define bn_new(bn)                  bn = BN_new()

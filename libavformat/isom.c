@@ -446,7 +446,7 @@ int ff_mp4_read_dec_config_descr(AVFormatContext *fc, AVStream *st, AVIOContext 
         av_dlog(fc, "Specific MPEG4 header len=%d\n", len);
         if (!len || (uint64_t)len > (1<<30))
             return -1;
-        av_free(st->codec->extradata);
+        av_freep(&st->codec->extradata);
         st->codec->extradata = av_mallocz(len + FF_INPUT_BUFFER_PADDING_SIZE);
         if (!st->codec->extradata)
             return AVERROR(ENOMEM);

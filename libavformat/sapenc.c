@@ -236,7 +236,7 @@ static int sap_write_header(AVFormatContext *s)
     return 0;
 
 fail:
-    av_free(contexts);
+    av_freep(&contexts);
     sap_write_close(s);
     return ret;
 }

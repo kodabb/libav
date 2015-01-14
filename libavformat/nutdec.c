@@ -673,8 +673,8 @@ static int find_and_decode_index(NUTContext *nut)
     ret = 0;
 
 fail:
-    av_free(syncpoints);
-    av_free(has_keyframe);
+    av_freep(&syncpoints);
+    av_freep(&has_keyframe);
     return ret;
 }
 

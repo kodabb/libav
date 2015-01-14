@@ -108,7 +108,7 @@ static int append_entry(HLSContext *hls, uint64_t duration)
     if (hls->nb_entries >= hls->size) {
         en = hls->list;
         hls->list = en->next;
-        av_free(en);
+        av_freep(&en);
     } else
         hls->nb_entries++;
 
@@ -124,7 +124,7 @@ static void free_entries(HLSContext *hls)
     while(p) {
         en = p;
         p = p->next;
-        av_free(en);
+        av_freep(&en);
     }
 }
 
@@ -248,7 +248,7 @@ static int hls_write_header(AVFormatContext *s)
 
 fail:
     if (ret) {
-        av_free(hls->basename);
+        av_freep(&hls->basename);
         if (hls->avf)
             avformat_free_context(hls->avf);
     }
@@ -314,7 +314,7 @@ static int hls_write_trailer(struct AVFormatContext *s)
     av_write_trailer(oc);
     avio_closep(&oc->pb);
     avformat_free_context(oc);
-    av_free(hls->basename);
+    av_freep(&hls->basename);
     append_entry(hls, hls->duration);
     hls_window(s, 1);
 

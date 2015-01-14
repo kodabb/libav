@@ -117,7 +117,7 @@ static void free_segment_list(struct variant *var)
 {
     int i;
     for (i = 0; i < var->n_segments; i++)
-        av_free(var->segments[i]);
+        av_freep(&var->segments[i]);
     av_freep(&var->segments);
     var->n_segments = 0;
 }
@@ -129,14 +129,14 @@ static void free_variant_list(HLSContext *c)
         struct variant *var = c->variants[i];
         free_segment_list(var);
         av_free_packet(&var->pkt);
-        av_free(var->pb.buffer);
+        av_freep(&var->pb.buffer);
         if (var->input)
             ffurl_close(var->input);
         if (var->ctx) {
             var->ctx->pb = NULL;
             avformat_close_input(&var->ctx);
         }
-        av_free(var);
+        av_freep(&var);
     }
     av_freep(&c->variants);
     c->n_variants = 0;
@@ -323,7 +323,7 @@ static int parse_playlist(HLSContext *c, const char *url,
         var->last_load_time = av_gettime_relative();
 
 fail:
-    av_free(new_url);
+    av_freep(&new_url);
     if (close_in)
         avio_close(in);
     return ret;

@@ -307,7 +307,7 @@ int64_t ff_gen_syncpoint_search(AVFormatContext *s,
 
     if (!keyframes_to_find) {
         // no stream active, error
-        av_free(sync);
+        av_freep(&sync);
         return -1;
     }
 
@@ -380,7 +380,7 @@ int64_t ff_gen_syncpoint_search(AVFormatContext *s,
             }
             if (min_distance == INT64_MAX) {
                 // no timestamp is in range, cannot seek
-                av_free(sync);
+                av_freep(&sync);
                 return -1;
             }
             if (min_pos < pos)
@@ -389,7 +389,7 @@ int64_t ff_gen_syncpoint_search(AVFormatContext *s,
     }
 
     avio_seek(s->pb, pos, SEEK_SET);
-    av_free(sync);
+    av_freep(&sync);
     return pos;
 }
 
@@ -404,7 +404,7 @@ AVParserState *ff_store_parser_state(AVFormatContext *s)
 
     state->stream_states = av_malloc(sizeof(AVParserStreamState) * s->nb_streams);
     if (!state->stream_states) {
-        av_free(state);
+        av_freep(&state);
         return NULL;
     }
 
@@ -470,8 +470,8 @@ void ff_restore_parser_state(AVFormatContext *s, AVParserState *state)
         st->probe_packets = ss->probe_packets;
     }
 
-    av_free(state->stream_states);
-    av_free(state);
+    av_freep(&state->stream_states);
+    av_freep(&state);
 }
 
 static void free_packet_list(AVPacketList *pktl)
@@ -481,7 +481,7 @@ static void free_packet_list(AVPacketList *pktl)
         cur = pktl;
         pktl = cur->next;
         av_free_packet(&cur->pkt);
-        av_free(cur);
+        av_freep(&cur);
     }
 }
 
@@ -503,6 +503,6 @@ void ff_free_parser_state(AVFormatContext *s, AVParserState *state)
     free_packet_list(state->parse_queue);
     free_packet_list(state->raw_packet_buffer);
 
-    av_free(state->stream_states);
-    av_free(state);
+    av_freep(&state->stream_states);
+    av_freep(&state);
 }

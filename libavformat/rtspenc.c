@@ -74,14 +74,14 @@ int ff_rtsp_setup_output_streams(AVFormatContext *s, const char *addr)
                 "rtsp", NULL, addr, -1, NULL);
     ctx_array[0] = &sdp_ctx;
     if (av_sdp_create(ctx_array, 1, sdp, SDP_MAX_SIZE)) {
-        av_free(sdp);
+        av_freep(&sdp);
         return AVERROR_INVALIDDATA;
     }
     av_log(s, AV_LOG_VERBOSE, "SDP:\n%s\n", sdp);
     ff_rtsp_send_cmd_with_content(s, "ANNOUNCE", rt->control_uri,
                                   "Content-Type: application/sdp\r\n",
                                   reply, NULL, sdp, strlen(sdp));
-    av_free(sdp);
+    av_freep(&sdp);
     if (reply->status_code != RTSP_STATUS_OK)
         return AVERROR_INVALIDDATA;
 
@@ -171,7 +171,7 @@ int ff_rtsp_tcp_write_packet(AVFormatContext *s, RTSPStream *rtsp_st)
         ptr += packet_len;
         size -= packet_len;
     }
-    av_free(buf);
+    av_freep(&buf);
     return ffio_open_dyn_packet_buf(&rtpctx->pb, RTSP_TCP_MAX_PACKET_SIZE);
 }
 

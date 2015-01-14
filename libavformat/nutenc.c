@@ -318,7 +318,7 @@ static void put_packet(NUTContext *nut, AVIOContext *bc, AVIOContext *dyn_bc,
     if (calculate_checksum)
         avio_wl32(bc, ffio_get_checksum(bc));
 
-    av_free(dyn_buf);
+    av_freep(&dyn_buf);
 }
 
 static void write_mainheader(NUTContext *nut, AVIOContext *bc)
@@ -512,7 +512,7 @@ static int write_globalinfo(NUTContext *nut, AVIOContext *bc)
 
     dyn_size = avio_close_dyn_buf(dyn_bc, &dyn_buf);
     avio_write(bc, dyn_buf, dyn_size);
-    av_free(dyn_buf);
+    av_freep(&dyn_buf);
     return 0;
 }
 
@@ -543,7 +543,7 @@ static int write_streaminfo(NUTContext *nut, AVIOContext *bc, int stream_id){
         avio_write(bc, dyn_buf, dyn_size);
     }
 
-    av_free(dyn_buf);
+    av_freep(&dyn_buf);
     return count;
 }
 
@@ -617,7 +617,7 @@ static int write_headers(AVFormatContext *avctx, AVIOContext *bc)
         else {
             uint8_t *buf;
             avio_close_dyn_buf(dyn_bc, &buf);
-            av_free(buf);
+            av_freep(&buf);
         }
     }
 

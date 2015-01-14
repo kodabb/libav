@@ -478,5 +478,5 @@ void av_dump_format(AVFormatContext *ic, int index,
         if (!printed[i])
             dump_stream_format(ic, i, index, is_output);
 
-    av_free(printed);
+    av_freep(&printed);
 }

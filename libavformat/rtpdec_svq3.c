@@ -85,7 +85,7 @@ static int svq3_parse_packet (AVFormatContext *s, PayloadContext *sv,
         if (sv->pktbuf) {
             uint8_t *tmp;
             avio_close_dyn_buf(sv->pktbuf, &tmp);
-            av_free(tmp);
+            av_freep(&tmp);
         }
         if ((res = avio_open_dyn_buf(&sv->pktbuf)) < 0)
             return res;
@@ -119,9 +119,9 @@ static void svq3_extradata_free(PayloadContext *sv)
     if (sv->pktbuf) {
         uint8_t *buf;
         avio_close_dyn_buf(sv->pktbuf, &buf);
-        av_free(buf);
+        av_freep(&buf);
     }
-    av_free(sv);
+    av_freep(&sv);
 }
 
 RTPDynamicProtocolHandler ff_svq3_dynamic_handler = {

@@ -134,7 +134,7 @@ static int ogg_write_page(AVFormatContext *s, OGGPage *page, int extra_flags)
 
     avio_write(s->pb, buf, size);
     avio_flush(s->pb);
-    av_free(buf);
+    av_freep(&buf);
     oggstream->page_count--;
     return 0;
 }
@@ -620,7 +620,7 @@ static int ogg_write_trailer(AVFormatContext *s)
         if (st->codec->codec_id == AV_CODEC_ID_FLAC ||
             st->codec->codec_id == AV_CODEC_ID_SPEEX ||
             st->codec->codec_id == AV_CODEC_ID_OPUS) {
-            av_free(oggstream->header[0]);
+            av_freep(&oggstream->header[0]);
         }
         av_freep(&oggstream->header[1]);
         av_freep(&st->priv_data);

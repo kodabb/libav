@@ -58,7 +58,7 @@ static void vp8_free_buffer(PayloadContext *vp8)
     if (!vp8->data)
         return;
     avio_close_dyn_buf(vp8->data, &tmp);
-    av_free(tmp);
+    av_freep(&tmp);
     vp8->data = NULL;
 }
 
@@ -279,7 +279,7 @@ static PayloadContext *vp8_new_context(void)
 static void vp8_free_context(PayloadContext *vp8)
 {
     vp8_free_buffer(vp8);
-    av_free(vp8);
+    av_freep(&vp8);
 }
 
 static int vp8_need_keyframe(PayloadContext *vp8)

@@ -303,7 +303,7 @@ fail:
     /* Rewind. Reuse probe buffer to avoid seeking. */
     if (ret < 0 ||
         (ret = ffio_rewind_with_probe_data(pb, buf, pd.buf_size)) < 0) {
-        av_free(buf);
+        av_freep(&buf);
     }
     av_freep(&pd.mime_type);
     return ret;

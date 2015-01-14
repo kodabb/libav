@@ -335,7 +335,7 @@ static int nsv_parse_NSVf_header(AVFormatContext *s)
             av_dlog(s, "NSV NSVf INFO: %s='%s'\n", token, value);
             av_dict_set(&s->metadata, token, value, 0);
         }
-        av_free(strings);
+        av_freep(&strings);
     }
     if (pb->eof_reached)
         return -1;

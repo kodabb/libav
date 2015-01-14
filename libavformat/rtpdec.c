@@ -346,7 +346,7 @@ int ff_rtp_check_and_send_back_rr(RTPDemuxContext *s, URLContext *fd,
         av_dlog(s->ic, "sending %d bytes of RR\n", len);
         result = ffurl_write(fd, buf, len);
         av_dlog(s->ic, "result from ffurl_write: %d\n", result);
-        av_free(buf);
+        av_freep(&buf);
     }
     return 0;
 }
@@ -371,7 +371,7 @@ void ff_rtp_send_punch_packets(URLContext *rtp_handle)
     len = avio_close_dyn_buf(pb, &buf);
     if ((len > 0) && buf)
         ffurl_write(rtp_handle, buf, len);
-    av_free(buf);
+    av_freep(&buf);
 
     /* Send a minimal RTCP RR */
     if (avio_open_dyn_buf(&pb) < 0)
@@ -386,7 +386,7 @@ void ff_rtp_send_punch_packets(URLContext *rtp_handle)
     len = avio_close_dyn_buf(pb, &buf);
     if ((len > 0) && buf)
         ffurl_write(rtp_handle, buf, len);
-    av_free(buf);
+    av_freep(&buf);
 }
 
 static int find_missing_packets(RTPDemuxContext *s, uint16_t *first_missing,
@@ -478,7 +478,7 @@ int ff_rtp_send_rtcp_feedback(RTPDemuxContext *s, URLContext *fd,
     len = avio_close_dyn_buf(pb, &buf);
     if (len > 0 && buf) {
         ffurl_write(fd, buf, len);
-        av_free(buf);
+        av_freep(&buf);
     }
     return 0;
 }
@@ -659,8 +659,8 @@ void ff_rtp_reset_packet_queue(RTPDemuxContext *s)
 {
     while (s->queue) {
         RTPPacket *next = s->queue->next;
-        av_free(s->queue->buf);
-        av_free(s->queue);
+        av_freep(&s->queue->buf);
+        av_freep(&s->queue);
         s->queue = next;
     }
     s->seq       = 0;
@@ -718,8 +718,8 @@ static int rtp_parse_queued_packet(RTPDemuxContext *s, AVPacket *pkt)
     /* Parse the first packet in the queue, and dequeue it */
     rv   = rtp_parse_packet_internal(s, pkt, s->queue->buf, s->queue->len);
     next = s->queue->next;
-    av_free(s->queue->buf);
-    av_free(s->queue);
+    av_freep(&s->queue->buf);
+    av_freep(&s->queue);
     s->queue = next;
     s->queue_len--;
     return rv;
@@ -825,7 +825,7 @@ void ff_rtp_parse_close(RTPDemuxContext *s)
 {
     ff_rtp_reset_packet_queue(s);
     ff_srtp_free(&s->srtp);
-    av_free(s);
+    av_freep(&s);
 }
 
 int ff_parse_fmtp(AVFormatContext *s,
@@ -858,11 +858,11 @@ int ff_parse_fmtp(AVFormatContext *s,
                                        value, value_size)) {
         res = parse_fmtp(s, stream, data, attr, value);
         if (res < 0 && res != AVERROR_PATCHWELCOME) {
-            av_free(value);
+            av_freep(&value);
             return res;
         }
     }
-    av_free(value);
+    av_freep(&value);
     return 0;
 }
 
