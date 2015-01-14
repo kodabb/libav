@@ -373,7 +373,7 @@ static int mmap_init(AVFormatContext *ctx)
     s->buf_len = av_malloc(sizeof(unsigned int) * s->buffers);
     if (!s->buf_len) {
         av_log(ctx, AV_LOG_ERROR, "Cannot allocate buffer sizes\n");
-        av_free(s->buf_start);
+        av_freep(&s->buf_start);
 
         return AVERROR(ENOMEM);
     }
@@ -437,7 +437,7 @@ static void mmap_release_buffer(void *opaque, uint8_t *data)
     buf.memory = V4L2_MEMORY_MMAP;
     buf.index = buf_descriptor->index;
     fd = buf_descriptor->fd;
-    av_free(buf_descriptor);
+    av_freep(&buf_descriptor);
 
     res = ioctl(fd, VIDIOC_QBUF, &buf);
     if (res < 0) {
@@ -606,8 +606,8 @@ static void mmap_close(struct video_data *s)
     for (i = 0; i < s->buffers; i++) {
         munmap(s->buf_start[i], s->buf_len[i]);
     }
-    av_free(s->buf_start);
-    av_free(s->buf_len);
+    av_freep(&s->buf_start);
+    av_freep(&s->buf_len);
 }
 
 static int v4l2_set_parameters(AVFormatContext *s1)

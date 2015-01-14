@@ -188,7 +188,7 @@ static LRESULT CALLBACK videostream_cb(HWND hwnd, LPVIDEOHDR vdhdr)
         goto fail;
 
     if(av_new_packet(&pktl_next->pkt, vdhdr->dwBytesUsed) < 0) {
-        av_free(pktl_next);
+        av_freep(&pktl_next);
         goto fail;
     }
 
@@ -228,7 +228,7 @@ static int vfw_read_close(AVFormatContext *s)
     while (pktl) {
         AVPacketList *next = pktl->next;
         av_free_packet(&pktl->pkt);
-        av_free(pktl);
+        av_freep(&pktl);
         pktl = next;
     }
 
@@ -344,7 +344,7 @@ static int vfw_read_header(AVFormatContext *s)
     biCompression = bi->bmiHeader.biCompression;
     biBitCount = bi->bmiHeader.biBitCount;
 
-    av_free(bi);
+    av_freep(&bi);
 
     /* Set sequence setup */
     ret = SendMessage(ctx->hwnd, WM_CAP_GET_SEQUENCE_SETUP, sizeof(cparms),
@@ -416,7 +416,7 @@ static int vfw_read_header(AVFormatContext *s)
     return 0;
 
 fail_bi:
-    av_free(bi);
+    av_freep(&bi);
 
 fail_io:
     vfw_read_close(s);
@@ -434,7 +434,7 @@ static int vfw_read_packet(AVFormatContext *s, AVPacket *pkt)
         if(ctx->pktl) {
             *pkt = ctx->pktl->pkt;
             ctx->pktl = ctx->pktl->next;
-            av_free(pktl);
+            av_freep(&pktl);
         }
         ResetEvent(ctx->event);
         ReleaseMutex(ctx->mutex);
