@@ -480,7 +480,7 @@ static int vp56_size_changed(AVCodecContext *avctx)
                                  (4*s->mb_width+6) * sizeof(*s->above_blocks));
     s->macroblocks = av_realloc(s->macroblocks,
                                 s->mb_width*s->mb_height*sizeof(*s->macroblocks));
-    av_free(s->edge_emu_buffer_alloc);
+    av_freep(&s->edge_emu_buffer_alloc);
     s->edge_emu_buffer_alloc = av_malloc(16*stride);
     s->edge_emu_buffer = s->edge_emu_buffer_alloc;
     if (s->flip < 0)

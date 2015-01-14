@@ -261,7 +261,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
             int *tmp = av_realloc(dst->slice_offset, src->slice_count *
                                   sizeof(*dst->slice_offset));
             if (!tmp) {
-                av_free(dst->slice_offset);
+                av_freep(&dst->slice_offset);
                 return AVERROR(ENOMEM);
             }
             dst->slice_offset = tmp;

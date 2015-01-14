@@ -838,8 +838,8 @@ static int generate_codebook(RoqContext *enc, RoqTempdata *tempdata,
         }
 out:
     if (size == 4)
-        av_free(closest_cb);
-    av_free(codebook);
+        av_freep(&closest_cb);
+    av_freep(&codebook);
     return ret;
 }
 
@@ -905,9 +905,9 @@ static int generate_new_codebooks(RoqContext *enc, RoqTempdata *tempData)
                         codebooks->unpacked_cb4_enlarged + i*8*8*3);
     }
 out:
-    av_free(yuvClusters);
-    av_free(points);
-    av_free(results4);
+    av_freep(&yuvClusters);
+    av_freep(&points);
+    av_freep(&results4);
     return ret;
 }
 
@@ -966,8 +966,8 @@ static int roq_encode_video(RoqContext *enc)
     FFSWAP(motion_vect *, enc->last_motion4, enc->this_motion4);
     FFSWAP(motion_vect *, enc->last_motion8, enc->this_motion8);
 
-    av_free(tempData->cel_evals);
-    av_free(tempData->closest_cb2);
+    av_freep(&tempData->cel_evals);
+    av_freep(&tempData->closest_cb2);
 
     enc->framesSinceKeyframe++;
 
@@ -981,11 +981,11 @@ static av_cold int roq_encode_end(AVCodecContext *avctx)
     av_frame_free(&enc->current_frame);
     av_frame_free(&enc->last_frame);
 
-    av_free(enc->tmpData);
-    av_free(enc->this_motion4);
-    av_free(enc->last_motion4);
-    av_free(enc->this_motion8);
-    av_free(enc->last_motion8);
+    av_freep(&enc->tmpData);
+    av_freep(&enc->this_motion4);
+    av_freep(&enc->last_motion4);
+    av_freep(&enc->this_motion8);
+    av_freep(&enc->last_motion8);
 
     return 0;
 }

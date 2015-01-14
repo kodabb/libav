@@ -317,7 +317,7 @@ int ff_init_vlc_sparse(VLC *vlc, int nb_bits, int nb_codes,
 
     ret = build_table(vlc, nb_bits, nb_codes, buf, flags);
 
-    av_free(buf);
+    av_freep(&buf);
     if (ret < 0) {
         av_freep(&vlc->table);
         return ret;

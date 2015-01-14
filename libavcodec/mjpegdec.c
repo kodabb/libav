@@ -1347,7 +1347,7 @@ static int mjpeg_decode_com(MJpegDecodeContext *s)
                      (len > 19 && !strncmp(cbuf, "Metasoft MJPEG Codec", 20)))
                 s->flipped = 1;
 
-            av_free(cbuf);
+            av_freep(&cbuf);
         }
     }
 
@@ -1682,7 +1682,7 @@ av_cold int ff_mjpeg_decode_end(AVCodecContext *avctx)
     } else if (s->picture_ptr)
         av_frame_unref(s->picture_ptr);
 
-    av_free(s->buffer);
+    av_freep(&s->buffer);
     av_freep(&s->ljpeg_buffer);
     s->ljpeg_buffer_size = 0;
 

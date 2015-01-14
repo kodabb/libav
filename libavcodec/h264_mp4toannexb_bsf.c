@@ -92,7 +92,7 @@ static int h264_extradata_to_annexb(AVCodecContext *avctx, const int padding)
         if (total_size > INT_MAX - padding ||
             extradata + 2 + unit_size > avctx->extradata +
             avctx->extradata_size) {
-            av_free(out);
+            av_freep(&out);
             return AVERROR(EINVAL);
         }
         if ((err = av_reallocp(&out, total_size + padding)) < 0)
@@ -121,7 +121,7 @@ static int h264_extradata_to_annexb(AVCodecContext *avctx, const int padding)
                "Warning: PPS NALU missing or invalid. "
                "The resulting stream may not play.\n");
 
-    av_free(avctx->extradata);
+    av_freep(&avctx->extradata);
     avctx->extradata      = out;
     avctx->extradata_size = total_size;
 

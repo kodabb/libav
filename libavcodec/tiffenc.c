@@ -375,7 +375,7 @@ static int encode_frame(AVCodecContext *avctx, AVPacket *pkt,
             zn += bytes_per_row;
         }
         ret = encode_strip(s, zbuf, ptr, zn, s->compr);
-        av_free(zbuf);
+        av_freep(&zbuf);
         if (ret < 0) {
             av_log(s->avctx, AV_LOG_ERROR, "Encode strip failed\n");
             goto fail;
@@ -421,7 +421,7 @@ static int encode_frame(AVCodecContext *avctx, AVPacket *pkt,
         }
     }
     if (s->compr == TIFF_LZW)
-        av_free(s->lzws);
+        av_freep(&s->lzws);
 
     s->num_entries = 0;
 
@@ -481,9 +481,9 @@ static int encode_frame(AVCodecContext *avctx, AVPacket *pkt,
     *got_packet = 1;
 
 fail:
-    av_free(strip_sizes);
-    av_free(strip_offsets);
-    av_free(yuv_line);
+    av_freep(&strip_sizes);
+    av_freep(&strip_offsets);
+    av_freep(&yuv_line);
     return ret;
 }
 

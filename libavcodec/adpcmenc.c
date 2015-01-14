@@ -522,7 +522,7 @@ static int adpcm_encode_frame(AVCodecContext *avctx, AVPacket *avpkt,
                         *dst++ = buf1[j] | (buf1[j + 1] << 4);
                 }
             }
-            av_free(buf);
+            av_freep(&buf);
         } else {
             for (i = 0; i < blocks; i++) {
                 for (ch = 0; ch < avctx->channels; ch++) {
@@ -600,7 +600,7 @@ static int adpcm_encode_frame(AVCodecContext *avctx, AVPacket *avpkt,
                 if (avctx->channels == 2)
                     put_bits(&pb, 4, buf[n + i]);
             }
-            av_free(buf);
+            av_freep(&buf);
         } else {
             for (i = 1; i < frame->nb_samples; i++) {
                 put_bits(&pb, 4, adpcm_ima_compress_sample(&c->status[0],
@@ -650,7 +650,7 @@ static int adpcm_encode_frame(AVCodecContext *avctx, AVPacket *avpkt,
                 for (i = 0; i < n; i++)
                     *dst++ = (buf[i] << 4) | buf[n + i];
             }
-            av_free(buf);
+            av_freep(&buf);
         } else {
             for (i = 7 * avctx->channels; i < avctx->block_align; i++) {
                 int nibble;
@@ -678,7 +678,7 @@ static int adpcm_encode_frame(AVCodecContext *avctx, AVPacket *avpkt,
                 for (i = 0; i < n; i++)
                     *dst++ = buf[i] | (buf[n + i] << 4);
             }
-            av_free(buf);
+            av_freep(&buf);
         } else
             for (n *= avctx->channels; n > 0; n--) {
                 int nibble;

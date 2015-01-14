@@ -282,12 +282,12 @@ error:
         ff_free_vlc(&vlc[0]);
     if(vlc[1].table)
         ff_free_vlc(&vlc[1]);
-    av_free(tmp1.bits);
-    av_free(tmp1.lengths);
-    av_free(tmp1.values);
-    av_free(tmp2.bits);
-    av_free(tmp2.lengths);
-    av_free(tmp2.values);
+    av_freep(&tmp1.bits);
+    av_freep(&tmp1.lengths);
+    av_freep(&tmp1.values);
+    av_freep(&tmp2.bits);
+    av_freep(&tmp2.lengths);
+    av_freep(&tmp2.values);
 
     return err;
 }
@@ -746,9 +746,9 @@ error:
     for(i = 0; i < 4; i++) {
         if(vlc[i].table)
             ff_free_vlc(&vlc[i]);
-        av_free(h[i].bits);
-        av_free(h[i].lengths);
-        av_free(h[i].values);
+        av_freep(&h[i].bits);
+        av_freep(&h[i].lengths);
+        av_freep(&h[i].values);
     }
 
     return ret;

@@ -52,7 +52,7 @@ void *ff_png_zalloc(void *opaque, unsigned int items, unsigned int size)
 
 void ff_png_zfree(void *opaque, void *ptr)
 {
-    av_free(ptr);
+    av_freep(&ptr);
 }
 
 int ff_png_get_nb_channels(int color_type)

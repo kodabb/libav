@@ -337,7 +337,7 @@ static int libschroedinger_decode_frame(AVCodecContext *avctx,
 
         /* Now free the frame resources. */
         libschroedinger_decode_frame_free(framewithpts->frame);
-        av_free(framewithpts);
+        av_freep(&framewithpts);
     } else {
         data       = NULL;
         *got_frame = 0;

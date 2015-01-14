@@ -511,14 +511,14 @@ int ff_h264_decode_seq_parameter_set(H264Context *h)
     }
     sps->new = 1;
 
-    av_free(h->sps_buffers[sps_id]);
+    av_freep(&h->sps_buffers[sps_id]);
     h->sps_buffers[sps_id] = sps;
     h->sps                 = *sps;
 
     return 0;
 
 fail:
-    av_free(sps);
+    av_freep(&sps);
     return -1;
 }
 
@@ -654,11 +654,11 @@ int ff_h264_decode_picture_parameter_set(H264Context *h, int bit_length)
                pps->transform_8x8_mode ? "8x8DCT" : "");
     }
 
-    av_free(h->pps_buffers[pps_id]);
+    av_freep(&h->pps_buffers[pps_id]);
     h->pps_buffers[pps_id] = pps;
     return 0;
 
 fail:
-    av_free(pps);
+    av_freep(&pps);
     return -1;
 }

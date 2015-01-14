@@ -2922,7 +2922,7 @@ static int aac_decode_frame(AVCodecContext *avctx, void *data,
                                        &new_extradata_size);
 
     if (new_extradata) {
-        av_free(avctx->extradata);
+        av_freep(&avctx->extradata);
         avctx->extradata = av_mallocz(new_extradata_size +
                                       FF_INPUT_BUFFER_PADDING_SIZE);
         if (!avctx->extradata)
@@ -3042,7 +3042,7 @@ static int latm_decode_audio_specific_config(struct LATMContext *latmctx,
         esize = (bits_consumed+7) / 8;
 
         if (avctx->extradata_size < esize) {
-            av_free(avctx->extradata);
+            av_freep(&avctx->extradata);
             avctx->extradata = av_malloc(esize + FF_INPUT_BUFFER_PADDING_SIZE);
             if (!avctx->extradata)
                 return AVERROR(ENOMEM);

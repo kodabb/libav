@@ -304,14 +304,14 @@ static void delete_region_display_list(DVBSubContext *ctx, DVBSubRegion *region)
 
                     *obj2_ptr = obj2->next;
 
-                    av_free(obj2);
+                    av_freep(&obj2);
                 }
             }
         }
 
         region->display_list = display->region_list_next;
 
-        av_free(display);
+        av_freep(&display);
     }
 
 }
@@ -327,8 +327,8 @@ static void delete_state(DVBSubContext *ctx)
         ctx->region_list = region->next;
 
         delete_region_display_list(ctx, region);
-        av_free(region->pbuf);
-        av_free(region);
+        av_freep(&region->pbuf);
+        av_freep(&region);
     }
 
     while (ctx->clut_list) {
@@ -336,7 +336,7 @@ static void delete_state(DVBSubContext *ctx)
 
         ctx->clut_list = clut->next;
 
-        av_free(clut);
+        av_freep(&clut);
     }
 
     av_freep(&ctx->display_definition);
@@ -434,7 +434,7 @@ static av_cold int dvbsub_close_decoder(AVCodecContext *avctx)
         display = ctx->display_list;
         ctx->display_list = display->next;
 
-        av_free(display);
+        av_freep(&display);
     }
 
     return 0;
@@ -1017,7 +1017,7 @@ static int dvbsub_parse_region_segment(AVCodecContext *avctx,
     buf += 2;
 
     if (region->width * region->height != region->buf_size) {
-        av_free(region->pbuf);
+        av_freep(&region->pbuf);
 
         region->buf_size = region->width * region->height;
 
@@ -1166,7 +1166,7 @@ static int dvbsub_parse_page_segment(AVCodecContext *avctx,
 
         tmp_display_list = display->next;
 
-        av_free(display);
+        av_freep(&display);
     }
 
     return 0;
@@ -1263,7 +1263,7 @@ static void save_display_set(DVBSubContext *ctx)
 
         png_save2(filename, pbuf, width, height);
 
-        av_free(pbuf);
+        av_freep(&pbuf);
     }
 
     fileno_index++;
@@ -1382,15 +1382,15 @@ static int dvbsub_display_end_segment(AVCodecContext *avctx, const uint8_t *buf,
 
         rect->pict.data[1] = av_mallocz(AVPALETTE_SIZE);
         if (!rect->pict.data[1]) {
-            av_free(sub->rects);
+            av_freep(&sub->rects);
             return AVERROR(ENOMEM);
         }
         memcpy(rect->pict.data[1], clut_table, (1 << region->depth) * sizeof(uint32_t));
 
         rect->pict.data[0] = av_malloc(region->buf_size);
         if (!rect->pict.data[0]) {
-            av_free(rect->pict.data[1]);
-            av_free(sub->rects);
+            av_freep(&rect->pict.data[1]);
+            av_freep(&sub->rects);
             return AVERROR(ENOMEM);
         }
         memcpy(rect->pict.data[0], region->pbuf, region->buf_size);

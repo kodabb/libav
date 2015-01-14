@@ -632,7 +632,7 @@ exit_loop:
     ret = bytestream2_tell(&s->gb);
 the_end:
     inflateEnd(&s->zstream);
-    av_free(crow_buf_base);
+    av_freep(&crow_buf_base);
     s->crow_buf = NULL;
     av_freep(&s->last_row);
     av_freep(&s->tmp_row);

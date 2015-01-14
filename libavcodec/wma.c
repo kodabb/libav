@@ -75,7 +75,7 @@ static av_cold int init_coef_vlc(VLC *vlc, uint16_t **prun_table,
     *prun_table   = run_table;
     *plevel_table = flevel_table;
     *pint_table   = int_table;
-    av_free(level_table);
+    av_freep(&level_table);
 
     return 0;
 }
@@ -385,9 +385,9 @@ int ff_wma_end(AVCodecContext *avctx)
         ff_free_vlc(&s->hgain_vlc);
     for (i = 0; i < 2; i++) {
         ff_free_vlc(&s->coef_vlc[i]);
-        av_free(s->run_table[i]);
-        av_free(s->level_table[i]);
-        av_free(s->int_table[i]);
+        av_freep(&s->run_table[i]);
+        av_freep(&s->level_table[i]);
+        av_freep(&s->int_table[i]);
     }
 
     return 0;

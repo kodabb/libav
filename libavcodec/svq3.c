@@ -1004,14 +1004,14 @@ static av_cold int svq3_decode_init(AVCodecContext *avctx)
                            size - offset) != Z_OK) {
                 av_log(avctx, AV_LOG_ERROR,
                        "could not uncompress watermark logo\n");
-                av_free(buf);
+                av_freep(&buf);
                 return -1;
             }
             s->watermark_key = ff_svq1_packet_checksum(buf, buf_len, 0);
             s->watermark_key = s->watermark_key << 16 | s->watermark_key;
             av_log(avctx, AV_LOG_DEBUG,
                    "watermark key %#"PRIx32"\n", s->watermark_key);
-            av_free(buf);
+            av_freep(&buf);
 #else
             av_log(avctx, AV_LOG_ERROR,
                    "this svq3 file contains watermark which need zlib support compiled in\n");

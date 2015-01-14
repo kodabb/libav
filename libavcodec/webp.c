@@ -212,7 +212,7 @@ static void image_ctx_free(ImageContext *img)
 {
     int i, j;
 
-    av_free(img->color_cache);
+    av_freep(&img->color_cache);
     if (img->role != IMAGE_ROLE_ARGB && !img->is_alpha_primary)
         av_frame_free(&img->frame);
     if (img->huffman_groups) {
@@ -220,7 +220,7 @@ static void image_ctx_free(ImageContext *img)
             for (j = 0; j < HUFFMAN_CODES_PER_META_CODE; j++)
                 ff_free_vlc(&img->huffman_groups[i * HUFFMAN_CODES_PER_META_CODE + j].vlc);
         }
-        av_free(img->huffman_groups);
+        av_freep(&img->huffman_groups);
     }
     memset(img, 0, sizeof(*img));
 }
@@ -319,7 +319,7 @@ static int huff_reader_build_canonical(HuffReader *r, int *code_lengths,
         code <<= 1;
     }
     if (!r->nb_symbols) {
-        av_free(codes);
+        av_freep(&codes);
         return AVERROR_INVALIDDATA;
     }
 
@@ -327,12 +327,12 @@ static int huff_reader_build_canonical(HuffReader *r, int *code_lengths,
                    code_lengths, sizeof(*code_lengths), sizeof(*code_lengths),
                    codes, sizeof(*codes), sizeof(*codes), 0);
     if (ret < 0) {
-        av_free(codes);
+        av_freep(&codes);
         return ret;
     }
     r->simple = 0;
 
-    av_free(codes);
+    av_freep(&codes);
     return 0;
 }
 
@@ -440,7 +440,7 @@ static int read_huffman_code_normal(WebPContext *s, HuffReader *hc,
 
 finish:
     ff_free_vlc(&code_len_hc.vlc);
-    av_free(code_lengths);
+    av_freep(&code_lengths);
     return ret;
 }
 
@@ -1052,7 +1052,7 @@ static int apply_color_indexing_transform(WebPContext *s)
                 }
             }
         }
-        av_free(line);
+        av_freep(&line);
     }
 
     for (y = 0; y < img->frame->height; y++) {

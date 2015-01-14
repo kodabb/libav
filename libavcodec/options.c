@@ -131,7 +131,7 @@ AVCodecContext *avcodec_alloc_context3(const AVCodec *codec)
         return NULL;
 
     if(avcodec_get_context_defaults3(avctx, codec) < 0){
-        av_free(avctx);
+        av_freep(&avctx);
         return NULL;
     }
 

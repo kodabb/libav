@@ -298,7 +298,7 @@ static av_cold int decode_end(AVCodecContext *avctx)
 
     av_frame_free(&a->pic);
 
-    av_free(a->refdata);
+    av_freep(&a->refdata);
     return 0;
 }
 

@@ -324,7 +324,7 @@ int ff_ccitt_unpack(AVCodecContext *avctx, const uint8_t *src, int srcsize,
     }
     ret = 0;
 fail:
-    av_free(runs);
-    av_free(ref);
+    av_freep(&runs);
+    av_freep(&ref);
     return ret;
 }

@@ -122,7 +122,7 @@ static long check_dcbzl_effect(void)
         if (fakedata[i] == (char) 0)
             count++;
 
-    av_free(fakedata);
+    av_freep(&fakedata);
 #endif
 
     return count;

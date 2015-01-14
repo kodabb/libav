@@ -207,16 +207,16 @@ static int tm2_build_huff_table(TM2Context *ctx, TM2Codes *code)
     }
 out:
     /* free allocated memory */
-    av_free(huff.nums);
-    av_free(huff.bits);
-    av_free(huff.lens);
+    av_freep(&huff.nums);
+    av_freep(&huff.bits);
+    av_freep(&huff.lens);
 
     return res;
 }
 
 static void tm2_free_codes(TM2Codes *code)
 {
-    av_free(code->recode);
+    av_freep(&code->recode);
     if (code->vlc.table)
         ff_free_vlc(&code->vlc);
 }
@@ -863,7 +863,7 @@ static int decode_frame(AVCodecContext *avctx,
 
     if ((ret = ff_reget_buffer(avctx, p)) < 0) {
         av_log(avctx, AV_LOG_ERROR, "get_buffer() failed\n");
-        av_free(swbuf);
+        av_freep(&swbuf);
         return ret;
     }
 
@@ -871,19 +871,19 @@ static int decode_frame(AVCodecContext *avctx,
                       buf_size >> 2);
 
     if ((ret = tm2_read_header(l, swbuf)) < 0) {
-        av_free(swbuf);
+        av_freep(&swbuf);
         return ret;
     }
 
     for (i = 0; i < TM2_NUM_STREAMS; i++) {
         if (offset >= buf_size) {
-            av_free(swbuf);
+            av_freep(&swbuf);
             return AVERROR_INVALIDDATA;
         }
         t = tm2_read_stream(l, swbuf + offset, tm2_stream_order[i],
                             buf_size - offset);
         if (t < 0) {
-            av_free(swbuf);
+            av_freep(&swbuf);
             return t;
         }
         offset += t;
@@ -897,7 +897,7 @@ static int decode_frame(AVCodecContext *avctx,
     l->cur = !l->cur;
     *got_frame      = 1;
     ret = av_frame_ref(data, l->pic);
-    av_free(swbuf);
+    av_freep(&swbuf);
 
     return (ret < 0) ? ret : buf_size;
 }
@@ -970,17 +970,17 @@ static av_cold int decode_end(AVCodecContext *avctx)
     TM2Context * const l = avctx->priv_data;
     int i;
 
-    av_free(l->last);
-    av_free(l->clast);
+    av_freep(&l->last);
+    av_freep(&l->clast);
     for (i = 0; i < TM2_NUM_STREAMS; i++)
-        av_free(l->tokens[i]);
+        av_freep(&l->tokens[i]);
     if (l->Y1) {
-        av_free(l->Y1_base);
-        av_free(l->U1_base);
-        av_free(l->V1_base);
-        av_free(l->Y2_base);
-        av_free(l->U2_base);
-        av_free(l->V2_base);
+        av_freep(&l->Y1_base);
+        av_freep(&l->U1_base);
+        av_freep(&l->V1_base);
+        av_freep(&l->Y2_base);
+        av_freep(&l->U2_base);
+        av_freep(&l->V2_base);
     }
 
     av_frame_free(&l->pic);

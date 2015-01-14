@@ -49,7 +49,7 @@ av_cold void av_fft_end(FFTContext *s)
 {
     if (s) {
         ff_fft_end(s);
-        av_free(s);
+        av_freep(&s);
     }
 }
 
@@ -84,7 +84,7 @@ av_cold void av_mdct_end(FFTContext *s)
 {
     if (s) {
         ff_mdct_end(s);
-        av_free(s);
+        av_freep(&s);
     }
 }
 
@@ -111,7 +111,7 @@ av_cold void av_rdft_end(RDFTContext *s)
 {
     if (s) {
         ff_rdft_end(s);
-        av_free(s);
+        av_freep(&s);
     }
 }
 
@@ -138,7 +138,7 @@ av_cold void av_dct_end(DCTContext *s)
 {
     if (s) {
         ff_dct_end(s);
-        av_free(s);
+        av_freep(&s);
     }
 }
 

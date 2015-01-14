@@ -462,7 +462,7 @@ error:
 static av_cold int tta_decode_close(AVCodecContext *avctx) {
     TTAContext *s = avctx->priv_data;
 
-    av_free(s->decode_buffer);
+    av_freep(&s->decode_buffer);
     av_freep(&s->ch_ctx);
 
     return 0;

@@ -70,15 +70,15 @@ found:
     if (parser->priv_data_size) {
         s->priv_data = av_mallocz(parser->priv_data_size);
         if (!s->priv_data) {
-            av_free(s);
+            av_freep(&s);
             return NULL;
         }
     }
     if (parser->parser_init) {
         ret = parser->parser_init(s);
         if (ret != 0) {
-            av_free(s->priv_data);
-            av_free(s);
+            av_freep(&s->priv_data);
+            av_freep(&s);
             return NULL;
         }
     }
@@ -211,8 +211,8 @@ void av_parser_close(AVCodecParserContext *s)
     if (s) {
         if (s->parser->parser_close)
             s->parser->parser_close(s);
-        av_free(s->priv_data);
-        av_free(s);
+        av_freep(&s->priv_data);
+        av_freep(&s);
     }
 }
 

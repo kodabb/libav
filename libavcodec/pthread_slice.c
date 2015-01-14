@@ -112,7 +112,7 @@ void ff_slice_thread_free(AVCodecContext *avctx)
     pthread_mutex_destroy(&c->current_job_lock);
     pthread_cond_destroy(&c->current_job_cond);
     pthread_cond_destroy(&c->last_job_cond);
-    av_free(c->workers);
+    av_freep(&c->workers);
     av_freep(&avctx->internal->thread_ctx);
 }
 
@@ -194,7 +194,7 @@ int ff_slice_thread_init(AVCodecContext *avctx)
 
     c->workers = av_mallocz(sizeof(pthread_t)*thread_count);
     if (!c->workers) {
-        av_free(c);
+        av_freep(&c);
         return -1;
     }
 

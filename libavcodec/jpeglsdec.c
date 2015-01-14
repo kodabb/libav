@@ -388,8 +388,8 @@ int ff_jpegls_decode_picture(MJpegDecodeContext *s, int near,
     }
 
 end:
-    av_free(state);
-    av_free(zero);
+    av_freep(&state);
+    av_freep(&zero);
 
     return ret;
 }

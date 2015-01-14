@@ -473,21 +473,21 @@ static av_cold int vc1_decode_init(AVCodecContext *avctx)
             switch (AV_RB32(start)) {
             case VC1_CODE_SEQHDR:
                 if (ff_vc1_decode_sequence_header(avctx, v, &gb) < 0) {
-                    av_free(buf2);
+                    av_freep(&buf2);
                     return -1;
                 }
                 seq_initialized = 1;
                 break;
             case VC1_CODE_ENTRYPOINT:
                 if (ff_vc1_decode_entry_point(avctx, v, &gb) < 0) {
-                    av_free(buf2);
+                    av_freep(&buf2);
                     return -1;
                 }
                 ep_initialized = 1;
                 break;
             }
         }
-        av_free(buf2);
+        av_freep(&buf2);
         if (!seq_initialized || !ep_initialized) {
             av_log(avctx, AV_LOG_ERROR, "Incomplete extradata\n");
             return -1;
@@ -927,17 +927,17 @@ image:
     }
 
 end:
-    av_free(buf2);
+    av_freep(&buf2);
     for (i = 0; i < n_slices; i++)
-        av_free(slices[i].buf);
-    av_free(slices);
+        av_freep(&slices[i].buf);
+    av_freep(&slices);
     return buf_size;
 
 err:
-    av_free(buf2);
+    av_freep(&buf2);
     for (i = 0; i < n_slices; i++)
-        av_free(slices[i].buf);
-    av_free(slices);
+        av_freep(&slices[i].buf);
+    av_freep(&slices);
     return -1;
 }
 

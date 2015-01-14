@@ -451,7 +451,7 @@ static int deinterlace_bottom_field_inplace(uint8_t *src1, int src_wrap,
     }
     /* do last line */
     deinterlace_line_inplace(buf,src_m1,src_0,src_0,src_0,width);
-    av_free(buf);
+    av_freep(&buf);
     return 0;
 }
 

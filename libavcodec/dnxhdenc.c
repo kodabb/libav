@@ -966,7 +966,7 @@ static void radix_sort(RCCMPEntry *data, int size)
         radix_sort_pass(tmp, data, size, buckets[2], 2);
         radix_sort_pass(data, tmp, size, buckets[3], 3);
     }
-    av_free(tmp);
+    av_freep(&tmp);
 }
 
 static int dnxhd_encode_fast(AVCodecContext *avctx, DNXHDEncContext *ctx)
@@ -1099,8 +1099,8 @@ static av_cold int dnxhd_encode_end(AVCodecContext *avctx)
     int max_level        = 1 << (ctx->cid_table->bit_depth + 2);
     int i;
 
-    av_free(ctx->vlc_codes - max_level * 2);
-    av_free(ctx->vlc_bits - max_level * 2);
+    av_freep(&ctx->vlc_codes - max_level * 2);
+    av_freep(&ctx->vlc_bits - max_level * 2);
     av_freep(&ctx->run_codes);
     av_freep(&ctx->run_bits);
 

@@ -319,7 +319,7 @@ int avcodec_fill_audio_frame(AVFrame *frame, int nb_channels,
                                       buf, nb_channels, frame->nb_samples,
                                       sample_fmt, align)) < 0) {
         if (frame->extended_data != frame->data)
-            av_free(frame->extended_data);
+            av_freep(&frame->extended_data);
         return ret;
     }
     if (frame->extended_data != frame->data) {

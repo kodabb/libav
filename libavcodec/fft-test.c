@@ -500,11 +500,11 @@ int main(int argc, char **argv)
     }
 
 cleanup:
-    av_free(tab);
-    av_free(tab1);
-    av_free(tab2);
-    av_free(tab_ref);
-    av_free(exptab);
+    av_freep(&tab);
+    av_freep(&tab1);
+    av_freep(&tab2);
+    av_freep(&tab_ref);
+    av_freep(&exptab);
 
     if (err)
         printf("Error: %d.\n", err);

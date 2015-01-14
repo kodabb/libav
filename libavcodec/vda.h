@@ -140,7 +140,7 @@ int ff_vda_destroy_decoder(struct vda_context *vda_ctx);
  * This struct holds all the information that needs to be passed
  * between the caller and libavcodec for initializing VDA decoding.
  * Its size is not a part of the public ABI, it must be allocated with
- * av_vda_alloc_context() and freed with av_free().
+ * av_vda_alloc_context() and freed with av_freep().
  */
 typedef struct AVVDAContext {
     /**
@@ -164,7 +164,7 @@ typedef struct AVVDAContext {
  * for VDA-accelerated decoding.
  *
  * When decoding with VDA is finished, the caller must destroy the decoder
- * object and free the VDA context using av_free().
+ * object and free the VDA context using av_freep().
  *
  * @return the newly allocated context or NULL on failure
  */

@@ -754,7 +754,7 @@ static int svq1_decode_frame(AVCodecContext *avctx, void *data,
     result     = buf_size;
 
 err:
-    av_free(pmv);
+    av_freep(&pmv);
     return result;
 }
 

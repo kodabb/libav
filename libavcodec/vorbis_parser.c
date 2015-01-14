@@ -177,7 +177,7 @@ static int parse_setup_header(AVVorbisParseContext *s,
     }
 
 bad_header:
-    av_free(rev_buf);
+    av_freep(&rev_buf);
     return ret;
 }
 

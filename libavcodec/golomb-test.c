@@ -91,7 +91,7 @@ int main(void)
         }
     }
 
-    av_free(temp);
+    av_freep(&temp);
 
     return ret;
 }

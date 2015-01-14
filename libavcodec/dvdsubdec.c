@@ -545,7 +545,7 @@ static av_cold int dvdsub_init(AVCodecContext *avctx)
     }
 
 fail:
-    av_free(data);
+    av_freep(&data);
     return ret;
 }
 

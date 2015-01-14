@@ -514,7 +514,7 @@ static int flac_parse(AVCodecParserContext *s, AVCodecContext *avctx,
             }
             temp = curr->next;
             av_freep(&curr->link_penalty);
-            av_free(curr);
+            av_freep(&curr);
             fpc->nb_headers_buffered--;
         }
         /* Release returned data from ring buffer. */
@@ -539,7 +539,7 @@ static int flac_parse(AVCodecParserContext *s, AVCodecContext *avctx,
         for (curr = fpc->headers; curr != fpc->best_header; curr = temp) {
             temp = curr->next;
             av_freep(&curr->link_penalty);
-            av_free(curr);
+            av_freep(&curr);
         }
         fpc->headers = fpc->best_header->next;
         av_freep(&fpc->best_header->link_penalty);
@@ -672,11 +672,11 @@ static void flac_parse_close(AVCodecParserContext *c)
     while (curr) {
         temp = curr->next;
         av_freep(&curr->link_penalty);
-        av_free(curr);
+        av_freep(&curr);
         curr = temp;
     }
     av_fifo_free(fpc->fifo_buf);
-    av_free(fpc->wrap_buf);
+    av_freep(&fpc->wrap_buf);
 }
 
 AVCodecParser ff_flac_parser = {

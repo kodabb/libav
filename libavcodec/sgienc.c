@@ -166,7 +166,7 @@ static int encode_frame(AVCodecContext *avctx, AVPacket *pkt,
                     encode_buf[x] = in_buf[depth * x];
 
                 if ((length = ff_rle_encode(buf, end_buf - buf - 1, encode_buf, 1, width, 0, 0, 0x80, 0)) < 1) {
-                    av_free(encode_buf);
+                    av_freep(&encode_buf);
                     return -1;
                 }
 
@@ -177,7 +177,7 @@ static int encode_frame(AVCodecContext *avctx, AVPacket *pkt,
             }
         }
 
-        av_free(encode_buf);
+        av_freep(&encode_buf);
     } else {
         for (z = 0; z < depth; z++) {
             in_buf = p->data[0] + p->linesize[0] * (height - 1) + z * bytes_per_channel;

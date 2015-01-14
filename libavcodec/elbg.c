@@ -348,7 +348,7 @@ int ff_init_elbg(int *points, int dim, int numpoints, int *codebook,
         }
         ret = ff_do_elbg(temp_points, dim, numpoints / 8, codebook,
                          numCB, 2 * max_steps, closest_cb, rand_state);
-        av_free(temp_points);
+        av_freep(&temp_points);
 
     } else  // If not, initialize the codebook with random positions
         for (i=0; i < numCB; i++)
@@ -441,12 +441,12 @@ int ff_do_elbg(int *points, int dim, int numpoints, int *codebook,
             (steps < max_steps));
 
 out:
-    av_free(dist_cb);
-    av_free(size_part);
-    av_free(elbg->utility);
-    av_free(list_buffer);
-    av_free(elbg->cells);
-    av_free(elbg->utility_inc);
-    av_free(elbg->scratchbuf);
+    av_freep(&dist_cb);
+    av_freep(&size_part);
+    av_freep(&elbg->utility);
+    av_freep(&list_buffer);
+    av_freep(&elbg->cells);
+    av_freep(&elbg->utility_inc);
+    av_freep(&elbg->scratchbuf);
     return ret;
 }

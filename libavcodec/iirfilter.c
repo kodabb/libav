@@ -301,16 +301,16 @@ void ff_iir_filter_flt(const struct FFIIRFilterCoeffs *c,
 
 av_cold void ff_iir_filter_free_state(struct FFIIRFilterState *state)
 {
-    av_free(state);
+    av_freep(&state);
 }
 
 av_cold void ff_iir_filter_free_coeffs(struct FFIIRFilterCoeffs *coeffs)
 {
     if(coeffs){
-        av_free(coeffs->cx);
-        av_free(coeffs->cy);
+        av_freep(&coeffs->cx);
+        av_freep(&coeffs->cy);
     }
-    av_free(coeffs);
+    av_freep(&coeffs);
 }
 
 #ifdef TEST

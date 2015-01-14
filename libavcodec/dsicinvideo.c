@@ -283,7 +283,7 @@ static av_cold int cinvideo_decode_end(AVCodecContext *avctx)
     av_frame_free(&cin->frame);
 
     for (i = 0; i < 3; ++i)
-        av_free(cin->bitmap_table[i]);
+        av_freep(&cin->bitmap_table[i]);
 
     return 0;
 }

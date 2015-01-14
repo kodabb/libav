@@ -121,7 +121,7 @@ static int tiff_unpack_zlib(TiffContext *s, uint8_t *dst, int stride,
         av_log(s->avctx, AV_LOG_ERROR,
                "Uncompressing failed (%lu of %lu) with error %d\n", outlen,
                (unsigned long)width * lines, ret);
-        av_free(zbuf);
+        av_freep(&zbuf);
         return AVERROR_UNKNOWN;
     }
     src = zbuf;
@@ -130,7 +130,7 @@ static int tiff_unpack_zlib(TiffContext *s, uint8_t *dst, int stride,
         dst += stride;
         src += width;
     }
-    av_free(zbuf);
+    av_freep(&zbuf);
     return 0;
 }
 #endif
@@ -150,7 +150,7 @@ static int tiff_unpack_fax(TiffContext *s, uint8_t *dst, int stride,
     }
     if (s->fax_opts & 2) {
         avpriv_request_sample(s->avctx, "Uncompressed fax mode");
-        av_free(src2);
+        av_freep(&src2);
         return AVERROR_PATCHWELCOME;
     }
     if (!s->fill_order) {
@@ -162,7 +162,7 @@ static int tiff_unpack_fax(TiffContext *s, uint8_t *dst, int stride,
     memset(src2 + size, 0, FF_INPUT_BUFFER_PADDING_SIZE);
     ret = ff_ccitt_unpack(s->avctx, src2, size, dst, lines, stride,
                           s->compr, s->fax_opts);
-    av_free(src2);
+    av_freep(&src2);
     return ret;
 }
 

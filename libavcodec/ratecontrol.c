@@ -1004,8 +1004,8 @@ static int init_pass2(MpegEncContext *s)
             ++toobig;
         }
     }
-    av_free(qscale);
-    av_free(blurred_qscale);
+    av_freep(&qscale);
+    av_freep(&blurred_qscale);
 
     /* check bitrate calculations and print info */
     qscale_sum = 0.0;
