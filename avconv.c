@@ -215,7 +215,7 @@ static void avconv_cleanup(int ret)
 
     if (vstats_file)
         fclose(vstats_file);
-    av_free(vstats_filename);
+    av_freep(&vstats_filename);
 
     av_freep(&input_streams);
     av_freep(&input_files);
@@ -2583,7 +2583,7 @@ static int transcode(void)
                     fclose(ost->logfile);
                     ost->logfile = NULL;
                 }
-                av_free(ost->forced_kf_pts);
+                av_freep(&ost->forced_kf_pts);
                 av_dict_free(&ost->encoder_opts);
                 av_dict_free(&ost->resample_opts);
             }

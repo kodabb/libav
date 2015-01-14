@@ -379,7 +379,7 @@ static int packet_queue_get(PacketQueue *q, AVPacket *pkt, int block)
             q->nb_packets--;
             q->size -= pkt1->pkt.size + sizeof(*pkt1);
             *pkt = pkt1->pkt;
-            av_free(pkt1);
+            av_freep(&pkt1);
             ret = 1;
             break;
         } else if (!block) {
@@ -829,7 +829,7 @@ static void video_audio_display(VideoState *s)
         nb_display_channels= FFMIN(nb_display_channels, 2);
         if (rdft_bits != s->rdft_bits) {
             av_rdft_end(s->rdft);
-            av_free(s->rdft_data);
+            av_freep(&s->rdft_data);
             s->rdft = av_rdft_init(rdft_bits, DFT_R2C);
             s->rdft_bits = rdft_bits;
             s->rdft_data = av_malloc(4 * nb_freq * sizeof(*s->rdft_data));
@@ -1238,7 +1238,7 @@ static void stream_close(VideoState *is)
     if (is->img_convert_ctx)
         sws_freeContext(is->img_convert_ctx);
 #endif
-    av_free(is);
+    av_freep(&is);
 }
 
 static void do_exit(void)
@@ -2517,7 +2517,7 @@ static VideoState *stream_open(const char *filename, AVInputFormat *iformat)
     is->av_sync_type = av_sync_type;
     is->parse_tid    = SDL_CreateThread(decode_thread, is);
     if (!is->parse_tid) {
-        av_free(is);
+        av_freep(&is);
         return NULL;
     }
     return is;

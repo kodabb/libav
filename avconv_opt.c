@@ -926,7 +926,7 @@ static OutputStream *new_output_stream(OptionsContext *o, AVFormatContext *oc, e
             do  {
                 buf = get_line(s);
                 if (!buf[0] || buf[0] == '#') {
-                    av_free(buf);
+                    av_freep(&buf);
                     continue;
                 }
                 if (!(arg = strchr(buf, '='))) {
@@ -935,7 +935,7 @@ static OutputStream *new_output_stream(OptionsContext *o, AVFormatContext *oc, e
                 }
                 *arg++ = 0;
                 av_dict_set(&ost->encoder_opts, buf, arg, AV_DICT_DONT_OVERWRITE);
-                av_free(buf);
+                av_freep(&buf);
             } while (!s->eof_reached);
             avio_close(s);
         }
@@ -1987,7 +1987,7 @@ static int opt_channel_layout(void *optctx, const char *opt, const char *arg)
     if (stream_str)
         av_strlcat(ac_str, stream_str, ac_str_size);
     ret = parse_option(o, ac_str, layout_str, options);
-    av_free(ac_str);
+    av_freep(&ac_str);
 
     return ret;
 }

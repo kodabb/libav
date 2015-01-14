@@ -151,7 +151,7 @@ cat $TMP | tr '@' '\n'
 cat $* | tr '\n' '@' | $EGREP --color=always -o '\+ *if *\( *([A-Za-z0-9_]*) *[<>]=? *([A-Za-z0-9_]*) *\)[ @\\+]*(\1|\2) *= *(\1|\2) *;'  >$TMP && printf "\nFFMIN/FFMAX\n"
 cat $TMP | tr '@' '\n'
 
-cat $* | tr '\n' '@' | $EGREP --color=always -o '\+ *if *\( *([A-Za-z0-9_]*) *\)[ @\\+]*av_free(p|) *\( *(&|) *\1[^-.]'  >$TMP && printf "\nav_free(NULL) is safe\n"
+cat $* | tr '\n' '@' | $EGREP --color=always -o '\+ *if *\( *([A-Za-z0-9_]*) *\)[ @\\+]*av_freep(&p|) *\( *(&|) *\1[^-.]'  >$TMP && printf "\nav_free(NULL) is safe\n"
 cat $TMP | tr '@' '\n'
 
 cat $* | tr '\n' '@' | $EGREP --color=always -o '[^a-zA-Z0-9_]([a-zA-Z0-9_]*) *= *av_malloc *\([^)]*\)[ @;\\+]*memset *\( *\1'  >$TMP && printf "\nav_mallocz()\n"

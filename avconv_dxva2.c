@@ -192,7 +192,7 @@ static void dxva2_release_buffer(void *opaque, uint8_t *data)
     }
     IDirect3DSurface9_Release(w->surface);
     IDirectXVideoDecoder_Release(w->decoder);
-    av_free(w);
+    av_freep(&w);
 }
 
 static int dxva2_get_buffer(AVCodecContext *s, AVFrame *frame, int flags)
@@ -226,7 +226,7 @@ static int dxva2_get_buffer(AVCodecContext *s, AVFrame *frame, int flags)
                                      dxva2_release_buffer, w,
                                      AV_BUFFER_FLAG_READONLY);
     if (!frame->buf[0]) {
-        av_free(w);
+        av_freep(&w);
         return AVERROR(ENOMEM);
     }
 

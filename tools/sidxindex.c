@@ -159,7 +159,7 @@ static int handle_file(struct Tracks *tracks, const char *file)
         temp = av_realloc(tracks->tracks,
                           sizeof(*tracks->tracks) * (tracks->nb_tracks + 1));
         if (!temp) {
-            av_free(track);
+            av_freep(&track);
             err = AVERROR(ENOMEM);
             goto fail;
         }
@@ -342,7 +342,7 @@ static int output_mpd(struct Tracks *tracks, const char *filename)
     fclose(out);
 err:
     for (i = 0; i < 2; i++)
-        av_free(adaptation_sets_buf[i]);
+        av_freep(&adaptation_sets_buf[i]);
     return ret;
 }
 

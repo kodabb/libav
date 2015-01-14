@@ -1433,7 +1433,7 @@ int cmdutils_read_file(const char *filename, char **bufptr, size_t *size)
     }
     ret = fread(*bufptr, 1, *size, f);
     if (ret < *size) {
-        av_free(*bufptr);
+        av_freep(bufptr);
         if (ferror(f)) {
             av_log(NULL, AV_LOG_ERROR, "Error while reading file '%s': %s\n",
                    filename, strerror(errno));
