@@ -324,11 +324,11 @@ static int channelmap_filter_frame(AVFilterLink *inlink, AVFrame *buf)
             if (buf->extended_data == buf->data) {
                 buf->extended_data = new_extended_data;
             } else {
-                av_free(buf->extended_data);
+                av_freep(&buf->extended_data);
                 buf->extended_data = new_extended_data;
             }
         } else if (buf->extended_data != buf->data) {
-            av_free(buf->extended_data);
+            av_freep(&buf->extended_data);
             buf->extended_data = buf->data;
         }
     }

@@ -31,8 +31,8 @@ void ff_avfilter_default_free_buffer(AVFilterBuffer *ptr)
 {
     if (ptr->extended_data != ptr->data)
         av_freep(&ptr->extended_data);
-    av_free(ptr->data[0]);
-    av_free(ptr);
+    av_freep(&ptr->data[0]);
+    av_freep(&ptr);
 }
 
 AVFilterBufferRef *avfilter_ref_buffer(AVFilterBufferRef *ref, int pmask)
@@ -44,7 +44,7 @@ AVFilterBufferRef *avfilter_ref_buffer(AVFilterBufferRef *ref, int pmask)
     if (ref->type == AVMEDIA_TYPE_VIDEO) {
         ret->video = av_malloc(sizeof(AVFilterBufferRefVideoProps));
         if (!ret->video) {
-            av_free(ret);
+            av_freep(&ret);
             return NULL;
         }
         *ret->video = *ref->video;
@@ -52,7 +52,7 @@ AVFilterBufferRef *avfilter_ref_buffer(AVFilterBufferRef *ref, int pmask)
     } else if (ref->type == AVMEDIA_TYPE_AUDIO) {
         ret->audio = av_malloc(sizeof(AVFilterBufferRefAudioProps));
         if (!ret->audio) {
-            av_free(ret);
+            av_freep(&ret);
             return NULL;
         }
         *ret->audio = *ref->audio;
@@ -83,9 +83,9 @@ void avfilter_unref_buffer(AVFilterBufferRef *ref)
         ref->buf->free(ref->buf);
     if (ref->extended_data != ref->data)
         av_freep(&ref->extended_data);
-    av_free(ref->video);
-    av_free(ref->audio);
-    av_free(ref);
+    av_freep(&ref->video);
+    av_freep(&ref->audio);
+    av_freep(&ref);
 }
 
 void avfilter_unref_bufferp(AVFilterBufferRef **ref)

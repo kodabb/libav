@@ -94,9 +94,9 @@ avfilter_get_video_buffer_ref_from_arrays(uint8_t *data[4], int linesize[4], int
 
 fail:
     if (picref && picref->video)
-        av_free(picref->video);
-    av_free(picref);
-    av_free(pic);
+        av_freep(&picref->video);
+    av_freep(&picref);
+    av_freep(&pic);
     return NULL;
 }
 #endif

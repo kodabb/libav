@@ -152,7 +152,7 @@ static int set_params(AVFilterContext *ctx, const char *params)
             if (*params)
                 params++;               /* skip ':' */
             ret = set_param(ctx, info, i, param);
-            av_free(param);
+            av_freep(&param);
             if (ret < 0)
                 return ret;
         }

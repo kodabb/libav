@@ -143,7 +143,7 @@ static void compat_free_buffer(AVFilterBuffer *buf)
 {
     AVFrame *frame = buf->priv;
     av_frame_free(&frame);
-    av_free(buf);
+    av_freep(&buf);
 }
 
 static int compat_read(AVFilterContext *ctx,

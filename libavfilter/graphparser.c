@@ -166,8 +166,8 @@ static int parse_filter(AVFilterContext **filt_ctx, const char **buf, AVFilterGr
     }
 
     ret = create_filter(filt_ctx, graph, index, name, opts, log_ctx);
-    av_free(name);
-    av_free(opts);
+    av_freep(&name);
+    av_freep(&opts);
     return ret;
 }
 
@@ -238,8 +238,8 @@ static int link_filter_inouts(AVFilterContext *filt_ctx,
 
         if (p->filter_ctx) {
             ret = link_filter(p->filter_ctx, p->pad_idx, filt_ctx, pad, log_ctx);
-            av_free(p->name);
-            av_free(p);
+            av_freep(&p->name);
+            av_freep(&p);
             if (ret < 0)
                 return ret;
         } else {
@@ -286,11 +286,11 @@ static int parse_inputs(const char **buf, AVFilterInOut **curr_inputs,
         match = extract_inout(name, open_outputs);
 
         if (match) {
-            av_free(name);
+            av_freep(&name);
         } else {
             /* Not in the list, so add it as an input */
             if (!(match = av_mallocz(sizeof(AVFilterInOut)))) {
-                av_free(name);
+                av_freep(&name);
                 return AVERROR(ENOMEM);
             }
             match->name    = name;
@@ -327,7 +327,7 @@ static int parse_outputs(const char **buf, AVFilterInOut **curr_inputs,
         if (!input) {
             av_log(log_ctx, AV_LOG_ERROR,
                    "No output pad can be associated to link label '%s'.\n", name);
-            av_free(name);
+            av_freep(&name);
             return AVERROR(EINVAL);
         }
         *curr_inputs = (*curr_inputs)->next;
@@ -338,13 +338,13 @@ static int parse_outputs(const char **buf, AVFilterInOut **curr_inputs,
         if (match) {
             if ((ret = link_filter(input->filter_ctx, input->pad_idx,
                                    match->filter_ctx, match->pad_idx, log_ctx)) < 0) {
-                av_free(name);
+                av_freep(&name);
                 return ret;
             }
-            av_free(match->name);
-            av_free(name);
-            av_free(match);
-            av_free(input);
+            av_freep(&match->name);
+            av_freep(&name);
+            av_freep(&match);
+            av_freep(&input);
         } else {
             /* Not in the list, so add the first input as a open_output */
             input->name = name;

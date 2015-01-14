@@ -303,9 +303,9 @@ do {                                                               \
             sizeof(*(*ref)->refs) * ((*ref)->refcount - idx - 1)); \
                                                                    \
     if(!--(*ref)->refcount) {                                      \
-        av_free((*ref)->list);                                     \
-        av_free((*ref)->refs);                                     \
-        av_free(*ref);                                             \
+        av_freep(&(*ref)->list);                                   \
+        av_freep(&(*ref)->refs);                                   \
+        av_freep(&*ref);                                           \
     }                                                              \
     *ref = NULL;                                                   \
 } while (0)

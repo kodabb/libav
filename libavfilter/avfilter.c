@@ -462,7 +462,7 @@ err:
     ret->nb_outputs = 0;
     av_freep(&ret->priv);
     av_freep(&ret->internal);
-    av_free(ret);
+    av_freep(&ret);
     return NULL;
 }
 
@@ -520,7 +520,7 @@ void avfilter_free(AVFilterContext *filter)
     av_freep(&filter->outputs);
     av_freep(&filter->priv);
     av_freep(&filter->internal);
-    av_free(filter);
+    av_freep(&filter);
 }
 
 /* process a list of value1:value2:..., each value corresponding

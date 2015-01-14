@@ -80,7 +80,7 @@ static void frame_list_clear(FrameList *frame_list)
         while (frame_list->list) {
             FrameInfo *info = frame_list->list;
             frame_list->list = info->next;
-            av_free(info);
+            av_freep(&info);
         }
         frame_list->nb_frames  = 0;
         frame_list->nb_samples = 0;
@@ -118,7 +118,7 @@ static void frame_list_remove_samples(FrameList *frame_list, int nb_samples)
                     frame_list->end = NULL;
                 frame_list->nb_frames--;
                 frame_list->nb_samples -= info->nb_samples;
-                av_free(info);
+                av_freep(&info);
             } else {
                 info->nb_samples       -= samples;
                 info->pts              += samples;

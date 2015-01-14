@@ -192,7 +192,7 @@ static void free_filter_param(FilterParam *fp)
     int z;
 
     for (z = 0; z < 2 * fp->steps_y; z++)
-        av_free(fp->sc[z]);
+        av_freep(&fp->sc[z]);
 }
 
 static av_cold void uninit(AVFilterContext *ctx)

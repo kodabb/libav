@@ -488,7 +488,7 @@ static int query_formats(AVFilterContext *ctx)
 
 static int glyph_enu_free(void *opaque, void *elem)
 {
-    av_free(elem);
+    av_freep(&elem);
     return 0;
 }
 

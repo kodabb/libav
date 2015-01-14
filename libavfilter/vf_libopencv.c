@@ -194,7 +194,7 @@ static int read_shape_from_file(int *cols, int *rows, int **values, const char *
             line[j] = 0;
             av_log(log_ctx, AV_LOG_DEBUG, "%3d: %s\n", i, line);
         }
-        av_free(line);
+        av_freep(&line);
     }
 #endif
 
@@ -267,7 +267,7 @@ static av_cold int dilate_init(AVFilterContext *ctx, const char *args)
                                    *kernel_str ? kernel_str : default_kernel_str,
                                    ctx)) < 0)
         return ret;
-    av_free(kernel_str);
+    av_freep(&kernel_str);
 
     sscanf(buf, "|%d", &dilate->nb_iterations);
     av_log(ctx, AV_LOG_VERBOSE, "iterations_nb:%d\n", dilate->nb_iterations);
@@ -343,7 +343,7 @@ static av_cold void uninit(AVFilterContext *ctx)
 
     if (s->uninit)
         s->uninit(ctx);
-    av_free(s->priv);
+    av_freep(&s->priv);
 }
 
 static int filter_frame(AVFilterLink *inlink, AVFrame *in)
