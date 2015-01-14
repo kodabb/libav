@@ -113,7 +113,7 @@ static int build_filter(ResampleContext *c, double factor)
         c->set_filter(c->filter_bank, tab, ph, tap_count);
     }
 
-    av_free(tab);
+    av_freep(&tab);
     return 0;
 }
 
@@ -214,8 +214,8 @@ ResampleContext *ff_audio_resample_init(AVAudioResampleContext *avr)
 
 error:
     ff_audio_data_free(&c->buffer);
-    av_free(c->filter_bank);
-    av_free(c);
+    av_freep(&c->filter_bank);
+    av_freep(&c);
     return NULL;
 }
 
@@ -224,7 +224,7 @@ void ff_audio_resample_free(ResampleContext **c)
     if (!*c)
         return;
     ff_audio_data_free(&(*c)->buffer);
-    av_free((*c)->filter_bank);
+    av_freep(&(*c)->filter_bank);
     av_freep(c);
 }
 

@@ -130,7 +130,7 @@ AudioData *ff_audio_data_alloc(int channels, int nb_samples,
 
     a->sample_size = av_get_bytes_per_sample(sample_fmt);
     if (!a->sample_size) {
-        av_free(a);
+        av_freep(&a);
         return NULL;
     }
     a->is_planar = ff_sample_fmt_is_planar(sample_fmt, channels);
@@ -148,7 +148,7 @@ AudioData *ff_audio_data_alloc(int channels, int nb_samples,
     if (nb_samples > 0) {
         ret = ff_audio_data_realloc(a, nb_samples);
         if (ret < 0) {
-            av_free(a);
+            av_freep(&a);
             return NULL;
         }
         return a;
@@ -217,7 +217,7 @@ void ff_audio_data_free(AudioData **a)
 {
     if (!*a)
         return;
-    av_free((*a)->buffer);
+    av_freep(&(*a)->buffer);
     av_freep(a);
 }
 

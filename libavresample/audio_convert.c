@@ -282,7 +282,7 @@ AudioConvert *ff_audio_convert_alloc(AVAudioResampleContext *avr,
         ac->dc = ff_dither_alloc(avr, out_fmt, in_fmt, channels, sample_rate,
                                  apply_map);
         if (!ac->dc) {
-            av_free(ac);
+            av_freep(&ac);
             return NULL;
         }
         return ac;

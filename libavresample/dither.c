@@ -321,8 +321,8 @@ void ff_dither_free(DitherContext **cp)
     ff_audio_convert_free(&c->ac_in);
     ff_audio_convert_free(&c->ac_out);
     for (ch = 0; ch < c->channels; ch++)
-        av_free(c->state[ch].noise_buf);
-    av_free(c->state);
+        av_freep(&c->state[ch].noise_buf);
+    av_freep(&c->state);
     av_freep(cp);
 }
 

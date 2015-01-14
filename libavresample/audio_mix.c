@@ -385,24 +385,24 @@ AudioMix *ff_audio_mix_alloc(AVAudioResampleContext *avr)
                                       avr->in_channels,
                                       avr->matrix_encoding);
         if (ret < 0) {
-            av_free(matrix_dbl);
+            av_freep(&matrix_dbl);
             goto error;
         }
 
         ret = ff_audio_mix_set_matrix(am, matrix_dbl, avr->in_channels);
         if (ret < 0) {
             av_log(avr, AV_LOG_ERROR, "error setting mix matrix\n");
-            av_free(matrix_dbl);
+            av_freep(&matrix_dbl);
             goto error;
         }
 
-        av_free(matrix_dbl);
+        av_freep(&matrix_dbl);
     }
 
     return am;
 
 error:
-    av_free(am);
+    av_freep(&am);
     return NULL;
 }
 
@@ -415,7 +415,7 @@ void ff_audio_mix_free(AudioMix **am_p)
     am = *am_p;
 
     if (am->matrix) {
-        av_free(am->matrix[0]);
+        av_freep(&am->matrix[0]);
         am->matrix = NULL;
     }
     memset(am->matrix_q8,  0, sizeof(am->matrix_q8 ));
@@ -663,7 +663,7 @@ int ff_audio_mix_set_matrix(AudioMix *am, const double *matrix, int stride)
     }
 
     if (am->matrix) {
-        av_free(am->matrix[0]);
+        av_freep(&am->matrix[0]);
         am->matrix = NULL;
     }
 
