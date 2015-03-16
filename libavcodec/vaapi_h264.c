@@ -229,7 +229,7 @@ static int vaapi_h264_start_frame(AVCodecContext          *avctx,
     VAPictureParameterBufferH264 *pic_param;
     VAIQMatrixBufferH264 *iq_matrix;
 
-    av_dlog(avctx, "vaapi_h264_start_frame()\n");
+    ff_dlog(avctx, "vaapi_h264_start_frame()\n");
 
     vactx->slice_param_size = sizeof(VASliceParameterBufferH264);
 
@@ -294,7 +294,7 @@ static int vaapi_h264_end_frame(AVCodecContext *avctx)
     H264Context * const h = avctx->priv_data;
     int ret;
 
-    av_dlog(avctx, "vaapi_h264_end_frame()\n");
+    ff_dlog(avctx, "vaapi_h264_end_frame()\n");
     ret = ff_vaapi_commit_slices(vactx);
     if (ret < 0)
         goto finish;
@@ -318,7 +318,7 @@ static int vaapi_h264_decode_slice(AVCodecContext *avctx,
     H264Context * const h = avctx->priv_data;
     VASliceParameterBufferH264 *slice_param;
 
-    av_dlog(avctx, "vaapi_h264_decode_slice(): buffer %p, size %d\n",
+    ff_dlog(avctx, "vaapi_h264_decode_slice(): buffer %p, size %d\n",
             buffer, size);
 
     /* Fill in VASliceParameterBufferH264. */

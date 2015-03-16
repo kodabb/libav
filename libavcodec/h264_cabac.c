@@ -1889,7 +1889,7 @@ int ff_h264_decode_mb_cabac(H264Context *h) {
 
     mb_xy = h->mb_xy = h->mb_x + h->mb_y*h->mb_stride;
 
-    tprintf(h->avctx, "pic:%d mb:%d/%d\n", h->frame_num, h->mb_x, h->mb_y);
+    ff_tlog(h->avctx, "pic:%d mb:%d/%d\n", h->frame_num, h->mb_x, h->mb_y);
     if( h->slice_type_nos != AV_PICTURE_TYPE_I ) {
         int skip;
         /* a skipped mb needs the aff flag from the following mb */
@@ -2044,7 +2044,7 @@ decode_intra_mb:
                     int pred = pred_intra_mode( h, i );
                     h->intra4x4_pred_mode_cache[ scan8[i] ] = decode_cabac_mb_intra4x4_pred_mode( h, pred );
 
-                    av_dlog(h->avctx, "i4x4 pred=%d mode=%d\n", pred,
+                    ff_dlog(h->avctx, "i4x4 pred=%d mode=%d\n", pred,
                             h->intra4x4_pred_mode_cache[scan8[i]]);
                 }
             }
@@ -2134,7 +2134,7 @@ decode_intra_mb:
                         uint8_t (* mvd_cache)[2]= &h->mvd_cache[list][ scan8[index] ];
                         pred_motion(h, index, block_width, list, h->ref_cache[list][ scan8[index] ], &mx, &my);
                         DECODE_CABAC_MB_MVD( h, list, index)
-                        tprintf(h->avctx, "final mv:%d %d\n", mx, my);
+                        ff_tlog(h->avctx, "final mv:%d %d\n", mx, my);
 
                         if(IS_SUB_8X8(sub_mb_type)){
                             mv_cache[ 1 ][0]=
@@ -2198,7 +2198,7 @@ decode_intra_mb:
                     int mx,my,mpx,mpy;
                     pred_motion(h, 0, 4, list, h->ref_cache[list][ scan8[0] ], &mx, &my);
                     DECODE_CABAC_MB_MVD( h, list, 0)
-                    tprintf(h->avctx, "final mv:%d %d\n", mx, my);
+                    ff_tlog(h->avctx, "final mv:%d %d\n", mx, my);
 
                     fill_rectangle(h->mvd_cache[list][ scan8[0] ], 4, 4, 8, pack8to16(mpx,mpy), 2);
                     fill_rectangle(h->mv_cache[list][ scan8[0] ], 4, 4, 8, pack16to32(mx,my), 4);
@@ -2229,7 +2229,7 @@ decode_intra_mb:
                         int mx,my,mpx,mpy;
                         pred_16x8_motion(h, 8*i, list, h->ref_cache[list][scan8[0] + 16*i], &mx, &my);
                         DECODE_CABAC_MB_MVD( h, list, 8*i)
-                        tprintf(h->avctx, "final mv:%d %d\n", mx, my);
+                        ff_tlog(h->avctx, "final mv:%d %d\n", mx, my);
 
                         fill_rectangle(h->mvd_cache[list][ scan8[0] + 16*i ], 4, 2, 8, pack8to16(mpx,mpy), 2);
                         fill_rectangle(h->mv_cache[list][ scan8[0] + 16*i ], 4, 2, 8, pack16to32(mx,my), 4);
@@ -2265,7 +2265,7 @@ decode_intra_mb:
                         pred_8x16_motion(h, i*4, list, h->ref_cache[list][ scan8[0] + 2*i ], &mx, &my);
                         DECODE_CABAC_MB_MVD( h, list, 4*i)
 
-                        tprintf(h->avctx, "final mv:%d %d\n", mx, my);
+                        ff_tlog(h->avctx, "final mv:%d %d\n", mx, my);
                         fill_rectangle(h->mvd_cache[list][ scan8[0] + 2*i ], 2, 4, 8, pack8to16(mpx,mpy), 2);
                         fill_rectangle(h->mv_cache[list][ scan8[0] + 2*i ], 2, 4, 8, pack16to32(mx,my), 4);
                     }else{
