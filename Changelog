@@ -28,6 +28,7 @@ version <next>:
 - MMAL-accelerated H.264 decoding
 - DTS decoding through libdcadec
 - Canopus HQ/HQA decoder
+- improved Quickdraw compatibility
 
 
 version 11:
