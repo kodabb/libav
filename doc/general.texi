@@ -290,6 +290,7 @@ library:
 @item Matroska audio            @tab X @tab
 @item FFmpeg metadata           @tab X @tab X
     @tab Metadata in text format.
+@item VidVox HAP                @tab X @tab X
 @item MAXIS XA                  @tab   @tab X
     @tab Used in Sim City 3000; file extension .xa.
 @item MD Studio                 @tab   @tab X
