@@ -220,6 +220,7 @@ External library support:
                            native MPEG-4/Xvid encoder exists [no]
   --enable-mmal            enable decoding via MMAL [no]
   --enable-openssl         enable openssl [no]
+  --enable-snappy          enable snappy decompression [no]
   --enable-x11grab         enable X11 grabbing (legacy) [no]
   --enable-zlib            enable zlib [autodetect]
 
@@ -1189,6 +1190,7 @@ EXTERNAL_LIBRARY_LIST="
     libxvid
     mmal
     openssl
+    snappy
     x11grab
     zlib
 "
@@ -1842,6 +1844,8 @@ h264_qsv_decoder_deps="libmfx"
 h264_qsv_decoder_select="h264_mp4toannexb_bsf h264_parser qsvdec h264_qsv_hwaccel"
 h264_qsv_encoder_deps="libmfx"
 h264_qsv_encoder_select="qsvenc"
+hap_decoder_deps="snappy"
+hap_encoder_deps="snappy"
 hevc_decoder_select="bswapdsp cabac golomb videodsp"
 huffyuv_decoder_select="bswapdsp huffyuvdsp"
 huffyuv_encoder_select="bswapdsp huffman huffyuvencdsp"
@@ -4283,6 +4287,8 @@ enabled openssl           && { check_lib openssl/ssl.h SSL_library_init -lssl -l
                                check_lib openssl/ssl.h SSL_library_init -lssl32 -leay32 ||
                                check_lib openssl/ssl.h SSL_library_init -lssl -lcrypto -lws2_32 -lgdi32 ||
                                die "ERROR: openssl not found"; }
+enabled snappy            && require snappy snappy-c.h snappy_uncompress -lsnappy
+
 
 if enabled gnutls; then
     { check_lib nettle/bignum.h nettle_mpz_get_str_256 -lnettle -lhogweed -lgmp && enable nettle; } ||

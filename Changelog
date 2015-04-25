@@ -30,6 +30,7 @@ version <next>:
 - Canopus HQ/HQA decoder
 - Automatically rotate videos based on metadata in avconv
 - improved Quickdraw compatibility
+- HAP decoder and encoder
 
 
 version 11:
