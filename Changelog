@@ -33,6 +33,7 @@ version <next>:
 - improved Quickdraw compatibility
 - NVIDIA NVENC-accelerated H.264 and HEVC encoding support
 - Multipart JPEG demuxer
+- Hap decoder and encoder
 
 
 version 11:
