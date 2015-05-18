@@ -33,3 +33,29 @@ int ff_vp9_check_experimental(AVCodecContext *avctx)
     }
     return 0;
 }
+
+enum AVPixelFormat ff_vpx_imgfmt_to_pixfmt(vpx_img_fmt_t img)
+{
+    switch(img) {
+    case VPX_IMG_FMT_RGB24:     return AV_PIX_FMT_RGB24;
+    case VPX_IMG_FMT_RGB565:    return AV_PIX_FMT_RGB565BE;
+    case VPX_IMG_FMT_RGB555:    return AV_PIX_FMT_RGB555BE;
+    case VPX_IMG_FMT_UYVY:      return AV_PIX_FMT_UYVY422;
+    case VPX_IMG_FMT_YUY2:      return AV_PIX_FMT_YUYV422;
+    case VPX_IMG_FMT_YVYU:      return AV_PIX_FMT_YVYU422;
+    case VPX_IMG_FMT_BGR24:     return AV_PIX_FMT_BGR24;
+    case VPX_IMG_FMT_ARGB:      return AV_PIX_FMT_ARGB;
+    case VPX_IMG_FMT_ARGB_LE:   return AV_PIX_FMT_BGRA;
+    case VPX_IMG_FMT_RGB565_LE: return AV_PIX_FMT_RGB565LE;
+    case VPX_IMG_FMT_RGB555_LE: return AV_PIX_FMT_RGB555LE;
+    case VPX_IMG_FMT_I420:      return AV_PIX_FMT_YUV420P;
+    case VPX_IMG_FMT_I422:      return AV_PIX_FMT_YUV422P;
+    case VPX_IMG_FMT_I444:      return AV_PIX_FMT_YUV444P;
+    case VPX_IMG_FMT_I440:      return AV_PIX_FMT_YUV440P;
+    case VPX_IMG_FMT_444A:      return AV_PIX_FMT_YUVA444P;
+    case VPX_IMG_FMT_I42016:    return AV_PIX_FMT_YUV420P16BE;
+    case VPX_IMG_FMT_I42216:    return AV_PIX_FMT_YUV422P16BE;
+    case VPX_IMG_FMT_I44416:    return AV_PIX_FMT_YUV444P16BE;
+    default:                    return AV_PIX_FMT_NONE;
+    }
+}
