@@ -30,6 +30,18 @@ fate-brenderpix: $(FATE_BRENDERPIX-yes)
 FATE_SAMPLES_AVCONV-$(call PARSERDEMDEC, BMP, IMAGE2PIPE, BMP) += fate-bmpparser
 fate-bmpparser: CMD = framecrc -f image2pipe -i $(TARGET_SAMPLES)/bmp/libav_4x_concat.bmp -pix_fmt rgb24
 
+define FATE_IMGSUITE_DDS
+FATE_DDS += fate-dds-$(1)
+fate-dds-$(1): CMD = framecrc -i $(TARGET_SAMPLES)/dds/libav_$(1).dds -sws_flags +accurate_rnd+bitexact -pix_fmt rgba
+endef
+
+DDS_FMT = argb argb-aexp dxt1 dxt1a dxt2 dxt3 dxt4 dxt5 dxt5-aexp pal rgb16 rgb24 xbgr xrgb y
+$(foreach FMT,$(DDS_FMT),$(eval $(call FATE_IMGSUITE_DDS,$(FMT))))
+
+FATE_DDS-$(call DEMDEC, IMAGE2, DDS) += $(FATE_DDS)
+FATE_SAMPLES_AVCONV += $(FATE_DDS-yes)
+fate-dds: $(FATE_DDS-yes)
+
 FATE_SAMPLES_AVCONV-$(call DEMDEC, IMAGE2, DPX) += fate-dpx
 fate-dpx: CMD = framecrc -i $(TARGET_SAMPLES)/dpx/lighthouse_rgb48.dpx
 

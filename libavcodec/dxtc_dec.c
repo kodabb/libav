@@ -50,10 +50,11 @@ static const uint8_t const_black[] = {
 
 #define RGBA(r, g, b, a) (r) | ((g) << 8) | ((b) << 16) | ((a) << 24)
 
-static av_always_inline void dxt13_block_internal(uint8_t *dst,
-                                                  const uint8_t *block,
-                                                  ptrdiff_t stride,
-                                                  const uint8_t *alpha_tab)
+static av_always_inline void dxt1_block_internal(uint8_t *dst,
+                                                 const uint8_t *block,
+                                                 ptrdiff_t stride,
+                                                 const uint8_t *alpha_tab,
+                                                 uint8_t alpha_1bit)
 {
     uint32_t tmp, code;
     uint16_t color0, color1;
@@ -131,7 +132,7 @@ static av_always_inline void dxt13_block_internal(uint8_t *dst,
                                  alpha);
                     break;
                 case 3:
-                    pixel = RGBA(0, 0, 0, alpha);
+                    pixel = RGBA(0, 0, 0, alpha_1bit);
                     break;
                 }
 
@@ -152,21 +153,30 @@ static av_always_inline void dxt13_block_internal(uint8_t *dst,
  */
 static int dxt1_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
 {
-    dxt13_block_internal(dst, block, stride, const_black);
+    dxt1_block_internal(dst, block, stride, const_black, 255);
 
     return 8;
 }
 
 /**
- * Decompress one block of a DXT3 texture and store the resulting
- * RGBA pixels in 'dst'. Alpha component is not premultiplied.
+ * Decompress one block of a DXT1 with 1-bit alpha texture and store
+ * the resulting RGBA pixels in 'dst'. Alpha is either fully opaque or
+ * fully transparent.
  *
  * @param dst    output buffer.
  * @param stride scanline in bytes.
  * @param block  block to decompress.
  * @return how much texture data has been consumed.
  */
-static int dxt3_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
+static int dxt1a_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
+{
+    dxt1_block_internal(dst, block, stride, const_black, 0);
+
+    return 8;
+}
+
+static av_always_inline void dxt3_block_internal(uint8_t *dst, ptrdiff_t stride,
+                                                 const uint8_t *block)
 {
     int i;
     uint8_t alpha_values[16] = { 0 };
@@ -182,7 +192,59 @@ static int dxt3_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
         block += 2;
     }
 
-    dxt13_block_internal(dst, block, stride, alpha_values);
+    dxt1_block_internal(dst, block, stride, alpha_values, 255);
+}
+
+/** Convert a premultiplied alpha pixel to a straigth alpha pixel. */
+static inline void premult2straight(uint8_t *src)
+{
+    int r = src[0];
+    int g = src[1];
+    int b = src[2];
+    int a = src[3];
+
+    src[0] = (uint8_t) r * a / 255;
+    src[1] = (uint8_t) g * a / 255;
+    src[2] = (uint8_t) b * a / 255;
+    src[3] = a;
+}
+
+/**
+ * Decompress one block of a DXT2 texture and store the resulting
+ * RGBA pixels in 'dst'.
+ *
+ * @param dst    output buffer.
+ * @param stride scanline in bytes.
+ * @param block  block to decompress.
+ * @return how much texture data has been consumed.
+ */
+static int dxt2_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
+{
+    int x, y;
+
+    dxt3_block_internal(dst, stride, block);
+
+    /* This format is DXT3, but returns premultiplied alpha. It needs to be
+     * converted because it's what lavc outputs (and swscale expects). */
+    for (y = 0; y < 4; y++)
+        for (x = 0; x < 4; x++)
+            premult2straight(dst + x * 4 + y * stride);
+
+    return 16;
+}
+
+/**
+ * Decompress one block of a DXT3 texture and store the resulting
+ * RGBA pixels in 'dst'.
+ *
+ * @param dst    output buffer.
+ * @param stride scanline in bytes.
+ * @param block  block to decompress.
+ * @return how much texture data has been consumed.
+ */
+static int dxt3_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
+{
+    dxt3_block_internal(dst, stride, block);
 
     return 16;
 }
@@ -306,8 +368,32 @@ static av_always_inline void dxt5_block_internal(uint8_t *dst,
 }
 
 /**
+ * Decompress one block of a DXT4 texture and store the resulting
+ * RGBA pixels in 'dst'.
+ *
+ * @param dst    output buffer.
+ * @param stride scanline in bytes.
+ * @param block  block to decompress.
+ * @return how much texture data has been consumed.
+ */
+static int dxt4_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
+{
+    int x, y;
+
+    dxt5_block_internal(dst, stride, block);
+
+    /* This format is DXT5, but returns premultiplied alpha. It needs to be
+     * converted because it's what lavc outputs (and swscale expects). */
+    for (y = 0; y < 4; y++)
+        for (x = 0; x < 4; x++)
+            premult2straight(dst + x * 4 + y * stride);
+
+    return 16;
+}
+
+/**
  * Decompress one block of a DXT5 texture and store the resulting
- * RGBA pixels in 'dst'. Alpha component is not premultiplied.
+ * RGBA pixels in 'dst'.
  *
  * @param dst    output buffer.
  * @param stride scanline in bytes.
@@ -322,22 +408,22 @@ static int dxt5_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
 }
 
 /** Convert a scaled YCoCg buffer to RGBA with opaque alpha. */
-static void ycocg2rgba(uint8_t *dst, const uint8_t *pixel)
+static void ycocg2rgba(uint8_t *src)
 {
-    int r = pixel[0];
-    int g = pixel[1];
-    int b = pixel[2];
-    int a = pixel[3];
+    int r = src[0];
+    int g = src[1];
+    int b = src[2];
+    int a = src[3];
 
     int s  = (b >> 3) + 1;
     int y  = a;
     int co = (r - 128) / s;
     int cg = (g - 128) / s;
 
-    dst[0] = av_clip_uint8(y + co - cg);
-    dst[1] = av_clip_uint8(y + cg);
-    dst[2] = av_clip_uint8(y - co - cg);
-    dst[3] = 255;
+    src[0] = av_clip_uint8(y + co - cg);
+    src[1] = av_clip_uint8(y + cg);
+    src[2] = av_clip_uint8(y - co - cg);
+    src[3] = 255;
 }
 
 /**
@@ -351,16 +437,15 @@ static void ycocg2rgba(uint8_t *dst, const uint8_t *pixel)
  */
 static int dxt5ys_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
 {
-    uint8_t reorder[64];
-    int i, j;
+    int x, y;
 
     /* This format is basically DXT5, with luma stored in alpha.
      * Run a normal decompress and then reorder the components. */
-    dxt5_block_internal(reorder, 16, block);
+    dxt5_block_internal(dst, stride, block);
 
-    for (j = 0; j < 4; j++)
-        for (i = 0; i < 4; i++)
-            ycocg2rgba(dst + i * 4 + j * stride, reorder + i * 4 + j * 16);
+    for (y = 0; y < 4; y++)
+        for (x = 0; x < 4; x++)
+            ycocg2rgba(dst + x * 4 + y * stride);
 
     return 16;
 }
@@ -368,7 +453,10 @@ static int dxt5ys_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
 av_cold void ff_dxtc_decompression_init(DXTCContext *c)
 {
     c->dxt1_block   = dxt1_block;
+    c->dxt1a_block  = dxt1a_block;
+    c->dxt2_block   = dxt2_block;
     c->dxt3_block   = dxt3_block;
+    c->dxt4_block   = dxt4_block;
     c->dxt5_block   = dxt5_block;
     c->dxt5ys_block = dxt5ys_block;
 }

@@ -27,7 +27,10 @@
 
 typedef struct DXTCContext {
     int (*dxt1_block)  (uint8_t *dst, ptrdiff_t stride, const uint8_t *block);
+    int (*dxt1a_block) (uint8_t *dst, ptrdiff_t stride, const uint8_t *block);
+    int (*dxt2_block)  (uint8_t *dst, ptrdiff_t stride, const uint8_t *block);
     int (*dxt3_block)  (uint8_t *dst, ptrdiff_t stride, const uint8_t *block);
+    int (*dxt4_block)  (uint8_t *dst, ptrdiff_t stride, const uint8_t *block);
     int (*dxt5_block)  (uint8_t *dst, ptrdiff_t stride, const uint8_t *block);
     int (*dxt5ys_block)(uint8_t *dst, ptrdiff_t stride, const uint8_t *block);
 } DXTCContext;
