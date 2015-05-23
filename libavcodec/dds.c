@@ -46,6 +46,7 @@
 #define DDPF_NORMALMAP (1 << 8)
 
 enum DDSPostProc {
+    DDS_NONE = 0,
     DDS_ALPHA_EXP,
     DDS_NORMAL_MAP,
     DDS_DOOM3,
@@ -143,9 +144,6 @@ static int parse_pixel_format(AVCodecContext *avctx)
             ctx->tex_fun = ctx->dxtc.dxt4_block;
             avctx->pix_fmt = AV_PIX_FMT_RGBA;
             break;
-        case MKTAG('R', 'X', 'G', 'B'):
-            ctx->postproc = DDS_DOOM3;
-            /* fall through */
         case MKTAG('D', 'X', 'T', '5'):
             ctx->tex_rat = 16;
             if (ycocg_scaled)
@@ -155,6 +153,15 @@ static int parse_pixel_format(AVCodecContext *avctx)
             else
                 ctx->tex_fun = ctx->dxtc.dxt5_block;
             avctx->pix_fmt = AV_PIX_FMT_RGBA;
+            break;
+        case MKTAG('R', 'X', 'G', 'B'):
+            ctx->tex_rat = 16;
+            ctx->tex_fun = ctx->dxtc.dxt5_block;
+            avctx->pix_fmt = AV_PIX_FMT_RGBA;
+            /* This format may be considered as normal, but it is handled
+             * differently in a separate postproc. */
+            ctx->postproc = DDS_DOOM3;
+            normal_map = 0;
             break;
         case MKTAG('U', 'Y', 'V', 'Y'):
             ctx->compressed = 0;
@@ -235,6 +242,57 @@ static int decompress_texture_thread(AVCodecContext *avctx, void *arg,
     return 0;
 }
 
+static void run_postproc(AVCodecContext *avctx, AVFrame *frame)
+{
+    DDSContext *ctx = avctx->priv_data;
+    int i;
+
+    switch (ctx->postproc) {
+    case DDS_ALPHA_EXP:
+        /* Alpha-exponential mode divides each channel by the maximum
+         * R, G or B value, and stores the multiplying factor in the
+         * alpha channel. */
+        for (i = 0; i < frame->linesize[0] * frame->height; i += 4) {
+            uint8_t *src = frame->data[0] + i;
+            int r = src[0];
+            int g = src[1];
+            int b = src[2];
+            int a = src[3];
+
+            src[0] = r * a / 255;
+            src[1] = g * a / 255;
+            src[2] = b * a / 255;
+            src[3] = 255;
+        }
+        break;
+    case DDS_NORMAL_MAP:
+        break;
+    case DDS_DOOM3:
+        /* This format has just R and A swapped. */
+        for (i = 0; i < frame->linesize[0] * frame->height; i += 4) {
+            uint8_t *src = frame->data[0] + i;
+            FFSWAP(uint8_t, src[0], src[3]);
+        }
+      break;
+    case DDS_YCOCG:
+        /* Data is Y-Co-Cg-A and not RGBA, but they are represented
+         * with the same masks in the DDPF header. */
+        for (i = 0; i < frame->linesize[0] * frame->height; i += 4) {
+            uint8_t *src = frame->data[0] + i;
+            int a  = src[0];
+            int cg = src[1] - 128;
+            int co = src[2] - 128;
+            int y  = src[3];
+
+            src[0] = av_clip_uint8(y + co - cg);
+            src[1] = av_clip_uint8(y + cg);
+            src[2] = av_clip_uint8(y - co - cg);
+            src[3] = a;
+        }
+        break;
+    }
+}
+
 static int dds_decode(AVCodecContext *avctx, void *data,
                       int *got_frame, AVPacket *avpkt)
 {
@@ -243,7 +301,7 @@ static int dds_decode(AVCodecContext *avctx, void *data,
     AVFrame *frame = data;
     uint32_t flags;
     int blocks, left, mipmap;
-    int i, ret;
+    int ret;
 
     ff_dxtc_decompression_init(&ctx->dxtc);
     bytestream2_init(gbc, avpkt->data, avpkt->size);
@@ -315,57 +373,13 @@ static int dds_decode(AVCodecContext *avctx, void *data,
                                frame->linesize[0] * frame->height);
     }
 
-    /* Run any post processing here. */
-    if (avctx->pix_fmt == AV_PIX_FMT_RGBA) {
-        switch (ctx->postproc) {
-        case DDS_ALPHA_EXP:
-            /* Alpha-exponential mode divides each channel by the maximum
-             * R, G or B value, and stores the multiplying factor in the
-             * alpha channel. */
-            for (i = 0; i < frame->linesize[0] * frame->height; i += 4) {
-                uint8_t *src = frame->data[0] + i;
-                int r = src[0];
-                int g = src[1];
-                int b = src[2];
-                int a = src[3];
-
-                src[0] = r * a / 255;
-                src[1] = g * a / 255;
-                src[2] = b * a / 255;
-                src[3] = 255;
-            }
-            break;
-        case DDS_NORMAL_MAP:
-            break;
-        case DDS_DOOM3:
-            /* This format has just R and A swapped. */
-            for (i = 0; i < frame->linesize[0] * frame->height; i += 4) {
-                uint8_t *src = frame->data[0] + i;
-                FFSWAP(uint8_t, src[0], src[3]);
-            }
-          break;
-        case DDS_YCOCG:
-            /* Data is Y-Co-Cg-A and not RGBA, but they are represented
-             * with the same masks in the DDPF header. */
-            for (i = 0; i < frame->linesize[0] * frame->height; i += 4) {
-                uint8_t *src = frame->data[0] + i;
-                int a  = src[0];
-                int cg = src[1] - 128;
-                int co = src[2] - 128;
-                int y  = src[3];
-
-                src[0] = av_clip_uint8(y + co - cg);
-                src[1] = av_clip_uint8(y + cg);
-                src[2] = av_clip_uint8(y - co - cg);
-                src[3] = a;
-            }
-            break;
-        }
-    }
-
     left = bytestream2_get_bytes_left(gbc);
     if (left != 0)
         av_log(avctx, AV_LOG_DEBUG, "%d trailing bytes.\n", left);
+
+    /* Run any post processing here if needed. */
+    if (avctx->pix_fmt == AV_PIX_FMT_RGBA)
+        run_postproc(avctx, frame);
 
     /* Frame is ready to be output */
     frame->key_frame = 1;
