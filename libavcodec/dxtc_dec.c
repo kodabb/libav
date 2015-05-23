@@ -407,15 +407,20 @@ static int dxt5_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
     return 16;
 }
 
-/** Convert a scaled YCoCg buffer to RGBA with opaque alpha. */
-static void ycocg2rgba(uint8_t *src)
+/**
+ * Convert a YCoCg buffer to RGBA.
+ *
+ * @param src    input buffer.
+ * @param scaled variant with scaled chroma components and opaque alpha.
+ */
+static void ycocg2rgba(uint8_t *src, int scaled)
 {
     int r = src[0];
     int g = src[1];
     int b = src[2];
     int a = src[3];
 
-    int s  = (b >> 3) + 1;
+    int s  = scaled ? (b >> 3) + 1 : 1;
     int y  = a;
     int co = (r - 128) / s;
     int cg = (g - 128) / s;
@@ -423,7 +428,31 @@ static void ycocg2rgba(uint8_t *src)
     src[0] = av_clip_uint8(y + co - cg);
     src[1] = av_clip_uint8(y + cg);
     src[2] = av_clip_uint8(y - co - cg);
-    src[3] = 255;
+    src[3] = scaled ? 255 : b;
+}
+
+/**
+ * Decompress one block of a DXT5 texture with classic YCoCg and store
+ * the resulting RGBA pixels in 'dst'. Alpha component is fully opaque.
+ *
+ * @param dst    output buffer.
+ * @param stride scanline in bytes.
+ * @param block  block to decompress.
+ * @return how much texture data has been consumed.
+ */
+static int dxt5y_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
+{
+    int x, y;
+
+    /* This format is basically DXT5, with luma stored in alpha.
+     * Run a normal decompress and then reorder the components. */
+    dxt5_block_internal(dst, stride, block);
+
+    for (y = 0; y < 4; y++)
+        for (x = 0; x < 4; x++)
+            ycocg2rgba(dst + x * 4 + y * stride, 0);
+
+    return 16;
 }
 
 /**
@@ -445,7 +474,7 @@ static int dxt5ys_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
 
     for (y = 0; y < 4; y++)
         for (x = 0; x < 4; x++)
-            ycocg2rgba(dst + x * 4 + y * stride);
+            ycocg2rgba(dst + x * 4 + y * stride, 1);
 
     return 16;
 }
@@ -458,5 +487,6 @@ av_cold void ff_dxtc_decompression_init(DXTCContext *c)
     c->dxt3_block   = dxt3_block;
     c->dxt4_block   = dxt4_block;
     c->dxt5_block   = dxt5_block;
+    c->dxt5y_block  = dxt5y_block;
     c->dxt5ys_block = dxt5ys_block;
 }

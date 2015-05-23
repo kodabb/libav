@@ -41,8 +41,16 @@
 #define BLOCK_W 4
 #define BLOCK_H 4
 
-#define DDPF_FOURCC  (1 << 2)
-#define DDPF_PALETTE (1 << 5)
+#define DDPF_FOURCC    (1 << 2)
+#define DDPF_PALETTE   (1 << 5)
+#define DDPF_NORMALMAP (1 << 8)
+
+enum DDSPostProc {
+    DDS_ALPHA_EXP,
+    DDS_NORMAL_MAP,
+    DDS_DOOM3,
+    DDS_YCOCG,
+} DDSPostProc;
 
 typedef struct DDSContext {
     AVClass *class;
@@ -52,6 +60,8 @@ typedef struct DDSContext {
 
     int compressed;
     int paletted;
+    enum DDSPostProc postproc;
+
     const uint8_t *tex_data; /* Compressed texture */
     int tex_rat;             /* Compression ratio */
 
@@ -64,9 +74,28 @@ static int parse_pixel_format(AVCodecContext *avctx)
     DDSContext *ctx = avctx->priv_data;
     GetByteContext *gbc = &ctx->gbc;
     char buf[32];
-    uint32_t flags, fourcc;
+    uint32_t flags, fourcc, gimp_tag;
     int size, bpp, r, g, b, a;
+    int alpha_exponent, ycocg_classic, ycocg_scaled, normal_map;
 
+    /* Alternative DDS implementations use reserved1 as custom header. */
+    if (bytestream2_get_le32(gbc) == MKTAG('G', 'I', 'M', 'P'))
+        av_log(avctx, AV_LOG_WARNING, "Image generated with GIMP-DDS, "
+               "not all features are implemented.\n");
+    bytestream2_skip(gbc, 4 * 2);
+
+    gimp_tag = bytestream2_get_le32(gbc);
+    alpha_exponent = gimp_tag == MKTAG('A', 'E', 'X', 'P');
+    ycocg_classic  = gimp_tag == MKTAG('Y', 'C', 'G', '1');
+    ycocg_scaled   = gimp_tag == MKTAG('Y', 'C', 'G', '2');
+
+    bytestream2_skip(gbc, 4 * 5);
+    if (bytestream2_get_le32(gbc) == MKTAG('N', 'V', 'T', 'T'))
+        av_log(avctx, AV_LOG_WARNING, "Image generated with NVidia-Texture-"
+               "Tool, not all features are implemented.\n");
+    bytestream2_skip(gbc, 4);
+
+    /* Now the real DDPF starts. */
     size = bytestream2_get_le32(gbc);
     if (size != 32) {
         av_log(avctx, AV_LOG_ERROR, "Invalid pixel format header %d.\n", size);
@@ -75,6 +104,7 @@ static int parse_pixel_format(AVCodecContext *avctx)
     flags = bytestream2_get_le32(gbc);
     ctx->compressed = flags & DDPF_FOURCC;
     ctx->paletted   = flags & DDPF_PALETTE;
+    normal_map      = flags & DDPF_NORMALMAP;
     fourcc = bytestream2_get_le32(gbc);
 
     bpp = bytestream2_get_le32(gbc); // rgbbitcount
@@ -86,6 +116,10 @@ static int parse_pixel_format(AVCodecContext *avctx)
     av_get_codec_tag_string(buf, sizeof(buf), fourcc);
     av_log(avctx, AV_LOG_VERBOSE, "fourcc %s bpp %d "
            "r 0x%x g 0x%x b 0x%x a 0x%x.\n", buf, bpp, r, g, b, a);
+    if (gimp_tag) {
+        av_get_codec_tag_string(buf, sizeof(buf), gimp_tag);
+        av_log(avctx, AV_LOG_VERBOSE, "and GIMP-DDS tag %s\n", buf);
+    }
 
     if (ctx->compressed) {
         switch (fourcc) {
@@ -109,9 +143,17 @@ static int parse_pixel_format(AVCodecContext *avctx)
             ctx->tex_fun = ctx->dxtc.dxt4_block;
             avctx->pix_fmt = AV_PIX_FMT_RGBA;
             break;
+        case MKTAG('R', 'X', 'G', 'B'):
+            ctx->postproc = DDS_DOOM3;
+            /* fall through */
         case MKTAG('D', 'X', 'T', '5'):
             ctx->tex_rat = 16;
-            ctx->tex_fun = ctx->dxtc.dxt5_block;
+            if (ycocg_scaled)
+                ctx->tex_fun = ctx->dxtc.dxt5ys_block;
+            else if (ycocg_classic)
+                ctx->tex_fun = ctx->dxtc.dxt5y_block;
+            else
+                ctx->tex_fun = ctx->dxtc.dxt5_block;
             avctx->pix_fmt = AV_PIX_FMT_RGBA;
             break;
         case MKTAG('U', 'Y', 'V', 'Y'):
@@ -124,6 +166,8 @@ static int parse_pixel_format(AVCodecContext *avctx)
             break;
         case MKTAG('A', 'T', 'I', '1'):
         case MKTAG('A', 'T', 'I', '2'):
+        case MKTAG('B', 'C', '4', 'S'):
+        case MKTAG('B', 'C', '5', 'S'):
         case MKTAG('D', 'X', '1', '0'):
             avpriv_report_missing_feature(avctx, "Texture type %s", buf);
             return AVERROR_PATCHWELCOME;
@@ -167,6 +211,13 @@ static int parse_pixel_format(AVCodecContext *avctx)
         }
     }
 
+    if (alpha_exponent)
+        ctx->postproc = DDS_ALPHA_EXP;
+    else if (normal_map)
+        ctx->postproc = DDS_NORMAL_MAP;
+    else if (ycocg_classic && !ctx->compressed)
+        ctx->postproc = DDS_YCOCG;
+
     return 0;
 }
 
@@ -191,9 +242,8 @@ static int dds_decode(AVCodecContext *avctx, void *data,
     GetByteContext *gbc = &ctx->gbc;
     AVFrame *frame = data;
     uint32_t flags;
-    int blocks, left;
-    int mipmap, alpha_exp;
-    int ret;
+    int blocks, left, mipmap;
+    int i, ret;
 
     ff_dxtc_decompression_init(&ctx->dxtc);
     bytestream2_init(gbc, avpkt->data, avpkt->size);
@@ -231,19 +281,7 @@ static int dds_decode(AVCodecContext *avctx, void *data,
     if (mipmap != 0)
         av_log(avctx, AV_LOG_VERBOSE, "File has %d mipmaps.\n", mipmap);
 
-    /* Alternative DDS implementations use reserved1 as custom header. */
-    if (bytestream2_get_le32(gbc) == MKTAG('G', 'I', 'M', 'P'))
-        av_log(avctx, AV_LOG_WARNING, "Image generated with GIMP-DDS, "
-               "not all features are implemented.\n");
-    bytestream2_skip(gbc, 4 * 2);
-    alpha_exp = bytestream2_get_le32(gbc) == MKTAG('A', 'E', 'X', 'P');
-    bytestream2_skip(gbc, 4 * 5);
-    if (bytestream2_get_le32(gbc) == MKTAG('N', 'V', 'T', 'T'))
-        av_log(avctx, AV_LOG_WARNING, "Image generated with NVidia-Texture-"
-               "Tool, not all features are implemented.\n");
-    bytestream2_skip(gbc, 4);
-
-    /* Now get the DDPF */
+    /* Extract pixel format information, considering variants in reserved1. */
     ret = parse_pixel_format(avctx);
     if (ret < 0)
         return ret;
@@ -277,23 +315,51 @@ static int dds_decode(AVCodecContext *avctx, void *data,
                                frame->linesize[0] * frame->height);
     }
 
-    /* This has to be done here because it is used by both rgba and dxt5. */
-    if (alpha_exp && avctx->pix_fmt == AV_PIX_FMT_RGBA) {
-        int i;
+    /* Run any post processing here. */
+    if (avctx->pix_fmt == AV_PIX_FMT_RGBA) {
+        switch (ctx->postproc) {
+        case DDS_ALPHA_EXP:
+            /* Alpha-exponential mode divides each channel by the maximum
+             * R, G or B value, and stores the multiplying factor in the
+             * alpha channel. */
+            for (i = 0; i < frame->linesize[0] * frame->height; i += 4) {
+                uint8_t *src = frame->data[0] + i;
+                int r = src[0];
+                int g = src[1];
+                int b = src[2];
+                int a = src[3];
 
-        /* Alpha-exponential mode divides each channel by the maximum R, G or B
-         * value, and stores the multiplying factor in the alpha channel. */
-        av_log(avctx, AV_LOG_DEBUG, "Alpha-exponential mode.\n");
-        for (i = 0; i < frame->linesize[0] * frame->height; i += 4) {
-            uint8_t *src = frame->data[0] + i;
-            int r = src[0];
-            int g = src[1];
-            int b = src[2];
-            int a = src[3];
-            src[0] = r * a / 255;
-            src[1] = g * a / 255;
-            src[2] = b * a / 255;
-            src[3] = 255;
+                src[0] = r * a / 255;
+                src[1] = g * a / 255;
+                src[2] = b * a / 255;
+                src[3] = 255;
+            }
+            break;
+        case DDS_NORMAL_MAP:
+            break;
+        case DDS_DOOM3:
+            /* This format has just R and A swapped. */
+            for (i = 0; i < frame->linesize[0] * frame->height; i += 4) {
+                uint8_t *src = frame->data[0] + i;
+                FFSWAP(uint8_t, src[0], src[3]);
+            }
+          break;
+        case DDS_YCOCG:
+            /* Data is Y-Co-Cg-A and not RGBA, but they are represented
+             * with the same masks in the DDPF header. */
+            for (i = 0; i < frame->linesize[0] * frame->height; i += 4) {
+                uint8_t *src = frame->data[0] + i;
+                int a  = src[0];
+                int cg = src[1] - 128;
+                int co = src[2] - 128;
+                int y  = src[3];
+
+                src[0] = av_clip_uint8(y + co - cg);
+                src[1] = av_clip_uint8(y + cg);
+                src[2] = av_clip_uint8(y - co - cg);
+                src[3] = a;
+            }
+            break;
         }
     }
 
@@ -302,7 +368,9 @@ static int dds_decode(AVCodecContext *avctx, void *data,
         av_log(avctx, AV_LOG_DEBUG, "%d trailing bytes.\n", left);
 
     /* Frame is ready to be output */
-    *got_frame = 1;
+    frame->key_frame = 1;
+    frame->pict_type = AV_PICTURE_TYPE_I;
+    *got_frame       = 1;
 
     return avpkt->size;
 }
