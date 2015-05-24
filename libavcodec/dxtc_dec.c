@@ -284,7 +284,7 @@ static av_always_inline void dxt5_block_internal(uint8_t *dst,
                                                  const uint8_t *block)
 {
     uint8_t alpha0, alpha1;
-    uint8_t alphaIndices[16];
+    uint8_t alpha_indices[16];
     uint8_t r0, g0, b0, r1, g1, b1;
     uint16_t color0, color1;
     uint32_t tmp, code;
@@ -293,7 +293,7 @@ static av_always_inline void dxt5_block_internal(uint8_t *dst,
     alpha0 = *(block);
     alpha1 = *(block + 1);
 
-    decompress_indices(alphaIndices, block + 2);
+    decompress_indices(alpha_indices, block + 2);
 
     color0 = AV_RL16(block + 8);
     color1 = AV_RL16(block + 10);
@@ -316,7 +316,7 @@ static av_always_inline void dxt5_block_internal(uint8_t *dst,
 
     for (j = 0; j < 4; j++) {
         for (i = 0; i < 4; i++) {
-            int alpha_code = alphaIndices[i + j * 4];
+            int alpha_code = alpha_indices[i + j * 4];
             uint8_t color_code = (code >> 2 * (i + j * 4)) & 0x03;
             uint32_t pixel = 0;
             uint8_t alpha;

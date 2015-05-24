@@ -43,14 +43,15 @@
 
 #define DDPF_FOURCC    (1 << 2)
 #define DDPF_PALETTE   (1 << 5)
-#define DDPF_NORMALMAP (1 << 8)
+#define DDPF_NORMALMAP (1 << 31)
 
 enum DDSPostProc {
     DDS_NONE = 0,
     DDS_ALPHA_EXP,
     DDS_NORMAL_MAP,
     DDS_DOOM3,
-    DDS_YCOCG,
+    DDS_RAW_YCOCG,
+    DDS_SWAP_ALPHA,
 } DDSPostProc;
 
 typedef struct DDSContext {
@@ -194,6 +195,8 @@ static int parse_pixel_format(AVCodecContext *avctx)
         if (bpp == 8 && r == 0xff && g == 0 && b == 0 && a == 0)
             avctx->pix_fmt = AV_PIX_FMT_GRAY8;
         /* 16 bpp */
+        else if (bpp == 16 && r == 0xff && g == 0 && b == 0 && a == 0xff00)
+            avctx->pix_fmt = AV_PIX_FMT_YA8;
         else if (bpp == 16 && r == 0xffff && g == 0 && b == 0 && a == 0)
             avctx->pix_fmt = AV_PIX_FMT_GRAY16LE;
         else if (bpp == 16 && r == 0xf800 && g == 0x7e0 && b == 0x1f && a == 0)
@@ -218,12 +221,15 @@ static int parse_pixel_format(AVCodecContext *avctx)
         }
     }
 
+    /* Set any remaining post-proc that should happen before frame is ready. */
     if (alpha_exponent)
         ctx->postproc = DDS_ALPHA_EXP;
     else if (normal_map)
         ctx->postproc = DDS_NORMAL_MAP;
     else if (ycocg_classic && !ctx->compressed)
-        ctx->postproc = DDS_YCOCG;
+        ctx->postproc = DDS_RAW_YCOCG;
+    else if (avctx->pix_fmt == AV_PIX_FMT_YA8)
+        ctx->postproc = DDS_SWAP_ALPHA;
 
     return 0;
 }
@@ -242,16 +248,18 @@ static int decompress_texture_thread(AVCodecContext *avctx, void *arg,
     return 0;
 }
 
+/* Convert internal format to normal RGBA (or YA8). */
 static void run_postproc(AVCodecContext *avctx, AVFrame *frame)
 {
     DDSContext *ctx = avctx->priv_data;
-    int i;
+    int i, x_off, y_off;
 
     switch (ctx->postproc) {
     case DDS_ALPHA_EXP:
         /* Alpha-exponential mode divides each channel by the maximum
          * R, G or B value, and stores the multiplying factor in the
          * alpha channel. */
+        av_log(avctx, AV_LOG_DEBUG, "Post-processing alpha exponent.\n");
         for (i = 0; i < frame->linesize[0] * frame->height; i += 4) {
             uint8_t *src = frame->data[0] + i;
             int r = src[0];
@@ -266,17 +274,53 @@ static void run_postproc(AVCodecContext *avctx, AVFrame *frame)
         }
         break;
     case DDS_NORMAL_MAP:
+        av_log(avctx, AV_LOG_DEBUG, "Post-processing normal map.\n");
+
+        /* Normal maps work in the XYZ color space and they encode X, Y
+         * in different components, depending on the texture type, and
+         * derive Z with a square root of the distance.
+         *
+         * http://www.realtimecollisiondetection.net/blog/?p=28
+         * */
+        if (ctx->tex_rat == 8) { // dxt1
+            x_off = 0;
+            y_off = 1;
+        } else {                 // dxt5
+            x_off = 3;
+            y_off = 1;
+        }
+        for (i = 0; i < frame->linesize[0] * frame->height; i += 4) {
+            uint8_t *src = frame->data[0] + i;
+            int x = src[x_off];
+            int y = src[y_off];
+            int z;
+            float nx = ((float) x / 255.0f) - 1.0f;
+            float ny = ((float) y / 255.0f) - 1.0f;
+            float nz = 0;
+            float d = 1.0f - nx * nx - ny * ny;
+
+            if (d > 0)
+                nz = sqrtf(d);
+            z = av_clip_uint8((int) (255.0f * nz));
+
+            src[0] = x;
+            src[1] = y;
+            src[2] = z;
+            src[3] = 255;
+        }
         break;
     case DDS_DOOM3:
         /* This format has just R and A swapped. */
+        av_log(avctx, AV_LOG_DEBUG, "Post-processing rxgb.\n");
         for (i = 0; i < frame->linesize[0] * frame->height; i += 4) {
             uint8_t *src = frame->data[0] + i;
             FFSWAP(uint8_t, src[0], src[3]);
         }
       break;
-    case DDS_YCOCG:
+    case DDS_RAW_YCOCG:
         /* Data is Y-Co-Cg-A and not RGBA, but they are represented
          * with the same masks in the DDPF header. */
+        av_log(avctx, AV_LOG_DEBUG, "Post-processing raw YCoCg.\n");
         for (i = 0; i < frame->linesize[0] * frame->height; i += 4) {
             uint8_t *src = frame->data[0] + i;
             int a  = src[0];
@@ -290,6 +334,14 @@ static void run_postproc(AVCodecContext *avctx, AVFrame *frame)
             src[3] = a;
         }
         break;
+    case DDS_SWAP_ALPHA:
+        /* Alpha and Luma are stored swapped. */
+        av_log(avctx, AV_LOG_DEBUG, "Post-processing swapped Luma/Alpha.\n");
+        for (i = 0; i < frame->linesize[0] * frame->height; i += 2) {
+            uint8_t *src = frame->data[0] + i;
+            FFSWAP(uint8_t, src[0], src[1]);
+        }
+
     }
 }
 
@@ -300,7 +352,7 @@ static int dds_decode(AVCodecContext *avctx, void *data,
     GetByteContext *gbc = &ctx->gbc;
     AVFrame *frame = data;
     uint32_t flags;
-    int blocks, left, mipmap;
+    int blocks, mipmap;
     int ret;
 
     ff_dxtc_decompression_init(&ctx->dxtc);
@@ -337,7 +389,7 @@ static int dds_decode(AVCodecContext *avctx, void *data,
     bytestream2_skip(gbc, 4); // depth
     mipmap = bytestream2_get_le32(gbc);
     if (mipmap != 0)
-        av_log(avctx, AV_LOG_VERBOSE, "File has %d mipmaps.\n", mipmap);
+        av_log(avctx, AV_LOG_VERBOSE, "Found %d mipmaps (skipped).\n", mipmap);
 
     /* Extract pixel format information, considering variants in reserved1. */
     ret = parse_pixel_format(avctx);
@@ -359,7 +411,6 @@ static int dds_decode(AVCodecContext *avctx, void *data,
         ctx->tex_data = gbc->buffer;
         blocks = avctx->coded_width * avctx->coded_height / (BLOCK_W * BLOCK_H);
         avctx->execute2(avctx, decompress_texture_thread, frame, NULL, blocks);
-        bytestream2_skip(gbc, blocks * BLOCK_W * BLOCK_H);
     } else if (ctx->paletted) {
         /* Use the first 1024 bytes as palette, then copy the rest */
         bytestream2_get_buffer(gbc, frame->data[1], 256 * 4);
@@ -367,23 +418,27 @@ static int dds_decode(AVCodecContext *avctx, void *data,
                                frame->linesize[0] * frame->height);
 
         frame->palette_has_changed = 1;
+    } else if (avctx->pix_fmt == AV_PIX_FMT_UYVY422 ||
+               avctx->pix_fmt == AV_PIX_FMT_YUYV422) {
+        const uint8_t *src[4];
+        int linesizes[4];
+        src[0] = gbc->buffer;
+        linesizes[0] = frame->width * 2;
+        av_image_copy(frame->data, frame->linesize, src, linesizes,
+                      avctx->pix_fmt, frame->width, frame->height);
     } else {
         /* Just copy the necessary data in the buffer */
         bytestream2_get_buffer(gbc, frame->data[0],
                                frame->linesize[0] * frame->height);
     }
 
-    left = bytestream2_get_bytes_left(gbc);
-    if (left != 0)
-        av_log(avctx, AV_LOG_DEBUG, "%d trailing bytes.\n", left);
-
     /* Run any post processing here if needed. */
-    if (avctx->pix_fmt == AV_PIX_FMT_RGBA)
+    if (avctx->pix_fmt == AV_PIX_FMT_RGBA || avctx->pix_fmt == AV_PIX_FMT_YA8)
         run_postproc(avctx, frame);
 
     /* Frame is ready to be output */
-    frame->key_frame = 1;
     frame->pict_type = AV_PICTURE_TYPE_I;
+    frame->key_frame = 1;
     *got_frame       = 1;
 
     return avpkt->size;
