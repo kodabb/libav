@@ -260,6 +260,7 @@ static void run_postproc(AVCodecContext *avctx, AVFrame *frame)
          * R, G or B value, and stores the multiplying factor in the
          * alpha channel. */
         av_log(avctx, AV_LOG_DEBUG, "Post-processing alpha exponent.\n");
+
         for (i = 0; i < frame->linesize[0] * frame->height; i += 4) {
             uint8_t *src = frame->data[0] + i;
             int r = src[0];
@@ -274,28 +275,23 @@ static void run_postproc(AVCodecContext *avctx, AVFrame *frame)
         }
         break;
     case DDS_NORMAL_MAP:
-        av_log(avctx, AV_LOG_DEBUG, "Post-processing normal map.\n");
-
-        /* Normal maps work in the XYZ color space and they encode X, Y
-         * in different components, depending on the texture type, and
+        /* Normal maps work in the XYZ color space and they encode
+         * X in R or in A, depending on the texture type, Y in G and
          * derive Z with a square root of the distance.
          *
          * http://www.realtimecollisiondetection.net/blog/?p=28
          * */
-        if (ctx->tex_rat == 8) { // dxt1
-            x_off = 0;
-            y_off = 1;
-        } else {                 // dxt5
-            x_off = 3;
-            y_off = 1;
-        }
+        av_log(avctx, AV_LOG_DEBUG, "Post-processing normal map.\n");
+
+        x_off = ctx->tex_rat == 8 ? 0 : 3;
+        y_off = 1;
         for (i = 0; i < frame->linesize[0] * frame->height; i += 4) {
             uint8_t *src = frame->data[0] + i;
             int x = src[x_off];
             int y = src[y_off];
             int z;
-            float nx = ((float) x / 255.0f) - 1.0f;
-            float ny = ((float) y / 255.0f) - 1.0f;
+            float nx = x / 255.0f - 1.0f;
+            float ny = y / 255.0f - 1.0f;
             float nz = 0;
             float d = 1.0f - nx * nx - ny * ny;
 
@@ -312,6 +308,7 @@ static void run_postproc(AVCodecContext *avctx, AVFrame *frame)
     case DDS_DOOM3:
         /* This format has just R and A swapped. */
         av_log(avctx, AV_LOG_DEBUG, "Post-processing rxgb.\n");
+
         for (i = 0; i < frame->linesize[0] * frame->height; i += 4) {
             uint8_t *src = frame->data[0] + i;
             FFSWAP(uint8_t, src[0], src[3]);
@@ -321,6 +318,7 @@ static void run_postproc(AVCodecContext *avctx, AVFrame *frame)
         /* Data is Y-Co-Cg-A and not RGBA, but they are represented
          * with the same masks in the DDPF header. */
         av_log(avctx, AV_LOG_DEBUG, "Post-processing raw YCoCg.\n");
+
         for (i = 0; i < frame->linesize[0] * frame->height; i += 4) {
             uint8_t *src = frame->data[0] + i;
             int a  = src[0];
@@ -337,6 +335,7 @@ static void run_postproc(AVCodecContext *avctx, AVFrame *frame)
     case DDS_SWAP_ALPHA:
         /* Alpha and Luma are stored swapped. */
         av_log(avctx, AV_LOG_DEBUG, "Post-processing swapped Luma/Alpha.\n");
+
         for (i = 0; i < frame->linesize[0] * frame->height; i += 2) {
             uint8_t *src = frame->data[0] + i;
             FFSWAP(uint8_t, src[0], src[1]);
