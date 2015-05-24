@@ -162,6 +162,27 @@ static int parse_pixel_format(AVCodecContext *avctx)
             ctx->postproc = DDS_DOOM3;
             normal_map = 0;
             break;
+        case MKTAG('A', 'T', 'I', '1'):
+        case MKTAG('B', 'C', '4', 'U'):
+            ctx->tex_ratio = 8;
+            ctx->tex_fun = ctx->dxtc.rgtc1u_block;
+            avctx->pix_fmt = AV_PIX_FMT_RGBA;
+        case MKTAG('B', 'C', '4', 'S'):
+            ctx->tex_ratio = 8;
+            ctx->tex_fun = ctx->dxtc.rgtc1s_block;
+            avctx->pix_fmt = AV_PIX_FMT_RGBA;
+            break;
+        case MKTAG('A', 'T', 'I', '2'):
+        case MKTAG('B', 'C', '5', 'U'):
+            ctx->tex_ratio = 16;
+            ctx->tex_fun = ctx->dxtc.rgtc2u_block;
+            avctx->pix_fmt = AV_PIX_FMT_RGBA;
+            break;
+        case MKTAG('B', 'C', '5', 'S'):
+            ctx->tex_ratio = 16;
+            ctx->tex_fun = ctx->dxtc.rgtc2s_block;
+            avctx->pix_fmt = AV_PIX_FMT_RGBA;
+        break;
         case MKTAG('U', 'Y', 'V', 'Y'):
             ctx->compressed = 0;
             avctx->pix_fmt = AV_PIX_FMT_UYVY422;
@@ -170,13 +191,6 @@ static int parse_pixel_format(AVCodecContext *avctx)
             ctx->compressed = 0;
             avctx->pix_fmt = AV_PIX_FMT_YUYV422;
             break;
-        case MKTAG('A', 'T', 'I', '1'):
-        case MKTAG('B', 'C', '4', 'S'):
-        case MKTAG('B', 'C', '4', 'U'):
-            ctx->tex_ratio = 8;
-        case MKTAG('A', 'T', 'I', '2'):
-        case MKTAG('B', 'C', '5', 'S'):
-        case MKTAG('B', 'C', '5', 'U'):
         case MKTAG('D', 'X', '1', '0'):
             avpriv_report_missing_feature(avctx, "Texture type %s", buf);
             return AVERROR_PATCHWELCOME;

@@ -479,6 +479,67 @@ static int dxt5ys_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
     return 16;
 }
 
+static void rgtc_block_internal(uint8_t *dst, ptrdiff_t stride,
+                                const uint8_t *block, const float *color_tab,
+                                int sign)
+{
+    uint8_t indices[16];
+    int x, y;
+
+    decompress_indices(indices, block + 2);
+
+    /* Convert from normalized values [-1, 1] or [0, 1] to standard RGBA. */
+    for (y = 0; y < 4; y++) {
+        for (x = 0; x < 4; x++) {
+            int i = indices[x + y * 4];
+            int r = (int) (color_tab[i] * 255);
+            uint32_t pixel = RGBA(r, 0, 0, 255);
+            AV_WL32(dst + x * 4 + y * stride, pixel);
+        }
+    }
+}
+
+/**
+ * Decompress one block of a ATI1 texture normalized with unsigned integers
+ * and store the resulting RGBA pixels in 'dst'. Alpha is fully opaque.
+ *
+ * @param dst    output buffer.
+ * @param stride scanline in bytes.
+ * @param block  block to decompress.
+ * @return how much texture data has been consumed.
+ */
+static int rgtc1u_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
+{
+    float color_table[8];
+    float r0 = block[0] / 255.0f;
+    float r1 = block[1] / 255.0f;
+
+    color_table[0] = r0;
+    color_table[1] = r1;
+
+    if (r0 > r1) {
+        /* 6 interpolated color values */
+        color_table[2] = (6 * r0 + 1 * r1) / 7.0f; // bit code 010
+        color_table[3] = (5 * r0 + 2 * r1) / 7.0f; // bit code 011
+        color_table[4] = (4 * r0 + 3 * r1) / 7.0f; // bit code 100
+        color_table[5] = (3 * r0 + 4 * r1) / 7.0f; // bit code 101
+        color_table[6] = (2 * r0 + 5 * r1) / 7.0f; // bit code 110
+        color_table[7] = (1 * r0 + 6 * r1) / 7.0f; // bit code 111
+    } else {
+        /* 4 interpolated color values */
+        color_table[2] = (4 * r0 + 1 * r1) / 5.0f; // bit code 010
+        color_table[3] = (3 * r0 + 2 * r1) / 5.0f; // bit code 011
+        color_table[4] = (2 * r0 + 3 * r1) / 5.0f; // bit code 100
+        color_table[5] = (1 * r0 + 4 * r1) / 5.0f; // bit code 101
+        color_table[6] = 0.0f;                     // bit code 110
+        color_table[7] = 1.0f;                     // bit code 111
+    }
+
+    rgtc_block_internal(dst, stride, block, color_table, 0);
+
+    return 8;
+}
+
 av_cold void ff_dxtc_decompression_init(DXTCContext *c)
 {
     c->dxt1_block   = dxt1_block;
@@ -489,4 +550,5 @@ av_cold void ff_dxtc_decompression_init(DXTCContext *c)
     c->dxt5_block   = dxt5_block;
     c->dxt5y_block  = dxt5y_block;
     c->dxt5ys_block = dxt5ys_block;
+    c->rgtc1u_block = rgtc1u_block;
 }
