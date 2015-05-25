@@ -59,7 +59,7 @@ static av_always_inline void dxt1_block_internal(uint8_t *dst,
     uint32_t tmp, code;
     uint16_t color0, color1;
     uint8_t r0, g0, b0, r1, g1, b1;
-    int i, j;
+    int x, y;
 
     color0 = AV_RL16(block);
     color1 = AV_RL16(block + 2);
@@ -81,11 +81,11 @@ static av_always_inline void dxt1_block_internal(uint8_t *dst,
     code = AV_RL32(block + 4);
 
     if (color0 > color1) {
-        for (j = 0; j < 4; j++) {
-            for (i = 0; i < 4; i++) {
-                uint8_t alpha = alpha_tab[i + j * 4];
+        for (y = 0; y < 4; y++) {
+            for (x = 0; x < 4; x++) {
+                uint8_t alpha = alpha_tab[x + y * 4];
                 uint32_t pixel = 0;
-                uint32_t pos_code = (code >> 2 * (i + j * 4)) & 0x03;
+                uint32_t pos_code = (code >> 2 * (x + y * 4)) & 0x03;
 
                 switch (pos_code) {
                 case 0:
@@ -108,15 +108,15 @@ static av_always_inline void dxt1_block_internal(uint8_t *dst,
                     break;
                 }
 
-                AV_WL32(dst + i * 4 + j * stride, pixel);
+                AV_WL32(dst + x * 4 + y * stride, pixel);
             }
         }
     } else {
-        for (j = 0; j < 4; j++) {
-            for (i = 0; i < 4; i++) {
-                uint8_t alpha = alpha_tab[i + j * 4];
+        for (y = 0; y < 4; y++) {
+            for (x = 0; x < 4; x++) {
+                uint8_t alpha = alpha_tab[x + y * 4];
                 uint32_t pixel = 0;
-                uint32_t pos_code = (code >> 2 * (i + j * 4)) & 0x03;
+                uint32_t pos_code = (code >> 2 * (x + y * 4)) & 0x03;
 
                 switch (pos_code) {
                 case 0:
@@ -136,7 +136,7 @@ static av_always_inline void dxt1_block_internal(uint8_t *dst,
                     break;
                 }
 
-                AV_WL32(dst + i * 4 + j * stride, pixel);
+                AV_WL32(dst + x * 4 + y * stride, pixel);
             }
         }
     }
@@ -288,7 +288,7 @@ static av_always_inline void dxt5_block_internal(uint8_t *dst,
     uint8_t r0, g0, b0, r1, g1, b1;
     uint16_t color0, color1;
     uint32_t tmp, code;
-    int i, j;
+    int x, y;
 
     alpha0 = *(block);
     alpha1 = *(block + 1);
@@ -314,10 +314,10 @@ static av_always_inline void dxt5_block_internal(uint8_t *dst,
 
     code = AV_RL32(block + 12);
 
-    for (j = 0; j < 4; j++) {
-        for (i = 0; i < 4; i++) {
-            int alpha_code = alpha_indices[i + j * 4];
-            uint8_t color_code = (code >> 2 * (i + j * 4)) & 0x03;
+    for (y = 0; y < 4; y++) {
+        for (x = 0; x < 4; x++) {
+            int alpha_code = alpha_indices[x + y * 4];
+            uint8_t color_code = (code >> 2 * (x + y * 4)) & 0x03;
             uint32_t pixel = 0;
             uint8_t alpha;
 
@@ -362,7 +362,7 @@ static av_always_inline void dxt5_block_internal(uint8_t *dst,
                 break;
             }
 
-            AV_WL32(dst + i * 4 + j * stride, pixel);
+            AV_WL32(dst + x * 4 + y * stride, pixel);
         }
     }
 }
@@ -479,36 +479,28 @@ static int dxt5ys_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
     return 16;
 }
 
-static void rgtc_block_internal(uint8_t *dst, ptrdiff_t stride,
-                                const uint8_t *block, const float *color_tab,
-                                int sign)
+static void rgtc_color(uint8_t *dst, ptrdiff_t stride, const uint8_t *block,
+                       const float *color_tab, int sign)
 {
     uint8_t indices[16];
     int x, y;
 
     decompress_indices(indices, block + 2);
 
-    /* Convert from normalized values [-1, 1] or [0, 1] to standard RGBA. */
+    /* This format stores one or two channels, since it only used to
+     * compress specular (black and white) or normal maps. */
     for (y = 0; y < 4; y++) {
         for (x = 0; x < 4; x++) {
             int i = indices[x + y * 4];
-            int r = (int) (color_tab[i] * 255);
-            uint32_t pixel = RGBA(r, 0, 0, 255);
+            int c = av_clip_uint8(color_tab[i] * 255);
+            uint32_t pixel = RGBA(c, c, c, 255);
             AV_WL32(dst + x * 4 + y * stride, pixel);
         }
     }
 }
 
-/**
- * Decompress one block of a ATI1 texture normalized with unsigned integers
- * and store the resulting RGBA pixels in 'dst'. Alpha is fully opaque.
- *
- * @param dst    output buffer.
- * @param stride scanline in bytes.
- * @param block  block to decompress.
- * @return how much texture data has been consumed.
- */
-static int rgtc1u_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
+static void rgtc_block_internal(uint8_t *dst, ptrdiff_t stride,
+                                const uint8_t *block, int sign)
 {
     float color_table[8];
     float r0 = block[0] / 255.0f;
@@ -535,10 +527,73 @@ static int rgtc1u_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
         color_table[7] = 1.0f;                     // bit code 111
     }
 
-    rgtc_block_internal(dst, stride, block, color_table, 0);
+    rgtc_color(dst, stride, block, color_table, sign);
+}
+
+/**
+ * Decompress one block of a RGRC1 texture with signed or unsigned components
+ * and store the resulting RGBA pixels in 'dst'. Alpha is fully opaque.
+ *
+ * @param dst    output buffer.
+ * @param stride scanline in bytes.
+ * @param block  block to decompress.
+ * @return how much texture data has been consumed.
+ */
+static int rgtc1u_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
+{
+    rgtc_block_internal(dst, stride, block, 0);
 
     return 8;
 }
+
+/**
+ * Decompress one block of a RGRC2 texture with signed or unsigned components
+ * and store the resulting RGBA pixels in 'dst'. Alpha is fully opaque.
+ *
+ * @param dst    output buffer.
+ * @param stride scanline in bytes.
+ * @param block  block to decompress.
+ * @return how much texture data has been consumed.
+ */
+static int rgtc2u_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
+{
+    uint8_t c0[4 * 4 * 4];
+    uint8_t c1[4 * 4 * 4];
+    int x, y;
+
+    /* Decompress the two channels separately and interleave them afterwards. */
+    rgtc_block_internal(c0, 16, block, 0);
+    rgtc_block_internal(c1, 16, block + 8, 0);
+
+    /* B is rebuilt exactly like a normal map. */
+    for (y = 0; y < 4; y++) {
+        for (x = 0; x < 4; x++) {
+            uint8_t *p = dst + x * 4 + y * stride;
+            int r = c0[x * 4 + y * 16];
+            int g = c1[x * 4 + y * 16];
+            int b = 0;
+            /* Our data in is [0 255], convert to [-1 1] first. */
+            float nr = 2 * r / 255.0f - 1;
+            float ng = 2 * g / 255.0f - 1;
+            float nb = 0;
+            float d = 1.0f - nr * nr - ng * ng;
+
+            if (d > 0)
+                nb = sqrtf(d);
+            b = av_clip_uint8(rint(255.0f * (nb + 1) / 2));
+
+            /* This is the 3Dc variant, with swapped G and R, which seems
+             * to be the more widespread.*/
+            p[0] = g;
+            p[1] = r;
+            p[2] = b;
+            p[3] = 255;
+        }
+    }
+
+    return 16;
+}
+
 
 av_cold void ff_dxtc_decompression_init(DXTCContext *c)
 {
@@ -551,4 +606,5 @@ av_cold void ff_dxtc_decompression_init(DXTCContext *c)
     c->dxt5y_block  = dxt5y_block;
     c->dxt5ys_block = dxt5ys_block;
     c->rgtc1u_block = rgtc1u_block;
+    c->rgtc2u_block = rgtc2u_block;
 }

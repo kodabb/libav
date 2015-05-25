@@ -52,6 +52,7 @@ enum DDSPostProc {
     DDS_DOOM3,
     DDS_RAW_YCOCG,
     DDS_SWAP_ALPHA,
+    DDS_A2XY,
 } DDSPostProc;
 
 typedef struct DDSContext {
@@ -79,21 +80,12 @@ static int parse_pixel_format(AVCodecContext *avctx)
     int alpha_exponent, ycocg_classic, ycocg_scaled, normal_map;
 
     /* Alternative DDS implementations use reserved1 as custom header. */
-    if (bytestream2_get_le32(gbc) == MKTAG('G', 'I', 'M', 'P'))
-        av_log(avctx, AV_LOG_WARNING, "Image generated with GIMP-DDS, "
-               "not all features are implemented.\n");
-    bytestream2_skip(gbc, 4 * 2);
-
+    bytestream2_skip(gbc, 4 * 3);
     gimp_tag = bytestream2_get_le32(gbc);
     alpha_exponent = gimp_tag == MKTAG('A', 'E', 'X', 'P');
     ycocg_classic  = gimp_tag == MKTAG('Y', 'C', 'G', '1');
     ycocg_scaled   = gimp_tag == MKTAG('Y', 'C', 'G', '2');
-
-    bytestream2_skip(gbc, 4 * 5);
-    if (bytestream2_get_le32(gbc) == MKTAG('N', 'V', 'T', 'T'))
-        av_log(avctx, AV_LOG_WARNING, "Image generated with NVidia-Texture-"
-               "Tool, not all features are implemented.\n");
-    bytestream2_skip(gbc, 4);
+    bytestream2_skip(gbc, 4 * 7);
 
     /* Now the real DDPF starts. */
     size = bytestream2_get_le32(gbc);
@@ -167,6 +159,7 @@ static int parse_pixel_format(AVCodecContext *avctx)
             ctx->tex_ratio = 8;
             ctx->tex_fun = ctx->dxtc.rgtc1u_block;
             avctx->pix_fmt = AV_PIX_FMT_RGBA;
+            break;
         case MKTAG('B', 'C', '4', 'S'):
             ctx->tex_ratio = 8;
             ctx->tex_fun = ctx->dxtc.rgtc1s_block;
@@ -182,7 +175,7 @@ static int parse_pixel_format(AVCodecContext *avctx)
             ctx->tex_ratio = 16;
             ctx->tex_fun = ctx->dxtc.rgtc2s_block;
             avctx->pix_fmt = AV_PIX_FMT_RGBA;
-        break;
+            break;
         case MKTAG('U', 'Y', 'V', 'Y'):
             ctx->compressed = 0;
             avctx->pix_fmt = AV_PIX_FMT_UYVY422;
@@ -191,7 +184,18 @@ static int parse_pixel_format(AVCodecContext *avctx)
             ctx->compressed = 0;
             avctx->pix_fmt = AV_PIX_FMT_YUYV422;
             break;
-        case MKTAG('D', 'X', '1', '0'):
+        case MKTAG('P', '8', ' ', ' '): /* ATI Palette8 */
+            ctx->compressed = 0;
+            ctx->paletted = 1;
+            avctx->pix_fmt = AV_PIX_FMT_PAL8;
+            break;
+        case MKTAG('A', 'T', 'C', ' '): /* ATI Texture Compression */
+        case MKTAG('A', 'T', 'C', 'A'):
+        case MKTAG('A', 'T', 'C', 'I'):
+        case MKTAG('E', 'T', 'C', ' '): /* Ericsson Texture Compression */
+        case MKTAG('E', 'T', 'C', '1'):
+        case MKTAG('E', 'T', 'C', '2'):
+        case MKTAG('D', 'X', '1', '0'): /* DirectX 10 */
             avpriv_report_missing_feature(avctx, "Texture type %s", buf);
             return AVERROR_PATCHWELCOME;
         default:
@@ -245,6 +249,24 @@ static int parse_pixel_format(AVCodecContext *avctx)
         ctx->postproc = DDS_RAW_YCOCG;
     else if (avctx->pix_fmt == AV_PIX_FMT_YA8)
         ctx->postproc = DDS_SWAP_ALPHA;
+
+    /* ATI/NVidia variants sometimes add swizzling in bpp. */
+    switch (bpp) {
+    case MKTAG('A', '2', 'X', 'Y'):
+        ctx->postproc = DDS_A2XY;
+        break;
+    case MKTAG('A', '2', 'D', '5'):
+    case MKTAG('x', 'G', 'x', 'R'):
+    case MKTAG('x', 'G', 'B', 'R'):
+    case MKTAG('x', 'R', 'G', 'B'):
+    case MKTAG('R', 'x', 'B', 'G'):
+    case MKTAG('R', 'B', 'x', 'G'):
+    case MKTAG('R', 'G', 'x', 'B'):
+        av_get_codec_tag_string(buf, sizeof(buf), bpp);
+        av_log(avctx, AV_LOG_WARNING,
+               "Unsupported swizzling type %s, colors might be off.\n", buf);
+        break;
+    }
 
     return 0;
 }
@@ -304,14 +326,15 @@ static void run_postproc(AVCodecContext *avctx, AVFrame *frame)
             int x = src[x_off];
             int y = src[y_off];
             int z;
-            float nx = x / 255.0f - 1.0f;
-            float ny = y / 255.0f - 1.0f;
+            /* Our data in is [0 255], convert to [-1 1] first. */
+            float nx = 2 * x / 255.0f - 1.0f;
+            float ny = 2 * y / 255.0f - 1.0f;
             float nz = 0;
             float d = 1.0f - nx * nx - ny * ny;
 
             if (d > 0)
                 nz = sqrtf(d);
-            z = av_clip_uint8((int) (255.0f * nz));
+            z = av_clip_uint8((int) (255.0f * (nz + 1) / 2));
 
             src[0] = x;
             src[1] = y;
@@ -354,6 +377,16 @@ static void run_postproc(AVCodecContext *avctx, AVFrame *frame)
             uint8_t *src = frame->data[0] + i;
             FFSWAP(uint8_t, src[0], src[1]);
         }
+        break;
+    case DDS_A2XY:
+        /* Red and Gree are stored swapped. */
+        av_log(avctx, AV_LOG_DEBUG, "Post-processing A2XY swizzle.\n");
+
+        for (i = 0; i < frame->linesize[0] * frame->height; i += 4) {
+            uint8_t *src = frame->data[0] + i;
+            FFSWAP(uint8_t, src[0], src[1]);
+        }
+        break;
     }
 }
 

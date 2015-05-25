@@ -35,7 +35,7 @@ FATE_DDS += fate-dds-$(1)
 fate-dds-$(1): CMD = framecrc -i $(TARGET_SAMPLES)/dds/libav_$(1).dds -sws_flags +accurate_rnd+bitexact -pix_fmt rgba
 endef
 
-DDS_FMT = argb argb-aexp dxt1 dxt1a dxt1-normalmap dxt2 dxt3 dxt4 dxt5 dxt5-aexp dxt5-normalmap dxt5-rxgb dxt5-ycocg dxt5-ycocg-scaled pal rgb16 rgb24 uyvy xbgr xrgb y ya ycocg yuyv
+DDS_FMT = argb argb-aexp dxt1 dxt1a dxt1-normalmap dxt2 dxt3 dxt4 dxt5 dxt5-aexp dxt5-normalmap dxt5-rxgb dxt5-ycocg dxt5-ycocg-scaled pal pal-ati rgb16 rgb24 rgtc1u rgtc2u rgtc2u-xy uyvy xbgr xrgb y ya ycocg yuyv
 $(foreach FMT,$(DDS_FMT),$(eval $(call FATE_IMGSUITE_DDS,$(FMT))))
 
 FATE_DDS-$(call DEMDEC, IMAGE2, DDS) += $(FATE_DDS)
