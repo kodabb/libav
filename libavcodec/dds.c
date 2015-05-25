@@ -49,10 +49,16 @@ enum DDSPostProc {
     DDS_NONE = 0,
     DDS_ALPHA_EXP,
     DDS_NORMAL_MAP,
-    DDS_DOOM3,
     DDS_RAW_YCOCG,
     DDS_SWAP_ALPHA,
-    DDS_A2XY,
+    DDS_SWIZZLE_A2XY,
+    DDS_SWIZZLE_RBXG,
+    DDS_SWIZZLE_RGXB,
+    DDS_SWIZZLE_RXBG,
+    DDS_SWIZZLE_RXGB,
+    DDS_SWIZZLE_XGBR,
+    DDS_SWIZZLE_XRBG,
+    DDS_SWIZZLE_XGXR,
 } DDSPostProc;
 
 typedef struct DDSContext {
@@ -151,7 +157,7 @@ static int parse_pixel_format(AVCodecContext *avctx)
             avctx->pix_fmt = AV_PIX_FMT_RGBA;
             /* This format may be considered as normal, but it is handled
              * differently in a separate postproc. */
-            ctx->postproc = DDS_DOOM3;
+            ctx->postproc = DDS_SWIZZLE_RXGB;
             normal_map = 0;
             break;
         case MKTAG('A', 'T', 'I', '1'):
@@ -253,18 +259,28 @@ static int parse_pixel_format(AVCodecContext *avctx)
     /* ATI/NVidia variants sometimes add swizzling in bpp. */
     switch (bpp) {
     case MKTAG('A', '2', 'X', 'Y'):
-        ctx->postproc = DDS_A2XY;
+        ctx->postproc = DDS_SWIZZLE_A2XY;
+        break;
+    case MKTAG('x', 'G', 'B', 'R'):
+        ctx->postproc = DDS_SWIZZLE_XGBR;
+        break;
+    case MKTAG('x', 'R', 'B', 'G'):
+        ctx->postproc = DDS_SWIZZLE_XRBG;
+        break;
+    case MKTAG('R', 'B', 'x', 'G'):
+        ctx->postproc = DDS_SWIZZLE_RBXG;
+        break;
+    case MKTAG('R', 'G', 'x', 'B'):
+        ctx->postproc = DDS_SWIZZLE_RGXB;
+        break;
+    case MKTAG('R', 'x', 'B', 'G'):
+        ctx->postproc = DDS_SWIZZLE_RXBG;
+        break;
+    case MKTAG('x', 'G', 'x', 'R'):
+        ctx->postproc = DDS_SWIZZLE_XGXR;
         break;
     case MKTAG('A', '2', 'D', '5'):
-    case MKTAG('x', 'G', 'x', 'R'):
-    case MKTAG('x', 'G', 'B', 'R'):
-    case MKTAG('x', 'R', 'G', 'B'):
-    case MKTAG('R', 'x', 'B', 'G'):
-    case MKTAG('R', 'B', 'x', 'G'):
-    case MKTAG('R', 'G', 'x', 'B'):
-        av_get_codec_tag_string(buf, sizeof(buf), bpp);
-        av_log(avctx, AV_LOG_WARNING,
-               "Unsupported swizzling type %s, colors might be off.\n", buf);
+        ctx->postproc = DDS_NORMAL_MAP;
         break;
     }
 
@@ -283,6 +299,15 @@ static int decompress_texture_thread(AVCodecContext *avctx, void *arg,
 
     ctx->tex_fun(p, frame->linesize[0], d);
     return 0;
+}
+
+static void do_swizzle(AVFrame *frame, int x, int y)
+{
+    int i;
+    for (i = 0; i < frame->linesize[0] * frame->height; i += 4) {
+        uint8_t *src = frame->data[0] + i;
+        FFSWAP(uint8_t, src[x], src[y]);
+    }
 }
 
 /* Convert internal format to normal RGBA (or YA8). */
@@ -342,15 +367,6 @@ static void run_postproc(AVCodecContext *avctx, AVFrame *frame)
             src[3] = 255;
         }
         break;
-    case DDS_DOOM3:
-        /* This format has just R and A swapped. */
-        av_log(avctx, AV_LOG_DEBUG, "Post-processing rxgb.\n");
-
-        for (i = 0; i < frame->linesize[0] * frame->height; i += 4) {
-            uint8_t *src = frame->data[0] + i;
-            FFSWAP(uint8_t, src[0], src[3]);
-        }
-      break;
     case DDS_RAW_YCOCG:
         /* Data is Y-Co-Cg-A and not RGBA, but they are represented
          * with the same masks in the DDPF header. */
@@ -378,14 +394,51 @@ static void run_postproc(AVCodecContext *avctx, AVFrame *frame)
             FFSWAP(uint8_t, src[0], src[1]);
         }
         break;
-    case DDS_A2XY:
-        /* Red and Gree are stored swapped. */
+    case DDS_SWIZZLE_A2XY:
+        /* Swap R and G, often used to restore a standard RGTC2. */
         av_log(avctx, AV_LOG_DEBUG, "Post-processing A2XY swizzle.\n");
-
-        for (i = 0; i < frame->linesize[0] * frame->height; i += 4) {
-            uint8_t *src = frame->data[0] + i;
-            FFSWAP(uint8_t, src[0], src[1]);
-        }
+        do_swizzle(frame, 0, 1);
+        break;
+    case DDS_SWIZZLE_RBXG:
+        /* Swap G and A, then B and new A (G). */
+        av_log(avctx, AV_LOG_DEBUG, "Post-processing RBXG swizzle.\n");
+        do_swizzle(frame, 1, 3);
+        do_swizzle(frame, 2, 3);
+        break;
+    case DDS_SWIZZLE_RGXB:
+        /* Swap B and A. */
+        av_log(avctx, AV_LOG_DEBUG, "Post-processing RGXB swizzle.\n");
+        do_swizzle(frame, 2, 3);
+        break;
+    case DDS_SWIZZLE_RXBG:
+        /* Swap G and A. */
+        av_log(avctx, AV_LOG_DEBUG, "Post-processing RXBG swizzle.\n");
+        do_swizzle(frame, 1, 3);
+        break;
+    case DDS_SWIZZLE_RXGB:
+        /* Swap R and A (misleading name). */
+        av_log(avctx, AV_LOG_DEBUG, "Post-processing RXGB swizzle.\n");
+        do_swizzle(frame, 0, 3);
+        break;
+    case DDS_SWIZZLE_XGBR:
+        /* Swap B and A, then R and new A (B). */
+        av_log(avctx, AV_LOG_DEBUG, "Post-processing XGBR swizzle.\n");
+        do_swizzle(frame, 2, 3);
+        do_swizzle(frame, 0, 3);
+        break;
+    case DDS_SWIZZLE_XGXR:
+        /* Swap G and A, then R and new A (G), then new R (G) and new G (A).
+         * This variant does not store any B. */
+        av_log(avctx, AV_LOG_DEBUG, "Post-processing XGXR swizzle.\n");
+        do_swizzle(frame, 1, 3);
+        do_swizzle(frame, 0, 3);
+        do_swizzle(frame, 0, 1);
+        break;
+    case DDS_SWIZZLE_XRBG:
+        /* Swap G and A, then R and new A (G). */
+        av_log(avctx, AV_LOG_DEBUG, "Post-processing XRBG swizzle.\n");
+        do_swizzle(frame, 1, 3);
+        do_swizzle(frame, 0, 3);
         break;
     }
 }
