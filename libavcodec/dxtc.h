@@ -38,6 +38,7 @@ typedef struct DXTCContext {
     int (*rgtc1s_block)(uint8_t *dst, ptrdiff_t stride, const uint8_t *block);
     int (*rgtc2u_block)(uint8_t *dst, ptrdiff_t stride, const uint8_t *block);
     int (*rgtc2s_block)(uint8_t *dst, ptrdiff_t stride, const uint8_t *block);
+    int (*dxn3dc_block)(uint8_t *dst, ptrdiff_t stride, const uint8_t *block);
 } DXTCContext;
 
 void ff_dxtc_decompression_init(DXTCContext *c);

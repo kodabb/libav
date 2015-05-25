@@ -487,8 +487,10 @@ static void rgtc_color(uint8_t *dst, ptrdiff_t stride, const uint8_t *block,
 
     decompress_indices(indices, block + 2);
 
-    /* This format stores one or two channels, since it only used to
-     * compress specular (black and white) or normal maps. */
+    /* At most only one or two channels are stored, since it only used to
+     * compress specular (black and white) or normal maps. Although
+     * the standard says to zero unused components, implementations fill
+     * all of them with the same value, probably to simplify accessing it. */
     for (y = 0; y < 4; y++) {
         for (x = 0; x < 4; x++) {
             int i = indices[x + y * 4];
@@ -532,7 +534,7 @@ static void rgtc_block_internal(uint8_t *dst, ptrdiff_t stride,
 
 /**
  * Decompress one block of a RGRC1 texture with signed or unsigned components
- * and store the resulting RGBA pixels in 'dst'. Alpha is fully opaque.
+ * and store the resulting RGBA pixels in 'dst'.
  *
  * @param dst    output buffer.
  * @param stride scanline in bytes.
@@ -546,16 +548,8 @@ static int rgtc1u_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
     return 8;
 }
 
-/**
- * Decompress one block of a RGRC2 texture with signed or unsigned components
- * and store the resulting RGBA pixels in 'dst'. Alpha is fully opaque.
- *
- * @param dst    output buffer.
- * @param stride scanline in bytes.
- * @param block  block to decompress.
- * @return how much texture data has been consumed.
- */
-static int rgtc2u_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
+static void rgtc2u_block_internal(uint8_t *dst, ptrdiff_t stride,
+                                  const uint8_t *block)
 {
     uint8_t c0[4 * 4 * 4];
     uint8_t c1[4 * 4 * 4];
@@ -582,18 +576,54 @@ static int rgtc2u_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
                 nb = sqrtf(d);
             b = av_clip_uint8(rint(255.0f * (nb + 1) / 2));
 
-            /* This is the 3Dc variant, with swapped G and R, which seems
-             * to be the more widespread.*/
-            p[0] = g;
-            p[1] = r;
+            p[0] = r;
+            p[1] = g;
             p[2] = b;
             p[3] = 255;
+        }
+    }
+}
+
+/**
+ * Decompress one block of a RGRC2 texture with unsigned components
+ * and store the resulting RGBA pixels in 'dst'. Alpha is fully opaque.
+ *
+ * @param dst    output buffer.
+ * @param stride scanline in bytes.
+ * @param block  block to decompress.
+ * @return how much texture data has been consumed.
+ */
+static int rgtc2u_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
+{
+    rgtc2u_block_internal(dst, stride, block);
+
+    return 16;
+}
+
+/**
+ * Decompress one block of a 3Dc texture with unsigned components
+ * and store the resulting RGBA pixels in 'dst'. Alpha is fully opaque.
+ *
+ * @param dst    output buffer.
+ * @param stride scanline in bytes.
+ * @param block  block to decompress.
+ * @return how much texture data has been consumed.
+ */
+static int dxn3dc_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
+{
+    int x, y;
+    rgtc2u_block_internal(dst, stride, block);
+
+    /* This is the 3Dc variant of RGTC2, with swapped R and G. */
+    for (y = 0; y < 4; y++) {
+        for (x = 0; x < 4; x++) {
+            uint8_t *p = dst + x * 4 + y * stride;
+            FFSWAP(uint8_t, p[0], p[1]);
         }
     }
 
     return 16;
 }
-
 
 av_cold void ff_dxtc_decompression_init(DXTCContext *c)
 {
@@ -607,4 +637,5 @@ av_cold void ff_dxtc_decompression_init(DXTCContext *c)
     c->dxt5ys_block = dxt5ys_block;
     c->rgtc1u_block = rgtc1u_block;
     c->rgtc2u_block = rgtc2u_block;
+    c->dxn3dc_block = dxn3dc_block;
 }

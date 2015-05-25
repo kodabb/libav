@@ -61,6 +61,45 @@ enum DDSPostProc {
     DDS_SWIZZLE_XGXR,
 } DDSPostProc;
 
+enum DDSDXGIFormat {
+    DXGI_FORMAT_R16G16B16A16_TYPELESS       =  9,
+    DXGI_FORMAT_R16G16B16A16_FLOAT          = 10,
+    DXGI_FORMAT_R16G16B16A16_UNORM          = 11,
+    DXGI_FORMAT_R16G16B16A16_UINT           = 12,
+    DXGI_FORMAT_R16G16B16A16_SNORM          = 13,
+    DXGI_FORMAT_R16G16B16A16_SINT           = 14,
+
+    DXGI_FORMAT_R8G8B8A8_TYPELESS           = 27,
+    DXGI_FORMAT_R8G8B8A8_UNORM              = 28,
+    DXGI_FORMAT_R8G8B8A8_UNORM_SRGB         = 29,
+    DXGI_FORMAT_R8G8B8A8_UINT               = 30,
+    DXGI_FORMAT_R8G8B8A8_SNORM              = 31,
+    DXGI_FORMAT_R8G8B8A8_SINT               = 32,
+
+    DXGI_FORMAT_BC1_TYPELESS                = 70,
+    DXGI_FORMAT_BC1_UNORM                   = 71,
+    DXGI_FORMAT_BC1_UNORM_SRGB              = 72,
+    DXGI_FORMAT_BC2_TYPELESS                = 73,
+    DXGI_FORMAT_BC2_UNORM                   = 74,
+    DXGI_FORMAT_BC2_UNORM_SRGB              = 75,
+    DXGI_FORMAT_BC3_TYPELESS                = 76,
+    DXGI_FORMAT_BC3_UNORM                   = 77,
+    DXGI_FORMAT_BC3_UNORM_SRGB              = 78,
+    DXGI_FORMAT_BC4_TYPELESS                = 79,
+    DXGI_FORMAT_BC4_UNORM                   = 80,
+    DXGI_FORMAT_BC4_SNORM                   = 81,
+    DXGI_FORMAT_BC5_TYPELESS                = 82,
+    DXGI_FORMAT_BC5_UNORM                   = 83,
+    DXGI_FORMAT_BC5_SNORM                   = 84,
+    DXGI_FORMAT_B5G6R5_UNORM                = 85,
+    DXGI_FORMAT_B8G8R8A8_UNORM              = 87,
+    DXGI_FORMAT_B8G8R8X8_UNORM              = 88,
+    DXGI_FORMAT_B8G8R8A8_TYPELESS           = 90,
+    DXGI_FORMAT_B8G8R8A8_UNORM_SRGB         = 91,
+    DXGI_FORMAT_B8G8R8X8_TYPELESS           = 92,
+    DXGI_FORMAT_B8G8R8X8_UNORM_SRGB         = 93,
+} DDSDXGIFormat;
+
 typedef struct DDSContext {
     DXTCContext dxtc;
     GetByteContext gbc;
@@ -82,8 +121,9 @@ static int parse_pixel_format(AVCodecContext *avctx)
     GetByteContext *gbc = &ctx->gbc;
     char buf[32];
     uint32_t flags, fourcc, gimp_tag;
+    enum DDSDXGIFormat dxgi;
     int size, bpp, r, g, b, a;
-    int alpha_exponent, ycocg_classic, ycocg_scaled, normal_map;
+    int alpha_exponent, ycocg_classic, ycocg_scaled, normal_map, array;
 
     /* Alternative DDS implementations use reserved1 as custom header. */
     bytestream2_skip(gbc, 4 * 3);
@@ -111,6 +151,12 @@ static int parse_pixel_format(AVCodecContext *avctx)
     b   = bytestream2_get_le32(gbc); // bbitmask
     a   = bytestream2_get_le32(gbc); // abitmask
 
+    bytestream2_skip(gbc, 4); // caps
+    bytestream2_skip(gbc, 4); // caps2
+    bytestream2_skip(gbc, 4); // caps3
+    bytestream2_skip(gbc, 4); // caps4
+    bytestream2_skip(gbc, 4); // reserved2
+
     av_get_codec_tag_string(buf, sizeof(buf), fourcc);
     av_log(avctx, AV_LOG_VERBOSE, "fourcc %s bpp %d "
            "r 0x%x g 0x%x b 0x%x a 0x%x.\n", buf, bpp, r, g, b, a);
@@ -119,27 +165,26 @@ static int parse_pixel_format(AVCodecContext *avctx)
         av_log(avctx, AV_LOG_VERBOSE, "and GIMP-DDS tag %s\n", buf);
     }
 
+    if (ctx->compressed)
+        avctx->pix_fmt = AV_PIX_FMT_RGBA;
+
     if (ctx->compressed) {
         switch (fourcc) {
         case MKTAG('D', 'X', 'T', '1'):
             ctx->tex_ratio = 8;
             ctx->tex_fun = ctx->dxtc.dxt1a_block;
-            avctx->pix_fmt = AV_PIX_FMT_RGBA;
             break;
         case MKTAG('D', 'X', 'T', '2'):
             ctx->tex_ratio = 16;
             ctx->tex_fun = ctx->dxtc.dxt2_block;
-            avctx->pix_fmt = AV_PIX_FMT_RGBA;
             break;
         case MKTAG('D', 'X', 'T', '3'):
             ctx->tex_ratio = 16;
             ctx->tex_fun = ctx->dxtc.dxt3_block;
-            avctx->pix_fmt = AV_PIX_FMT_RGBA;
             break;
         case MKTAG('D', 'X', 'T', '4'):
             ctx->tex_ratio = 16;
             ctx->tex_fun = ctx->dxtc.dxt4_block;
-            avctx->pix_fmt = AV_PIX_FMT_RGBA;
             break;
         case MKTAG('D', 'X', 'T', '5'):
             ctx->tex_ratio = 16;
@@ -149,14 +194,12 @@ static int parse_pixel_format(AVCodecContext *avctx)
                 ctx->tex_fun = ctx->dxtc.dxt5y_block;
             else
                 ctx->tex_fun = ctx->dxtc.dxt5_block;
-            avctx->pix_fmt = AV_PIX_FMT_RGBA;
             break;
         case MKTAG('R', 'X', 'G', 'B'):
             ctx->tex_ratio = 16;
             ctx->tex_fun = ctx->dxtc.dxt5_block;
-            avctx->pix_fmt = AV_PIX_FMT_RGBA;
-            /* This format may be considered as normal, but it is handled
-             * differently in a separate postproc. */
+            /* This format may be considered as a normal map,
+             * but it is handled differently in a separate postproc. */
             ctx->postproc = DDS_SWIZZLE_RXGB;
             normal_map = 0;
             break;
@@ -164,23 +207,22 @@ static int parse_pixel_format(AVCodecContext *avctx)
         case MKTAG('B', 'C', '4', 'U'):
             ctx->tex_ratio = 8;
             ctx->tex_fun = ctx->dxtc.rgtc1u_block;
-            avctx->pix_fmt = AV_PIX_FMT_RGBA;
             break;
         case MKTAG('B', 'C', '4', 'S'):
             ctx->tex_ratio = 8;
             ctx->tex_fun = ctx->dxtc.rgtc1s_block;
-            avctx->pix_fmt = AV_PIX_FMT_RGBA;
             break;
-        case MKTAG('A', 'T', 'I', '2'):
-        case MKTAG('B', 'C', '5', 'U'):
+        case MKTAG('A', 'T', 'I', '2'): /* 3Dc (RGT2 variant) */
+            ctx->tex_ratio = 16;
+            ctx->tex_fun = ctx->dxtc.dxn3dc_block;
+            break;
+    case MKTAG('B', 'C', '5', 'U'):
             ctx->tex_ratio = 16;
             ctx->tex_fun = ctx->dxtc.rgtc2u_block;
-            avctx->pix_fmt = AV_PIX_FMT_RGBA;
             break;
         case MKTAG('B', 'C', '5', 'S'):
             ctx->tex_ratio = 16;
             ctx->tex_fun = ctx->dxtc.rgtc2s_block;
-            avctx->pix_fmt = AV_PIX_FMT_RGBA;
             break;
         case MKTAG('U', 'Y', 'V', 'Y'):
             ctx->compressed = 0;
@@ -195,15 +237,102 @@ static int parse_pixel_format(AVCodecContext *avctx)
             ctx->paletted = 1;
             avctx->pix_fmt = AV_PIX_FMT_PAL8;
             break;
-        case MKTAG('A', 'T', 'C', ' '): /* ATI Texture Compression */
-        case MKTAG('A', 'T', 'C', 'A'):
-        case MKTAG('A', 'T', 'C', 'I'):
-        case MKTAG('E', 'T', 'C', ' '): /* Ericsson Texture Compression */
-        case MKTAG('E', 'T', 'C', '1'):
-        case MKTAG('E', 'T', 'C', '2'):
         case MKTAG('D', 'X', '1', '0'): /* DirectX 10 */
-            avpriv_report_missing_feature(avctx, "Texture type %s", buf);
-            return AVERROR_PATCHWELCOME;
+            /* Additional header. */
+            dxgi = bytestream2_get_le32(gbc);
+            bytestream2_skip(gbc, 4); // resourceDimension
+            bytestream2_skip(gbc, 4); // miscFlag
+            array = bytestream2_get_le32(gbc);
+            bytestream2_skip(gbc, 4); // miscFlag2
+
+            if (array != 0)
+                av_log(avctx, AV_LOG_VERBOSE,
+                       "Found array of size %d (ignored).\n", array);
+
+            /* Only BC* are actually compressed. */
+            ctx->compressed = (dxgi >= 70) && (dxgi <= 84);
+
+            av_log(avctx, AV_LOG_VERBOSE, "DXGI format %d.\n", dxgi);
+            switch (dxgi) {
+            /* RGB types. */
+            case DXGI_FORMAT_R16G16B16A16_TYPELESS:
+            case DXGI_FORMAT_R16G16B16A16_FLOAT:
+            case DXGI_FORMAT_R16G16B16A16_UNORM:
+            case DXGI_FORMAT_R16G16B16A16_UINT:
+            case DXGI_FORMAT_R16G16B16A16_SNORM:
+            case DXGI_FORMAT_R16G16B16A16_SINT:
+                avctx->pix_fmt = AV_PIX_FMT_BGRA64;
+                break;
+            case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
+                avctx->colorspace = AVCOL_SPC_RGB;
+            case DXGI_FORMAT_R8G8B8A8_TYPELESS:
+            case DXGI_FORMAT_R8G8B8A8_UNORM:
+            case DXGI_FORMAT_R8G8B8A8_UINT:
+            case DXGI_FORMAT_R8G8B8A8_SNORM:
+            case DXGI_FORMAT_R8G8B8A8_SINT:
+                avctx->pix_fmt = AV_PIX_FMT_BGRA;
+                break;
+            case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
+                avctx->colorspace = AVCOL_SPC_RGB;
+            case DXGI_FORMAT_B8G8R8A8_TYPELESS:
+            case DXGI_FORMAT_B8G8R8A8_UNORM:
+                avctx->pix_fmt = AV_PIX_FMT_RGBA;
+                break;
+            case DXGI_FORMAT_B8G8R8X8_UNORM_SRGB:
+                avctx->colorspace = AVCOL_SPC_RGB;
+            case DXGI_FORMAT_B8G8R8X8_TYPELESS:
+            case DXGI_FORMAT_B8G8R8X8_UNORM:
+                avctx->pix_fmt = AV_PIX_FMT_RGBA; // opaque
+                break;
+            case DXGI_FORMAT_B5G6R5_UNORM:
+                avctx->pix_fmt = AV_PIX_FMT_RGB565LE;
+                break;
+            /* Texture types. */
+            case DXGI_FORMAT_BC1_UNORM_SRGB:
+                avctx->colorspace = AVCOL_SPC_RGB;
+            case DXGI_FORMAT_BC1_TYPELESS:
+            case DXGI_FORMAT_BC1_UNORM:
+                ctx->tex_ratio = 8;
+                ctx->tex_fun = ctx->dxtc.dxt1a_block;
+                break;
+            case DXGI_FORMAT_BC2_UNORM_SRGB:
+                avctx->colorspace = AVCOL_SPC_RGB;
+            case DXGI_FORMAT_BC2_TYPELESS:
+            case DXGI_FORMAT_BC2_UNORM:
+                ctx->tex_ratio = 16;
+                ctx->tex_fun = ctx->dxtc.dxt3_block;
+                break;
+            case DXGI_FORMAT_BC3_UNORM_SRGB:
+                avctx->colorspace = AVCOL_SPC_RGB;
+            case DXGI_FORMAT_BC3_TYPELESS:
+            case DXGI_FORMAT_BC3_UNORM:
+                ctx->tex_ratio = 16;
+                ctx->tex_fun = ctx->dxtc.dxt5_block;
+                break;
+            case DXGI_FORMAT_BC4_TYPELESS:
+            case DXGI_FORMAT_BC4_UNORM:
+                ctx->tex_ratio = 8;
+                ctx->tex_fun = ctx->dxtc.rgtc1u_block;
+                break;
+            case DXGI_FORMAT_BC4_SNORM:
+                ctx->tex_ratio = 8;
+                ctx->tex_fun = ctx->dxtc.rgtc1s_block;
+                break;
+            case DXGI_FORMAT_BC5_TYPELESS:
+            case DXGI_FORMAT_BC5_UNORM:
+                ctx->tex_ratio = 16;
+                ctx->tex_fun = ctx->dxtc.rgtc2u_block;
+                break;
+            case DXGI_FORMAT_BC5_SNORM:
+                ctx->tex_ratio = 16;
+                ctx->tex_fun = ctx->dxtc.rgtc2s_block;
+                break;
+            default:
+                av_log(avctx, AV_LOG_ERROR,
+                       "Unsupported DXGI format %d.\n", dxgi);
+                return AVERROR_INVALIDDATA;
+            }
+            break;
         default:
             av_log(avctx, AV_LOG_ERROR, "Unsupported %s fourcc.\n", buf);
             return AVERROR_INVALIDDATA;
@@ -428,7 +557,7 @@ static void run_postproc(AVCodecContext *avctx, AVFrame *frame)
         break;
     case DDS_SWIZZLE_XGXR:
         /* Swap G and A, then R and new A (G), then new R (G) and new G (A).
-         * This variant does not store any B. */
+         * This variant does not store any B component. */
         av_log(avctx, AV_LOG_DEBUG, "Post-processing XGXR swizzle.\n");
         do_swizzle(frame, 1, 3);
         do_swizzle(frame, 0, 3);
@@ -489,16 +618,11 @@ static int dds_decode(AVCodecContext *avctx, void *data,
     if (mipmap != 0)
         av_log(avctx, AV_LOG_VERBOSE, "Found %d mipmaps (ignored).\n", mipmap);
 
-    /* Extract pixel format information, considering variants in reserved1. */
+    /* Extract pixel format information, considering additional elements
+     * in reserved1 and reserved2. */
     ret = parse_pixel_format(avctx);
     if (ret < 0)
         return ret;
-
-    bytestream2_skip(gbc, 4); // caps
-    bytestream2_skip(gbc, 4); // caps2
-    bytestream2_skip(gbc, 4); // caps3
-    bytestream2_skip(gbc, 4); // caps4
-    bytestream2_skip(gbc, 4); // reserved2
 
     ret = ff_get_buffer(avctx, frame, 0);
     if (ret < 0)
