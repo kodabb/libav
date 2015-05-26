@@ -34,6 +34,7 @@ version <next>:
 - NVIDIA NVENC-accelerated H.264 and HEVC encoding support
 - Multipart JPEG demuxer
 - Hap decoder and encoder
+- DirectDraw Surface image/texture decoding
 
 
 version 11:
