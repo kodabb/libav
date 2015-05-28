@@ -162,8 +162,8 @@ static int dxt1a_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
     return 8;
 }
 
-static av_always_inline void dxt3_block_internal(uint8_t *dst, ptrdiff_t stride,
-                                                 const uint8_t *block)
+static void dxt3_block_internal(uint8_t *dst, ptrdiff_t stride,
+                                const uint8_t *block)
 {
     int i;
     uint8_t alpha_values[16] = { 0 };
@@ -183,7 +183,7 @@ static av_always_inline void dxt3_block_internal(uint8_t *dst, ptrdiff_t stride,
 }
 
 /** Convert a premultiplied alpha pixel to a straigth alpha pixel. */
-static inline void premult2straight(uint8_t *src)
+static av_always_inline void premult2straight(uint8_t *src)
 {
     int r = src[0];
     int g = src[1];
@@ -266,9 +266,8 @@ static void decompress_indices(uint8_t *dst, const uint8_t *src)
     }
 }
 
-static av_always_inline void dxt5_block_internal(uint8_t *dst,
-                                                 ptrdiff_t stride,
-                                                 const uint8_t *block)
+static void dxt5_block_internal(uint8_t *dst, ptrdiff_t stride,
+                                const uint8_t *block)
 {
     uint8_t alpha0, alpha1;
     uint8_t alpha_indices[16];
@@ -492,10 +491,8 @@ static void rgtc_block_internal(uint8_t *dst, ptrdiff_t stride,
     }
 }
 
-static av_always_inline void rgtc1_block_internal(uint8_t *dst,
-                                                  ptrdiff_t stride,
-                                                  const uint8_t *block,
-                                                  int sign)
+static void rgtc1_block_internal(uint8_t *dst, ptrdiff_t stride,
+                                 const uint8_t *block, int sign)
 {
     float color_table[8];
     float r0, r1;
