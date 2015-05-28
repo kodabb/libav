@@ -38,11 +38,10 @@ static const uint8_t const_black[] = {
 
 #define RGBA(r, g, b, a) (r) | ((g) << 8) | ((b) << 16) | ((a) << 24)
 
-static av_always_inline void dxt1_block_internal(uint8_t *dst,
-                                                 const uint8_t *block,
-                                                 ptrdiff_t stride,
-                                                 const uint8_t *alpha_tab,
-                                                 uint8_t alpha_1bit)
+static void dxt_block_internal(uint8_t *dst, ptrdiff_t stride,
+                               const uint8_t *block,
+                               const uint8_t *alpha_tab,
+                               uint8_t alpha_1bit)
 {
     uint32_t tmp, code;
     uint16_t color0, color1;
@@ -141,7 +140,7 @@ static av_always_inline void dxt1_block_internal(uint8_t *dst,
  */
 static int dxt1_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
 {
-    dxt1_block_internal(dst, block, stride, const_black, 255);
+    dxt_block_internal(dst, stride, block, const_black, 255);
 
     return 8;
 }
@@ -158,7 +157,7 @@ static int dxt1_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
  */
 static int dxt1a_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
 {
-    dxt1_block_internal(dst, block, stride, const_black, 0);
+    dxt_block_internal(dst, stride, block, const_black, 0);
 
     return 8;
 }
@@ -180,7 +179,7 @@ static av_always_inline void dxt3_block_internal(uint8_t *dst, ptrdiff_t stride,
         block += 2;
     }
 
-    dxt1_block_internal(dst, block, stride, alpha_values, 255);
+    dxt_block_internal(dst, stride, block, alpha_values, 255);
 }
 
 /** Convert a premultiplied alpha pixel to a straigth alpha pixel. */
@@ -401,7 +400,7 @@ static int dxt5_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
  * @param src    input buffer.
  * @param scaled variant with scaled chroma components and opaque alpha.
  */
-static void ycocg2rgba(uint8_t *src, int scaled)
+static av_always_inline void ycocg2rgba(uint8_t *src, int scaled)
 {
     int r = src[0];
     int g = src[1];
@@ -467,9 +466,10 @@ static int dxt5ys_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
     return 16;
 }
 
-static void rgtc_color_block(uint8_t *dst, ptrdiff_t stride,
-                             const uint8_t *block, const float *color_tab,
-                             int sign)
+static void rgtc_block_internal(uint8_t *dst, ptrdiff_t stride,
+                                const uint8_t *block,
+                                const float *color_tab,
+                                int sign)
 {
     uint8_t indices[16];
     int x, y;
@@ -529,7 +529,7 @@ static av_always_inline void rgtc1_block_internal(uint8_t *dst,
         color_table[7] = 1.0f;                     // bit code 111
     }
 
-    rgtc_color_block(dst, stride, block, color_table, sign);
+    rgtc_block_internal(dst, stride, block, color_table, sign);
 }
 
 /**
