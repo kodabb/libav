@@ -271,9 +271,7 @@ static void dxt5_block_internal(uint8_t *dst, ptrdiff_t stride,
 {
     uint8_t alpha0, alpha1;
     uint8_t alpha_indices[16];
-    uint8_t r0, g0, b0, r1, g1, b1;
-    uint16_t color0, color1;
-    uint32_t tmp, code;
+    uint8_t alpha_tab[16];
     int x, y;
 
     alpha0 = *(block);
@@ -281,30 +279,9 @@ static void dxt5_block_internal(uint8_t *dst, ptrdiff_t stride,
 
     decompress_indices(alpha_indices, block + 2);
 
-    color0 = AV_RL16(block + 8);
-    color1 = AV_RL16(block + 10);
-
-    tmp = (color0 >> 11) * 255 + 16;
-    r0  = (uint8_t) ((tmp / 32 + tmp) / 32);
-    tmp = ((color0 & 0x07E0) >> 5) * 255 + 32;
-    g0  = (uint8_t) ((tmp / 64 + tmp) / 64);
-    tmp = (color0 & 0x001F) * 255 + 16;
-    b0  = (uint8_t) ((tmp / 32 + tmp) / 32);
-
-    tmp = (color1 >> 11) * 255 + 16;
-    r1  = (uint8_t) ((tmp / 32 + tmp) / 32);
-    tmp = ((color1 & 0x07E0) >> 5) * 255 + 32;
-    g1  = (uint8_t) ((tmp / 64 + tmp) / 64);
-    tmp = (color1 & 0x001F) * 255 + 16;
-    b1  = (uint8_t) ((tmp / 32 + tmp) / 32);
-
-    code = AV_RL32(block + 12);
-
     for (y = 0; y < 4; y++) {
         for (x = 0; x < 4; x++) {
             int alpha_code = alpha_indices[x + y * 4];
-            uint8_t color_code = (code >> 2 * (x + y * 4)) & 0x03;
-            uint32_t pixel = 0;
             uint8_t alpha;
 
             if (alpha_code == 0) {
@@ -327,30 +304,11 @@ static void dxt5_block_internal(uint8_t *dst, ptrdiff_t stride,
                 }
             }
 
-            switch (color_code) {
-            case 0:
-                pixel = RGBA(r0, g0, b0, alpha);
-                break;
-            case 1:
-                pixel = RGBA(r1, g1, b1, alpha);
-                break;
-            case 2:
-                pixel = RGBA((2 * r0 + r1) / 3,
-                             (2 * g0 + g1) / 3,
-                             (2 * b0 + b1) / 3,
-                             alpha);
-                break;
-            case 3:
-                pixel = RGBA((r0 + 2 * r1) / 3,
-                             (g0 + 2 * g1) / 3,
-                             (b0 + 2 * b1) / 3,
-                             alpha);
-                break;
-            }
-
-            AV_WL32(dst + x * 4 + y * stride, pixel);
+            alpha_tab[x + y * 4] = alpha;
         }
     }
+
+    dxt_block_internal(dst, stride, block + 8, alpha_tab, 255);
 }
 
 /**
