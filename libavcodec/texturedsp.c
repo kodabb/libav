@@ -33,8 +33,8 @@
 
 #define RGBA(r, g, b, a) (r) | ((g) << 8) | ((b) << 16) | ((a) << 24)
 
-static void dxt1_block_internal(uint8_t *dst, ptrdiff_t stride,
-                                const uint8_t *block, uint8_t alpha)
+static inline void dxt1_block_internal(uint8_t *dst, ptrdiff_t stride,
+                                       const uint8_t *block, uint8_t alpha)
 {
     uint32_t tmp, code;
     uint16_t color0, color1;
@@ -153,8 +153,8 @@ static int dxt1a_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
     return 8;
 }
 
-static void dxt3_block_internal(uint8_t *dst, ptrdiff_t stride,
-                                const uint8_t *block)
+static inline void dxt3_block_internal(uint8_t *dst, ptrdiff_t stride,
+                                       const uint8_t *block)
 {
     uint32_t tmp, code;
     uint16_t color0, color1;
@@ -304,8 +304,8 @@ static void decompress_indices(uint8_t *dst, const uint8_t *src)
     }
 }
 
-static void dxt5_block_internal(uint8_t *dst, ptrdiff_t stride,
-                                const uint8_t *block)
+static inline void dxt5_block_internal(uint8_t *dst, ptrdiff_t stride,
+                                       const uint8_t *block)
 {
     uint8_t alpha0, alpha1;
     uint8_t alpha_indices[16];
@@ -503,10 +503,10 @@ static int dxt5ys_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
     return 16;
 }
 
-static void rgtc_block_internal(uint8_t *dst, ptrdiff_t stride,
-                                const uint8_t *block,
-                                const float *color_tab,
-                                int sign)
+static inline void rgtc_block_internal(uint8_t *dst, ptrdiff_t stride,
+                                       const uint8_t *block,
+                                       const float *color_tab,
+                                       int sign)
 {
     uint8_t indices[16];
     int x, y;
@@ -529,8 +529,8 @@ static void rgtc_block_internal(uint8_t *dst, ptrdiff_t stride,
     }
 }
 
-static void rgtc1_block_internal(uint8_t *dst, ptrdiff_t stride,
-                                 const uint8_t *block, int sign)
+static inline void rgtc1_block_internal(uint8_t *dst, ptrdiff_t stride,
+                                        const uint8_t *block, int sign)
 {
     float color_table[8];
     float r0, r1;
@@ -599,8 +599,8 @@ static int rgtc1u_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
     return 8;
 }
 
-static void rgtc2_block_internal(uint8_t *dst, ptrdiff_t stride,
-                                 const uint8_t *block, int sign)
+static inline void rgtc2_block_internal(uint8_t *dst, ptrdiff_t stride,
+                                        const uint8_t *block, int sign)
 {
     uint8_t c0[4 * 4 * 4];
     uint8_t c1[4 * 4 * 4];
