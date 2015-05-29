@@ -38,7 +38,7 @@ static const uint8_t const_black[] = {
 
 #define RGBA(r, g, b, a) (r) | ((g) << 8) | ((b) << 16) | ((a) << 24)
 
-static void dxt_block_internal(uint8_t *dst, ptrdiff_t stride,
+static inline void dxt_block_internal(uint8_t *dst, ptrdiff_t stride,
                                const uint8_t *block,
                                const uint8_t *alpha_tab,
                                uint8_t alpha_1bit)
@@ -162,7 +162,7 @@ static int dxt1a_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
     return 8;
 }
 
-static void dxt3_block_internal(uint8_t *dst, ptrdiff_t stride,
+static inline void dxt3_block_internal(uint8_t *dst, ptrdiff_t stride,
                                 const uint8_t *block)
 {
     int i;
@@ -266,7 +266,7 @@ static void decompress_indices(uint8_t *dst, const uint8_t *src)
     }
 }
 
-static void dxt5_block_internal(uint8_t *dst, ptrdiff_t stride,
+static inline void dxt5_block_internal(uint8_t *dst, ptrdiff_t stride,
                                 const uint8_t *block)
 {
     uint8_t alpha0, alpha1;
@@ -423,7 +423,7 @@ static int dxt5ys_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
     return 16;
 }
 
-static void rgtc_block_internal(uint8_t *dst, ptrdiff_t stride,
+static internal void rgtc_block_internal(uint8_t *dst, ptrdiff_t stride,
                                 const uint8_t *block,
                                 const float *color_tab,
                                 int sign)
@@ -449,7 +449,7 @@ static void rgtc_block_internal(uint8_t *dst, ptrdiff_t stride,
     }
 }
 
-static void rgtc1_block_internal(uint8_t *dst, ptrdiff_t stride,
+static internal void rgtc1_block_internal(uint8_t *dst, ptrdiff_t stride,
                                  const uint8_t *block, int sign)
 {
     float color_table[8];
