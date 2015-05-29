@@ -31,17 +31,10 @@
 
 #include "texturedsp.h"
 
-static const uint8_t const_black[] = {
-    255, 255, 255, 255, 255, 255, 255, 255,
-    255, 255, 255, 255, 255, 255, 255, 255,
-};
-
 #define RGBA(r, g, b, a) (r) | ((g) << 8) | ((b) << 16) | ((a) << 24)
 
-static void dxt_block_internal(uint8_t *dst, ptrdiff_t stride,
-                               const uint8_t *block,
-                               const uint8_t *alpha_tab,
-                               uint8_t alpha_1bit)
+static void dxt1_block_internal(uint8_t *dst, ptrdiff_t stride,
+                                const uint8_t *block, uint8_t alpha)
 {
     uint32_t tmp, code;
     uint16_t color0, color1;
@@ -70,28 +63,27 @@ static void dxt_block_internal(uint8_t *dst, ptrdiff_t stride,
     if (color0 > color1) {
         for (y = 0; y < 4; y++) {
             for (x = 0; x < 4; x++) {
-                uint8_t alpha = alpha_tab[x + y * 4];
                 uint32_t pixel = 0;
                 uint32_t pos_code = (code >> 2 * (x + y * 4)) & 0x03;
 
                 switch (pos_code) {
                 case 0:
-                    pixel = RGBA(r0, g0, b0, alpha);
+                    pixel = RGBA(r0, g0, b0, 255);
                     break;
                 case 1:
-                    pixel = RGBA(r1, g1, b1, alpha);
+                    pixel = RGBA(r1, g1, b1, 255);
                     break;
                 case 2:
                     pixel = RGBA((2 * r0 + r1) / 3,
                                  (2 * g0 + g1) / 3,
                                  (2 * b0 + b1) / 3,
-                                 alpha);
+                                 255);
                     break;
                 case 3:
                     pixel = RGBA((r0 + 2 * r1) / 3,
                                  (g0 + 2 * g1) / 3,
                                  (b0 + 2 * b1) / 3,
-                                 alpha);
+                                 255);
                     break;
                 }
 
@@ -101,25 +93,24 @@ static void dxt_block_internal(uint8_t *dst, ptrdiff_t stride,
     } else {
         for (y = 0; y < 4; y++) {
             for (x = 0; x < 4; x++) {
-                uint8_t alpha = alpha_tab[x + y * 4];
                 uint32_t pixel = 0;
                 uint32_t pos_code = (code >> 2 * (x + y * 4)) & 0x03;
 
                 switch (pos_code) {
                 case 0:
-                    pixel = RGBA(r0, g0, b0, alpha);
+                    pixel = RGBA(r0, g0, b0, 255);
                     break;
                 case 1:
-                    pixel = RGBA(r1, g1, b1, alpha);
+                    pixel = RGBA(r1, g1, b1, 255);
                     break;
                 case 2:
                     pixel = RGBA((r0 + r1) / 2,
                                  (g0 + g1) / 2,
                                  (b0 + b1) / 2,
-                                 alpha);
+                                 255);
                     break;
                 case 3:
-                    pixel = RGBA(0, 0, 0, alpha_1bit);
+                    pixel = RGBA(0, 0, 0, alpha);
                     break;
                 }
 
@@ -140,7 +131,7 @@ static void dxt_block_internal(uint8_t *dst, ptrdiff_t stride,
  */
 static int dxt1_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
 {
-    dxt_block_internal(dst, stride, block, const_black, 255);
+    dxt1_block_internal(dst, stride, block, 255);
 
     return 8;
 }
@@ -157,7 +148,7 @@ static int dxt1_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
  */
 static int dxt1a_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
 {
-    dxt_block_internal(dst, stride, block, const_black, 0);
+    dxt1_block_internal(dst, stride, block, 0);
 
     return 8;
 }
@@ -165,21 +156,68 @@ static int dxt1a_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
 static void dxt3_block_internal(uint8_t *dst, ptrdiff_t stride,
                                 const uint8_t *block)
 {
-    int i;
-    uint8_t alpha_values[16] = { 0 };
+    uint32_t tmp, code;
+    uint16_t color0, color1;
+    uint8_t r0, g0, b0, r1, g1, b1;
+    int x, y;
 
-    for (i = 0; i < 4; i++) {
-        const uint16_t alpha = AV_RL16(block);
+    color0 = AV_RL16(block + 8);
+    color1 = AV_RL16(block + 10);
 
-        alpha_values[i * 4 + 0] = ((alpha >>  0) & 0x0F) * 17;
-        alpha_values[i * 4 + 1] = ((alpha >>  4) & 0x0F) * 17;
-        alpha_values[i * 4 + 2] = ((alpha >>  8) & 0x0F) * 17;
-        alpha_values[i * 4 + 3] = ((alpha >> 12) & 0x0F) * 17;
+    tmp = (color0 >> 11) * 255 + 16;
+    r0  = (uint8_t) ((tmp / 32 + tmp) / 32);
+    tmp = ((color0 & 0x07E0) >> 5) * 255 + 32;
+    g0  = (uint8_t) ((tmp / 64 + tmp) / 64);
+    tmp = (color0 & 0x001F) * 255 + 16;
+    b0  = (uint8_t) ((tmp / 32 + tmp) / 32);
 
-        block += 2;
+    tmp = (color1 >> 11) * 255 + 16;
+    r1  = (uint8_t) ((tmp / 32 + tmp) / 32);
+    tmp = ((color1 & 0x07E0) >> 5) * 255 + 32;
+    g1  = (uint8_t) ((tmp / 64 + tmp) / 64);
+    tmp = (color1 & 0x001F) * 255 + 16;
+    b1  = (uint8_t) ((tmp / 32 + tmp) / 32);
+
+    code = AV_RL32(block + 12);
+
+    for (y = 0; y < 4; y++) {
+        const uint16_t alpha_code = AV_RL16(block + 2 * y);
+        uint8_t alpha_values[4];
+
+        alpha_values[0] = ((alpha_code >>  0) & 0x0F) * 17;
+        alpha_values[1] = ((alpha_code >>  4) & 0x0F) * 17;
+        alpha_values[2] = ((alpha_code >>  8) & 0x0F) * 17;
+        alpha_values[3] = ((alpha_code >> 12) & 0x0F) * 17;
+
+        for (x = 0; x < 4; x++) {
+            uint8_t color_code = (code >> 2 * (x + y * 4)) & 0x03;
+            uint8_t alpha = alpha_values[x];
+            uint32_t pixel = 0;
+
+            switch (color_code) {
+            case 0:
+                pixel = RGBA(r0, g0, b0, alpha);
+                break;
+            case 1:
+                pixel = RGBA(r1, g1, b1, alpha);
+                break;
+            case 2:
+                pixel = RGBA((2 * r0 + r1) / 3,
+                             (2 * g0 + g1) / 3,
+                             (2 * b0 + b1) / 3,
+                             alpha);
+                break;
+            case 3:
+                pixel = RGBA((r0 + 2 * r1) / 3,
+                             (g0 + 2 * g1) / 3,
+                             (b0 + 2 * b1) / 3,
+                             alpha);
+                break;
+            }
+
+            AV_WL32(dst + x * 4 + y * stride, pixel);
+        }
     }
-
-    dxt_block_internal(dst, stride, block, alpha_values, 255);
 }
 
 /** Convert a premultiplied alpha pixel to a straigth alpha pixel. */
