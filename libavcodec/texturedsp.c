@@ -32,6 +32,7 @@
 #include "texturedsp.h"
 
 #define RGBA(r, g, b, a) (r) | ((g) << 8) | ((b) << 16) | ((a) << 24)
+#define RGB(r, g, b)     (r) | ((g) << 8) | ((b) << 16)
 
 static inline void dxt1_block_internal(uint8_t *dst, ptrdiff_t stride,
                                        const uint8_t *block, uint8_t alpha)
@@ -40,9 +41,11 @@ static inline void dxt1_block_internal(uint8_t *dst, ptrdiff_t stride,
     uint16_t color0, color1;
     uint8_t r0, g0, b0, r1, g1, b1;
     int x, y;
+    uint32_t colors[4];
 
-    color0 = AV_RL16(block);
+    color0 = AV_RL16(block + 0);
     color1 = AV_RL16(block + 2);
+    code   = AV_RL32(block + 4);
 
     tmp = (color0 >> 11) * 255 + 16;
     r0  = (uint8_t) ((tmp / 32 + tmp) / 32);
@@ -58,64 +61,32 @@ static inline void dxt1_block_internal(uint8_t *dst, ptrdiff_t stride,
     tmp = (color1 & 0x001F) * 255 + 16;
     b1  = (uint8_t) ((tmp / 32 + tmp) / 32);
 
-    code = AV_RL32(block + 4);
-
     if (color0 > color1) {
-        for (y = 0; y < 4; y++) {
-            for (x = 0; x < 4; x++) {
-                uint32_t pixel = 0;
-                uint32_t pos_code = (code >> 2 * (x + y * 4)) & 0x03;
-
-                switch (pos_code) {
-                case 0:
-                    pixel = RGBA(r0, g0, b0, 255);
-                    break;
-                case 1:
-                    pixel = RGBA(r1, g1, b1, 255);
-                    break;
-                case 2:
-                    pixel = RGBA((2 * r0 + r1) / 3,
-                                 (2 * g0 + g1) / 3,
-                                 (2 * b0 + b1) / 3,
-                                 255);
-                    break;
-                case 3:
-                    pixel = RGBA((r0 + 2 * r1) / 3,
-                                 (g0 + 2 * g1) / 3,
-                                 (b0 + 2 * b1) / 3,
-                                 255);
-                    break;
-                }
-
-                AV_WL32(dst + x * 4 + y * stride, pixel);
-            }
-        }
+        colors[0] = RGBA(r0, g0, b0, 255);
+        colors[1] = RGBA(r1, g1, b1, 255);
+        colors[2] = RGBA((2 * r0 + r1) / 3,
+                         (2 * g0 + g1) / 3,
+                         (2 * b0 + b1) / 3,
+                         255);
+        colors[3] = RGBA((2 * r1 + r0) / 3,
+                         (2 * g1 + g0) / 3,
+                         (2 * b1 + b0) / 3,
+                         255);
     } else {
-        for (y = 0; y < 4; y++) {
-            for (x = 0; x < 4; x++) {
-                uint32_t pixel = 0;
-                uint32_t pos_code = (code >> 2 * (x + y * 4)) & 0x03;
+        colors[0] = RGBA(r0, g0, b0, 255);
+        colors[1] = RGBA(r1, g1, b1, 255);
+        colors[2] = RGBA((r0 + r1) / 2,
+                         (g0 + g1) / 2,
+                         (b0 + b1) / 2,
+                         255);
+        colors[3] = RGBA(0, 0, 0, alpha);
+    }
+    for (y = 0; y < 4; y++) {
+        for (x = 0; x < 4; x++) {
+            uint32_t pos_code = (code >> 2 * (x + y * 4)) & 0x03;
+            uint32_t pixel = colors[pos_code];
 
-                switch (pos_code) {
-                case 0:
-                    pixel = RGBA(r0, g0, b0, 255);
-                    break;
-                case 1:
-                    pixel = RGBA(r1, g1, b1, 255);
-                    break;
-                case 2:
-                    pixel = RGBA((r0 + r1) / 2,
-                                 (g0 + g1) / 2,
-                                 (b0 + b1) / 2,
-                                 255);
-                    break;
-                case 3:
-                    pixel = RGBA(0, 0, 0, alpha);
-                    break;
-                }
-
-                AV_WL32(dst + x * 4 + y * stride, pixel);
-            }
+            AV_WL32(dst + x * 4 + y * stride, pixel);
         }
     }
 }
@@ -160,9 +131,11 @@ static inline void dxt3_block_internal(uint8_t *dst, ptrdiff_t stride,
     uint16_t color0, color1;
     uint8_t r0, g0, b0, r1, g1, b1;
     int x, y;
+    uint32_t colors[4];
 
     color0 = AV_RL16(block + 8);
     color1 = AV_RL16(block + 10);
+    code   = AV_RL32(block + 12);
 
     tmp = (color0 >> 11) * 255 + 16;
     r0  = (uint8_t) ((tmp / 32 + tmp) / 32);
@@ -178,7 +151,10 @@ static inline void dxt3_block_internal(uint8_t *dst, ptrdiff_t stride,
     tmp = (color1 & 0x001F) * 255 + 16;
     b1  = (uint8_t) ((tmp / 32 + tmp) / 32);
 
-    code = AV_RL32(block + 12);
+    colors[0] = RGB(r0, g0, b0);
+    colors[1] = RGB(r1, g1, b1);
+    colors[2] = RGB((2 * r0 + r1) / 3, (2 * g0 + g1) / 3, (2 * b0 + b1) / 3);
+    colors[3] = RGB((2 * r1 + r0) / 3, (2 * g1 + g0) / 3, (2 * b1 + b0) / 3);
 
     for (y = 0; y < 4; y++) {
         const uint16_t alpha_code = AV_RL16(block + 2 * y);
@@ -192,28 +168,7 @@ static inline void dxt3_block_internal(uint8_t *dst, ptrdiff_t stride,
         for (x = 0; x < 4; x++) {
             uint8_t color_code = (code >> 2 * (x + y * 4)) & 0x03;
             uint8_t alpha = alpha_values[x];
-            uint32_t pixel = 0;
-
-            switch (color_code) {
-            case 0:
-                pixel = RGBA(r0, g0, b0, alpha);
-                break;
-            case 1:
-                pixel = RGBA(r1, g1, b1, alpha);
-                break;
-            case 2:
-                pixel = RGBA((2 * r0 + r1) / 3,
-                             (2 * g0 + g1) / 3,
-                             (2 * b0 + b1) / 3,
-                             alpha);
-                break;
-            case 3:
-                pixel = RGBA((r0 + 2 * r1) / 3,
-                             (g0 + 2 * g1) / 3,
-                             (b0 + 2 * b1) / 3,
-                             alpha);
-                break;
-            }
+            uint32_t pixel = colors[color_code] | (alpha << 24);
 
             AV_WL32(dst + x * 4 + y * stride, pixel);
         }
@@ -313,6 +268,7 @@ static inline void dxt5_block_internal(uint8_t *dst, ptrdiff_t stride,
     uint16_t color0, color1;
     uint32_t tmp, code;
     int x, y;
+    uint32_t colors[4];
 
     alpha0 = *(block);
     alpha1 = *(block + 1);
@@ -321,6 +277,7 @@ static inline void dxt5_block_internal(uint8_t *dst, ptrdiff_t stride,
 
     color0 = AV_RL16(block + 8);
     color1 = AV_RL16(block + 10);
+    code = AV_RL32(block + 12);
 
     tmp = (color0 >> 11) * 255 + 16;
     r0  = (uint8_t) ((tmp / 32 + tmp) / 32);
@@ -336,13 +293,16 @@ static inline void dxt5_block_internal(uint8_t *dst, ptrdiff_t stride,
     tmp = (color1 & 0x001F) * 255 + 16;
     b1  = (uint8_t) ((tmp / 32 + tmp) / 32);
 
-    code = AV_RL32(block + 12);
+    colors[0] = RGB(r0, g0, b0);
+    colors[1] = RGB(r1, g1, b1);
+    colors[2] = RGB((2 * r0 + r1) / 3, (2 * g0 + g1) / 3, (2 * b0 + b1) / 3);
+    colors[3] = RGB((2 * r1 + r0) / 3, (2 * g1 + g0) / 3, (2 * b1 + b0) / 3);
 
     for (y = 0; y < 4; y++) {
         for (x = 0; x < 4; x++) {
             int alpha_code = alpha_indices[x + y * 4];
             uint8_t color_code = (code >> 2 * (x + y * 4)) & 0x03;
-            uint32_t pixel = 0;
+            uint32_t pixel;
             uint8_t alpha;
 
             if (alpha_code == 0) {
@@ -365,27 +325,7 @@ static inline void dxt5_block_internal(uint8_t *dst, ptrdiff_t stride,
                 }
             }
 
-            switch (color_code) {
-            case 0:
-                pixel = RGBA(r0, g0, b0, alpha);
-                break;
-            case 1:
-                pixel = RGBA(r1, g1, b1, alpha);
-                break;
-            case 2:
-                pixel = RGBA((2 * r0 + r1) / 3,
-                             (2 * g0 + g1) / 3,
-                             (2 * b0 + b1) / 3,
-                             alpha);
-                break;
-            case 3:
-                pixel = RGBA((r0 + 2 * r1) / 3,
-                             (g0 + 2 * g1) / 3,
-                             (b0 + 2 * b1) / 3,
-                             alpha);
-                break;
-            }
-
+            pixel = colors[color_code] | (alpha << 24);
             AV_WL32(dst + x * 4 + y * stride, pixel);
         }
     }
