@@ -32,9 +32,10 @@
 #include "texturedsp.h"
 
 #define RGBA(r, g, b, a) (r) | ((g) << 8) | ((b) << 16) | ((a) << 24)
-#define RGB(r, g, b)     (r) | ((g) << 8) | ((b) << 16)
 
-#define EXTRACT_COLOR(dxtn, alpha)                                            \
+static void EXTRACT_COLOR(uint32_t colors[4], uint16_t color0, uint16_t color1,
+                          int dxtn, int alpha)   
+{\
     do {                                                                      \
         int tmp;                                                              \
         uint8_t r0, g0, b0, r1, g1, b1;                                       \
@@ -74,7 +75,8 @@
                              a);                                              \
             colors[3] = RGBA(0, 0, 0, alpha);                                 \
         }                                                                     \
-    } while (0)
+    } while (0);
+}
 
 static inline void dxt1_block_internal(uint8_t *dst, ptrdiff_t stride,
                                        const uint8_t *block, uint8_t alpha)
@@ -85,14 +87,15 @@ static inline void dxt1_block_internal(uint8_t *dst, ptrdiff_t stride,
     uint16_t color1 = AV_RL16(block + 2);
     uint32_t code   = AV_RL32(block + 4);
 
-    EXTRACT_COLOR(0, alpha);
+    EXTRACT_COLOR(colors, color0, color1, 0, alpha);
 
     for (y = 0; y < 4; y++) {
         for (x = 0; x < 4; x++) {
             uint32_t pixel = colors[code & 3];
             code >>= 2;
-            AV_WL32(dst + x * 4 + y * stride, pixel);
+            AV_WL32(dst + x * 4, pixel);
         }
+        dst += stride;
     }
 }
 
@@ -138,7 +141,7 @@ static inline void dxt3_block_internal(uint8_t *dst, ptrdiff_t stride,
     uint16_t color1 = AV_RL16(block + 10);
     uint32_t code   = AV_RL32(block + 12);
 
-    EXTRACT_COLOR(1, 0);
+    EXTRACT_COLOR(colors, color0, color1,1, 0);
 
     for (y = 0; y < 4; y++) {
         const uint16_t alpha_code = AV_RL16(block + 2 * y);
@@ -154,8 +157,9 @@ static inline void dxt3_block_internal(uint8_t *dst, ptrdiff_t stride,
             uint32_t pixel = colors[code & 3] | (alpha << 24);
             code >>= 2;
 
-            AV_WL32(dst + x * 4 + y * stride, pixel);
+            AV_WL32(dst + x * 4, pixel);
         }
+        dst += stride;
     }
 }
 
@@ -257,7 +261,7 @@ static inline void dxt5_block_internal(uint8_t *dst, ptrdiff_t stride,
 
     decompress_indices(alpha_indices, block + 2);
 
-    EXTRACT_COLOR(1, 0);
+    EXTRACT_COLOR(colors, color0, color1, 1, 0);
 
     for (y = 0; y < 4; y++) {
         for (x = 0; x < 4; x++) {
@@ -286,8 +290,9 @@ static inline void dxt5_block_internal(uint8_t *dst, ptrdiff_t stride,
             }
             pixel = colors[code & 3] | (alpha << 24);
             code >>= 2;
-            AV_WL32(dst + x * 4 + y * stride, pixel);
+            AV_WL32(dst + x * 4, pixel);
         }
+        dst += stride;
     }
 }
 
