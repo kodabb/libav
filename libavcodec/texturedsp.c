@@ -34,53 +34,59 @@
 #define RGBA(r, g, b, a) (r) | ((g) << 8) | ((b) << 16) | ((a) << 24)
 #define RGB(r, g, b)     (r) | ((g) << 8) | ((b) << 16)
 
+#define EXTRACT_COLOR(dxtn, alpha)                                            \
+    do {                                                                      \
+        int tmp;                                                              \
+        uint8_t r0, g0, b0, r1, g1, b1;                                       \
+        uint8_t a = dxtn ? 0 : 255;                                           \
+                                                                              \
+        tmp = (color0 >> 11) * 255 + 16;                                      \
+        r0  = (uint8_t) ((tmp / 32 + tmp) / 32);                              \
+        tmp = ((color0 & 0x07E0) >> 5) * 255 + 32;                            \
+        g0  = (uint8_t) ((tmp / 64 + tmp) / 64);                              \
+        tmp = (color0 & 0x001F) * 255 + 16;                                   \
+        b0  = (uint8_t) ((tmp / 32 + tmp) / 32);                              \
+                                                                              \
+        tmp = (color1 >> 11) * 255 + 16;                                      \
+        r1  = (uint8_t) ((tmp / 32 + tmp) / 32);                              \
+        tmp = ((color1 & 0x07E0) >> 5) * 255 + 32;                            \
+        g1  = (uint8_t) ((tmp / 64 + tmp) / 64);                              \
+        tmp = (color1 & 0x001F) * 255 + 16;                                   \
+        b1  = (uint8_t) ((tmp / 32 + tmp) / 32);                              \
+                                                                              \
+        if (dxtn || color0 > color1) {                                        \
+            colors[0] = RGBA(r0, g0, b0, a);                                  \
+            colors[1] = RGBA(r1, g1, b1, a);                                  \
+            colors[2] = RGBA((2 * r0 + r1) / 3,                               \
+                             (2 * g0 + g1) / 3,                               \
+                             (2 * b0 + b1) / 3,                               \
+                             a);                                              \
+            colors[3] = RGBA((2 * r1 + r0) / 3,                               \
+                             (2 * g1 + g0) / 3,                               \
+                             (2 * b1 + b0) / 3,                               \
+                             a);                                              \
+        } else {                                                              \
+            colors[0] = RGBA(r0, g0, b0, a);                                  \
+            colors[1] = RGBA(r1, g1, b1, a);                                  \
+            colors[2] = RGBA((r0 + r1) / 2,                                   \
+                             (g0 + g1) / 2,                                   \
+                             (b0 + b1) / 2,                                   \
+                             a);                                              \
+            colors[3] = RGBA(0, 0, 0, alpha);                                 \
+        }                                                                     \
+    } while (0)
+
 static inline void dxt1_block_internal(uint8_t *dst, ptrdiff_t stride,
                                        const uint8_t *block, uint8_t alpha)
 {
-    uint32_t tmp, code;
-    uint16_t color0, color1;
-    uint8_t r0, g0, b0, r1, g1, b1;
     int x, y;
     uint32_t colors[4];
+    uint16_t color0 = AV_RL16(block + 0);
+    uint16_t color1 = AV_RL16(block + 2);
+    uint32_t code   = AV_RL32(block + 4);
 
-    color0 = AV_RL16(block + 0);
-    color1 = AV_RL16(block + 2);
-    code   = AV_RL32(block + 4);
+    EXTRACT_COLOR(0, alpha);
 
-    tmp = (color0 >> 11) * 255 + 16;
-    r0  = (uint8_t) ((tmp / 32 + tmp) / 32);
-    tmp = ((color0 & 0x07E0) >> 5) * 255 + 32;
-    g0  = (uint8_t) ((tmp / 64 + tmp) / 64);
-    tmp = (color0 & 0x001F) * 255 + 16;
-    b0  = (uint8_t) ((tmp / 32 + tmp) / 32);
-
-    tmp = (color1 >> 11) * 255 + 16;
-    r1  = (uint8_t) ((tmp / 32 + tmp) / 32);
-    tmp = ((color1 & 0x07E0) >> 5) * 255 + 32;
-    g1  = (uint8_t) ((tmp / 64 + tmp) / 64);
-    tmp = (color1 & 0x001F) * 255 + 16;
-    b1  = (uint8_t) ((tmp / 32 + tmp) / 32);
-
-    if (color0 > color1) {
-        colors[0] = RGBA(r0, g0, b0, 255);
-        colors[1] = RGBA(r1, g1, b1, 255);
-        colors[2] = RGBA((2 * r0 + r1) / 3,
-                         (2 * g0 + g1) / 3,
-                         (2 * b0 + b1) / 3,
-                         255);
-        colors[3] = RGBA((2 * r1 + r0) / 3,
-                         (2 * g1 + g0) / 3,
-                         (2 * b1 + b0) / 3,
-                         255);
-    } else {
-        colors[0] = RGBA(r0, g0, b0, 255);
-        colors[1] = RGBA(r1, g1, b1, 255);
-        colors[2] = RGBA((r0 + r1) / 2,
-                         (g0 + g1) / 2,
-                         (b0 + b1) / 2,
-                         255);
-        colors[3] = RGBA(0, 0, 0, alpha);
-    }
     for (y = 0; y < 4; y++) {
         for (x = 0; x < 4; x++) {
             uint32_t pos_code = (code >> 2 * (x + y * 4)) & 0x03;
@@ -127,34 +133,13 @@ static int dxt1a_block(uint8_t *dst, ptrdiff_t stride, const uint8_t *block)
 static inline void dxt3_block_internal(uint8_t *dst, ptrdiff_t stride,
                                        const uint8_t *block)
 {
-    uint32_t tmp, code;
-    uint16_t color0, color1;
-    uint8_t r0, g0, b0, r1, g1, b1;
     int x, y;
     uint32_t colors[4];
+    uint16_t color0 = AV_RL16(block +  8);
+    uint16_t color1 = AV_RL16(block + 10);
+    uint32_t code   = AV_RL32(block + 12);
 
-    color0 = AV_RL16(block + 8);
-    color1 = AV_RL16(block + 10);
-    code   = AV_RL32(block + 12);
-
-    tmp = (color0 >> 11) * 255 + 16;
-    r0  = (uint8_t) ((tmp / 32 + tmp) / 32);
-    tmp = ((color0 & 0x07E0) >> 5) * 255 + 32;
-    g0  = (uint8_t) ((tmp / 64 + tmp) / 64);
-    tmp = (color0 & 0x001F) * 255 + 16;
-    b0  = (uint8_t) ((tmp / 32 + tmp) / 32);
-
-    tmp = (color1 >> 11) * 255 + 16;
-    r1  = (uint8_t) ((tmp / 32 + tmp) / 32);
-    tmp = ((color1 & 0x07E0) >> 5) * 255 + 32;
-    g1  = (uint8_t) ((tmp / 64 + tmp) / 64);
-    tmp = (color1 & 0x001F) * 255 + 16;
-    b1  = (uint8_t) ((tmp / 32 + tmp) / 32);
-
-    colors[0] = RGB(r0, g0, b0);
-    colors[1] = RGB(r1, g1, b1);
-    colors[2] = RGB((2 * r0 + r1) / 3, (2 * g0 + g1) / 3, (2 * b0 + b1) / 3);
-    colors[3] = RGB((2 * r1 + r0) / 3, (2 * g1 + g0) / 3, (2 * b1 + b0) / 3);
+    EXTRACT_COLOR(1, 0);
 
     for (y = 0; y < 4; y++) {
         const uint16_t alpha_code = AV_RL16(block + 2 * y);
@@ -262,41 +247,18 @@ static void decompress_indices(uint8_t *dst, const uint8_t *src)
 static inline void dxt5_block_internal(uint8_t *dst, ptrdiff_t stride,
                                        const uint8_t *block)
 {
-    uint8_t alpha0, alpha1;
-    uint8_t alpha_indices[16];
-    uint8_t r0, g0, b0, r1, g1, b1;
-    uint16_t color0, color1;
-    uint32_t tmp, code;
     int x, y;
     uint32_t colors[4];
-
-    alpha0 = *(block);
-    alpha1 = *(block + 1);
+    uint8_t alpha_indices[16];
+    uint16_t color0 = AV_RL16(block + 8);
+    uint16_t color1 = AV_RL16(block + 10);
+    uint32_t code   = AV_RL32(block + 12);
+    uint8_t alpha0  = *(block);
+    uint8_t alpha1  = *(block + 1);
 
     decompress_indices(alpha_indices, block + 2);
 
-    color0 = AV_RL16(block + 8);
-    color1 = AV_RL16(block + 10);
-    code = AV_RL32(block + 12);
-
-    tmp = (color0 >> 11) * 255 + 16;
-    r0  = (uint8_t) ((tmp / 32 + tmp) / 32);
-    tmp = ((color0 & 0x07E0) >> 5) * 255 + 32;
-    g0  = (uint8_t) ((tmp / 64 + tmp) / 64);
-    tmp = (color0 & 0x001F) * 255 + 16;
-    b0  = (uint8_t) ((tmp / 32 + tmp) / 32);
-
-    tmp = (color1 >> 11) * 255 + 16;
-    r1  = (uint8_t) ((tmp / 32 + tmp) / 32);
-    tmp = ((color1 & 0x07E0) >> 5) * 255 + 32;
-    g1  = (uint8_t) ((tmp / 64 + tmp) / 64);
-    tmp = (color1 & 0x001F) * 255 + 16;
-    b1  = (uint8_t) ((tmp / 32 + tmp) / 32);
-
-    colors[0] = RGB(r0, g0, b0);
-    colors[1] = RGB(r1, g1, b1);
-    colors[2] = RGB((2 * r0 + r1) / 3, (2 * g0 + g1) / 3, (2 * b0 + b1) / 3);
-    colors[3] = RGB((2 * r1 + r0) / 3, (2 * g1 + g0) / 3, (2 * b1 + b0) / 3);
+    EXTRACT_COLOR(1, 0);
 
     for (y = 0; y < 4; y++) {
         for (x = 0; x < 4; x++) {
