@@ -89,9 +89,8 @@ static inline void dxt1_block_internal(uint8_t *dst, ptrdiff_t stride,
 
     for (y = 0; y < 4; y++) {
         for (x = 0; x < 4; x++) {
-            uint32_t pos_code = (code >> 2 * (x + y * 4)) & 0x03;
-            uint32_t pixel = colors[pos_code];
-
+            uint32_t pixel = colors[code & 3];
+            code >>= 2;
             AV_WL32(dst + x * 4 + y * stride, pixel);
         }
     }
@@ -151,9 +150,9 @@ static inline void dxt3_block_internal(uint8_t *dst, ptrdiff_t stride,
         alpha_values[3] = ((alpha_code >> 12) & 0x0F) * 17;
 
         for (x = 0; x < 4; x++) {
-            uint8_t color_code = (code >> 2 * (x + y * 4)) & 0x03;
             uint8_t alpha = alpha_values[x];
-            uint32_t pixel = colors[color_code] | (alpha << 24);
+            uint32_t pixel = colors[code & 3] | (alpha << 24);
+            code >>= 2;
 
             AV_WL32(dst + x * 4 + y * stride, pixel);
         }
@@ -263,7 +262,6 @@ static inline void dxt5_block_internal(uint8_t *dst, ptrdiff_t stride,
     for (y = 0; y < 4; y++) {
         for (x = 0; x < 4; x++) {
             int alpha_code = alpha_indices[x + y * 4];
-            uint8_t color_code = (code >> 2 * (x + y * 4)) & 0x03;
             uint32_t pixel;
             uint8_t alpha;
 
@@ -286,8 +284,8 @@ static inline void dxt5_block_internal(uint8_t *dst, ptrdiff_t stride,
                     }
                 }
             }
-
-            pixel = colors[color_code] | (alpha << 24);
+            pixel = colors[code & 3] | (alpha << 24);
+            code >>= 2;
             AV_WL32(dst + x * 4 + y * stride, pixel);
         }
     }
