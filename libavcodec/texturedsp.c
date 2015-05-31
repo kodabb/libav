@@ -33,49 +33,49 @@
 
 #define RGBA(r, g, b, a) (r) | ((g) << 8) | ((b) << 16) | ((a) << 24)
 
-static void EXTRACT_COLOR(uint32_t colors[4], uint16_t color0, uint16_t color1,
-                          int dxtn, int alpha)   
-{\
-    do {                                                                      \
-        int tmp;                                                              \
-        uint8_t r0, g0, b0, r1, g1, b1;                                       \
-        uint8_t a = dxtn ? 0 : 255;                                           \
-                                                                              \
-        tmp = (color0 >> 11) * 255 + 16;                                      \
-        r0  = (uint8_t) ((tmp / 32 + tmp) / 32);                              \
-        tmp = ((color0 & 0x07E0) >> 5) * 255 + 32;                            \
-        g0  = (uint8_t) ((tmp / 64 + tmp) / 64);                              \
-        tmp = (color0 & 0x001F) * 255 + 16;                                   \
-        b0  = (uint8_t) ((tmp / 32 + tmp) / 32);                              \
-                                                                              \
-        tmp = (color1 >> 11) * 255 + 16;                                      \
-        r1  = (uint8_t) ((tmp / 32 + tmp) / 32);                              \
-        tmp = ((color1 & 0x07E0) >> 5) * 255 + 32;                            \
-        g1  = (uint8_t) ((tmp / 64 + tmp) / 64);                              \
-        tmp = (color1 & 0x001F) * 255 + 16;                                   \
-        b1  = (uint8_t) ((tmp / 32 + tmp) / 32);                              \
-                                                                              \
-        if (dxtn || color0 > color1) {                                        \
-            colors[0] = RGBA(r0, g0, b0, a);                                  \
-            colors[1] = RGBA(r1, g1, b1, a);                                  \
-            colors[2] = RGBA((2 * r0 + r1) / 3,                               \
-                             (2 * g0 + g1) / 3,                               \
-                             (2 * b0 + b1) / 3,                               \
-                             a);                                              \
-            colors[3] = RGBA((2 * r1 + r0) / 3,                               \
-                             (2 * g1 + g0) / 3,                               \
-                             (2 * b1 + b0) / 3,                               \
-                             a);                                              \
-        } else {                                                              \
-            colors[0] = RGBA(r0, g0, b0, a);                                  \
-            colors[1] = RGBA(r1, g1, b1, a);                                  \
-            colors[2] = RGBA((r0 + r1) / 2,                                   \
-                             (g0 + g1) / 2,                                   \
-                             (b0 + b1) / 2,                                   \
-                             a);                                              \
-            colors[3] = RGBA(0, 0, 0, alpha);                                 \
-        }                                                                     \
-    } while (0);
+static av_always_inline void extract_color(uint32_t colors[4],
+                                           uint16_t color0,
+                                           uint16_t color1,
+                                           int dxtn, int alpha)
+{
+    int tmp;
+    uint8_t r0, g0, b0, r1, g1, b1;
+    uint8_t a = dxtn ? 0 : 255;
+
+    tmp = (color0 >> 11) * 255 + 16;
+    r0  = (uint8_t) ((tmp / 32 + tmp) / 32);
+    tmp = ((color0 & 0x07E0) >> 5) * 255 + 32;
+    g0  = (uint8_t) ((tmp / 64 + tmp) / 64);
+    tmp = (color0 & 0x001F) * 255 + 16;
+    b0  = (uint8_t) ((tmp / 32 + tmp) / 32);
+
+    tmp = (color1 >> 11) * 255 + 16;
+    r1  = (uint8_t) ((tmp / 32 + tmp) / 32);
+    tmp = ((color1 & 0x07E0) >> 5) * 255 + 32;
+    g1  = (uint8_t) ((tmp / 64 + tmp) / 64);
+    tmp = (color1 & 0x001F) * 255 + 16;
+    b1  = (uint8_t) ((tmp / 32 + tmp) / 32);
+
+    if (dxtn || color0 > color1) {
+        colors[0] = RGBA(r0, g0, b0, a);
+        colors[1] = RGBA(r1, g1, b1, a);
+        colors[2] = RGBA((2 * r0 + r1) / 3,
+                         (2 * g0 + g1) / 3,
+                         (2 * b0 + b1) / 3,
+                         a);
+        colors[3] = RGBA((2 * r1 + r0) / 3,
+                         (2 * g1 + g0) / 3,
+                         (2 * b1 + b0) / 3,
+                         a);
+    } else {
+        colors[0] = RGBA(r0, g0, b0, a);
+        colors[1] = RGBA(r1, g1, b1, a);
+        colors[2] = RGBA((r0 + r1) / 2,
+                         (g0 + g1) / 2,
+                         (b0 + b1) / 2,
+                         a);
+        colors[3] = RGBA(0, 0, 0, alpha);
+    }
 }
 
 static inline void dxt1_block_internal(uint8_t *dst, ptrdiff_t stride,
@@ -87,7 +87,7 @@ static inline void dxt1_block_internal(uint8_t *dst, ptrdiff_t stride,
     uint16_t color1 = AV_RL16(block + 2);
     uint32_t code   = AV_RL32(block + 4);
 
-    EXTRACT_COLOR(colors, color0, color1, 0, alpha);
+    extract_color(colors, color0, color1, 0, alpha);
 
     for (y = 0; y < 4; y++) {
         for (x = 0; x < 4; x++) {
@@ -141,7 +141,7 @@ static inline void dxt3_block_internal(uint8_t *dst, ptrdiff_t stride,
     uint16_t color1 = AV_RL16(block + 10);
     uint32_t code   = AV_RL32(block + 12);
 
-    EXTRACT_COLOR(colors, color0, color1,1, 0);
+    extract_color(colors, color0, color1, 1, 0);
 
     for (y = 0; y < 4; y++) {
         const uint16_t alpha_code = AV_RL16(block + 2 * y);
@@ -261,7 +261,7 @@ static inline void dxt5_block_internal(uint8_t *dst, ptrdiff_t stride,
 
     decompress_indices(alpha_indices, block + 2);
 
-    EXTRACT_COLOR(colors, color0, color1, 1, 0);
+    extract_color(colors, color0, color1, 1, 0);
 
     for (y = 0; y < 4; y++) {
         for (x = 0; x < 4; x++) {
