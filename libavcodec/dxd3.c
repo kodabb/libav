@@ -130,8 +130,8 @@ static int dxd3_decode(AVCodecContext *avctx, void *data,
     DXD3Context *ctx = avctx->priv_data;
     GetByteContext *gbc = &ctx->gbc;
     AVFrame *frame = data;
-    uint32_t version, size, tag;
-    int ret, blocks;
+    uint32_t version, tag;
+    int ret, blocks, size;
 
     bytestream2_init(gbc, avpkt->data, avpkt->size);
 
@@ -141,19 +141,21 @@ static int dxd3_decode(AVCodecContext *avctx, void *data,
         return AVERROR_INVALIDDATA;
     }
 
-    tag = bytestream2_get_be32(gbc);
-    if (tag != MKTAG('D', 'X', 'T', '1')) {
+    tag = bytestream2_get_le32(gbc);
+    if (tag != MKBETAG('D', 'X', 'T', '1')) {
         av_log(avctx, AV_LOG_ERROR, "Unsupported tag header (0x%08X).\n", tag);
         return AVERROR_INVALIDDATA;
     }
     ctx->tex_funct = ctx->texdsp.dxt1_block;
 
-    version = bytestream2_get_be32(gbc);
-    size = bytestream2_get_be32(gbc);
-    if (size > bytestream2_get_bytes_left(gbc)) {
-        av_log(avctx, AV_LOG_ERROR, "Incomplete file (%d > %d).",
+    version = bytestream2_get_le32(gbc);
+    if (version != 4) {
+        av_log(avctx, AV_LOG_WARNING, "version %d\n", version);
+    }
+    size = bytestream2_get_le32(gbc);
+    if (size != bytestream2_get_bytes_left(gbc)) {
+        av_log(avctx, AV_LOG_ERROR, "Incomplete file (%u > %u)\n.",
                size, bytestream2_get_bytes_left(gbc));
-        return AVERROR_INVALIDDATA;
     }
 
     bytestream2_skip(gbc, 4); // dunno
