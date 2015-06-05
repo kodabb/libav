@@ -40,70 +40,14 @@
 #define DDPF_PALETTE   (1 <<  5)
 #define DDPF_NORMALMAP (1 << 31)
 
-enum DDSPostProc {
-    DDS_NONE = 0,
-    DDS_ALPHA_EXP,
-    DDS_NORMAL_MAP,
-    DDS_RAW_YCOCG,
-    DDS_SWAP_ALPHA,
-    DDS_SWIZZLE_A2XY,
-    DDS_SWIZZLE_RBXG,
-    DDS_SWIZZLE_RGXB,
-    DDS_SWIZZLE_RXBG,
-    DDS_SWIZZLE_RXGB,
-    DDS_SWIZZLE_XGBR,
-    DDS_SWIZZLE_XRBG,
-    DDS_SWIZZLE_XGXR,
-} DDSPostProc;
-
-enum DDSDXGIFormat {
-    DXGI_FORMAT_R16G16B16A16_TYPELESS       =  9,
-    DXGI_FORMAT_R16G16B16A16_FLOAT          = 10,
-    DXGI_FORMAT_R16G16B16A16_UNORM          = 11,
-    DXGI_FORMAT_R16G16B16A16_UINT           = 12,
-    DXGI_FORMAT_R16G16B16A16_SNORM          = 13,
-    DXGI_FORMAT_R16G16B16A16_SINT           = 14,
-
-    DXGI_FORMAT_R8G8B8A8_TYPELESS           = 27,
-    DXGI_FORMAT_R8G8B8A8_UNORM              = 28,
-    DXGI_FORMAT_R8G8B8A8_UNORM_SRGB         = 29,
-    DXGI_FORMAT_R8G8B8A8_UINT               = 30,
-    DXGI_FORMAT_R8G8B8A8_SNORM              = 31,
-    DXGI_FORMAT_R8G8B8A8_SINT               = 32,
-
-    DXGI_FORMAT_BC1_TYPELESS                = 70,
-    DXGI_FORMAT_BC1_UNORM                   = 71,
-    DXGI_FORMAT_BC1_UNORM_SRGB              = 72,
-    DXGI_FORMAT_BC2_TYPELESS                = 73,
-    DXGI_FORMAT_BC2_UNORM                   = 74,
-    DXGI_FORMAT_BC2_UNORM_SRGB              = 75,
-    DXGI_FORMAT_BC3_TYPELESS                = 76,
-    DXGI_FORMAT_BC3_UNORM                   = 77,
-    DXGI_FORMAT_BC3_UNORM_SRGB              = 78,
-    DXGI_FORMAT_BC4_TYPELESS                = 79,
-    DXGI_FORMAT_BC4_UNORM                   = 80,
-    DXGI_FORMAT_BC4_SNORM                   = 81,
-    DXGI_FORMAT_BC5_TYPELESS                = 82,
-    DXGI_FORMAT_BC5_UNORM                   = 83,
-    DXGI_FORMAT_BC5_SNORM                   = 84,
-    DXGI_FORMAT_B5G6R5_UNORM                = 85,
-    DXGI_FORMAT_B8G8R8A8_UNORM              = 87,
-    DXGI_FORMAT_B8G8R8X8_UNORM              = 88,
-    DXGI_FORMAT_B8G8R8A8_TYPELESS           = 90,
-    DXGI_FORMAT_B8G8R8A8_UNORM_SRGB         = 91,
-    DXGI_FORMAT_B8G8R8X8_TYPELESS           = 92,
-    DXGI_FORMAT_B8G8R8X8_UNORM_SRGB         = 93,
-} DDSDXGIFormat;
-
 typedef struct DXD3Context {
     TextureDSPContext texdsp;
     GetByteContext gbc;
 
     int compressed;
     int paletted;
-    enum DDSPostProc postproc;
 
-    const uint8_t *tex_data; // Compressed texture
+    uint8_t *tex_data; // Compressed texture
     int tex_ratio;           // Compression ratio
 
     /* Pointer to the selected compress or decompress function. */
@@ -122,6 +66,114 @@ static int decompress_texture_thread(AVCodecContext *avctx, void *arg,
 
     ctx->tex_funct(p, frame->linesize[0], d);
     return 0;
+}
+
+static const uint16_t DXTR_DistMask[] = {
+    0xFF, 0, 0xFF, 0xFF
+};
+
+static const int DXTR_DistCost[] = {
+      1,   0,   0,   0,   2,   0,   0,   0,   0, 0,  0, 0, 0, 0, 0,  0,  0,  0,
+      1,   0,   2,   0,   3,   0,   4,   0,   5, 0,  6, 0, 7, 0, 8,  0,  9,  0,
+     10,   0,  11,   0,  12,   0,  13,   0,  14, 0, 15, 0, 4, 0, 0,  0,  5,  0,
+      0,   0,   6,   0,   0,   0,   7,   0,   0, 0,  0, 2, 4, 6, 8, 10, 12, 14,
+    128, 128, 128, 128, 128, 128, 128, 128,
+};
+
+static const int DXTR_DistOffset[] = {
+    1, 0, 0, 0, 2, 0, 0, 0, 2, 1, 0, 0
+};
+
+static int DXTR_uncompressDXT1(uint32_t *dst, const uint8_t *inbuf, size_t size)
+{
+    const uint8_t *src_;
+    uint32_t *out;
+    unsigned int state;
+    unsigned int v7;
+    int v8;
+    unsigned int v9;
+    uint16_t v10;
+    int v11;
+    uint32_t *v12;
+    int v13;
+    int v14;
+    const uint8_t *src;
+    uint16_t v16;
+    int v17;
+    uint16_t v18;
+
+    src_ = inbuf + 8;
+    *dst = *(uint32_t *)inbuf;
+    dst[1] = *((uint32_t *)inbuf + 1);
+    if (size >= 9) {
+        out = dst + 2;
+        state = 2;
+        while (1) {
+            if (state == 2) {
+                state = *(uint32_t *)src_;
+                src_ += 4;
+                v7 = (state >> 2) | 0x80000000;
+            } else {
+                v7 = state >> 2;
+            }
+            v8 = state & 3;
+            if (v8)
+                break;
+
+            if (v7 == 2) {
+                v7 = *(uint32_t *)src_;
+                src_ += 4;
+                v9 = (v7 >> 2) | 0x80000000;
+            } else {
+                v9 = v7 >> 2;
+            }
+
+            v14 = v7 & 3;
+            if (v14) {
+                v16 = *(uint16_t *)src_ & DXTR_DistMask[v14];
+                src = &src_[DXTR_DistCost[v14]];
+                *out = out[-2 * (DXTR_DistOffset[v14] + v16)];
+            } else {
+                *out = *(uint32_t *)src_;
+                src = src_ + 4;
+            }
+
+            if (v9 == 2) {
+                v9 = *(uint32_t *)src;
+                src += 4;
+                v7 = (v9 >> 2) | 0x80000000;
+            } else {
+                v7 = v9 >> 2;
+            }
+
+            v17 = v9 & 3;
+            if (v17) {
+                v18 = *(uint16_t *)src & DXTR_DistMask[v17];
+                src_ = &src[DXTR_DistCost[v17]];
+                v13 = -8 * (DXTR_DistOffset[v17] + v18);
+                goto LABEL_20;
+            }
+            out[1] = *(uint32_t *)src;
+            src_ = src + 4;
+LABEL_21:
+            out += 2;
+            state = v7;
+            if (out >= (uint32_t *)((char *)dst + size))
+                return src_ - inbuf;
+        }
+
+        v10 = *(uint16_t *)src_ & DXTR_DistMask[v8];
+        src_ += DXTR_DistCost[v8];
+        v11 = 8 * (DXTR_DistOffset[v8] + v10);
+        v12 = &out[-v11 / 4u];
+        v13 = -v11;
+        *out = *v12;
+LABEL_20:
+        out[1] = *(uint32_t *)((char *)out + v13 + 4);
+        goto LABEL_21;
+    }
+
+    return src_ - inbuf;
 }
 
 static int dxd3_decode(AVCodecContext *avctx, void *data,
@@ -158,15 +210,16 @@ static int dxd3_decode(AVCodecContext *avctx, void *data,
                size, bytestream2_get_bytes_left(gbc));
     }
 
-    bytestream2_skip(gbc, 4); // dunno
-    bytestream2_skip(gbc, 4); // dunno
-
     ret = ff_get_buffer(avctx, frame, 0);
     if (ret < 0)
         return ret;
 
     /* Use the decompress function on the texture, one block per thread. */
-    ctx->tex_data = gbc->buffer;
+    ret = av_reallocp(&ctx->tex_data, 1920*1080*4/8);
+    if (ret < 0)
+        return ret;
+
+    DXTR_uncompressDXT1((uint32_t *)ctx->tex_data, gbc->buffer, 1920*1080*4/8);
     blocks = avctx->coded_width * avctx->coded_height / (TEXTURE_BLOCK_W * TEXTURE_BLOCK_H);
     avctx->execute2(avctx, decompress_texture_thread, frame, NULL, blocks);
 
@@ -200,6 +253,15 @@ static int dxd3_init(AVCodecContext *avctx)
     return 0;
 }
 
+static int dxd3_close(AVCodecContext *avctx)
+{
+    DXD3Context *ctx = avctx->priv_data;
+
+    av_freep(&ctx->tex_data);
+
+    return 0;
+}
+
 AVCodec ff_dxd3_decoder = {
     .name           = "dxd3",
     .long_name      = NULL_IF_CONFIG_SMALL("Resolume DXD3"),
@@ -207,7 +269,9 @@ AVCodec ff_dxd3_decoder = {
     .id             = AV_CODEC_ID_DXD3,
     .init           = dxd3_init,
     .decode         = dxd3_decode,
+    .close          = dxd3_close,
     .priv_data_size = sizeof(DXD3Context),
     .capabilities   = CODEC_CAP_DR1 | CODEC_CAP_SLICE_THREADS,
-    .caps_internal  = FF_CODEC_CAP_INIT_THREADSAFE
+    .caps_internal  = FF_CODEC_CAP_INIT_THREADSAFE |
+                      FF_CODEC_CAP_INIT_CLEANUP
 };
