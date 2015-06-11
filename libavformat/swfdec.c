@@ -69,12 +69,14 @@ static int swf_read_header(AVFormatContext *s)
 
     tag = avio_rb32(pb) & 0xffffff00;
 
-    if (tag == MKBETAG('C', 'W', 'S', 0)) {
+    if (tag == MKBETAG('C', 'W', 'S', 0) || tag == MKBETAG('Z', 'W', 'S', 0)) {
         av_log(s, AV_LOG_ERROR, "Compressed SWF format not supported\n");
         return AVERROR(EIO);
     }
-    if (tag != MKBETAG('F', 'W', 'S', 0))
+    if (tag != MKBETAG('F', 'W', 'S', 0)) {
+        av_log(s, AV_LOG_ERROR, "Not a SWF file\n");
         return AVERROR(EIO);
+    }
     avio_rl32(pb);
     /* skip rectangle size */
     nbits = avio_r8(pb) >> 3;
