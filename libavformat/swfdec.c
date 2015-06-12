@@ -24,6 +24,8 @@
 #include "libavutil/intreadwrite.h"
 #include "swf.h"
 
+#include <zlib.h>
+
 static const AVCodecTag swf_audio_codec_tags[] = {
     { AV_CODEC_ID_PCM_S16LE,  0x00 },
     { AV_CODEC_ID_ADPCM_SWF,  0x01 },
@@ -65,19 +67,56 @@ static int swf_read_header(AVFormatContext *s)
 {
     SWFContext *swf = s->priv_data;
     AVIOContext *pb = s->pb;
-    int nbits, len, tag;
+    int nbits, len, tag, ret;
+    uint32_t file_length, uncompressed_length;
+    z_stream zstream = { 0 };
 
     tag = avio_rb32(pb) & 0xffffff00;
 
-    if (tag == MKBETAG('C', 'W', 'S', 0) || tag == MKBETAG('Z', 'W', 'S', 0)) {
+    if (tag == MKBETAG('Z', 'W', 'S', 0)) {
         av_log(s, AV_LOG_ERROR, "Compressed SWF format not supported\n");
         return AVERROR(EIO);
     }
-    if (tag != MKBETAG('F', 'W', 'S', 0)) {
+    if (tag != MKBETAG('F', 'W', 'S', 0) && tag != MKBETAG('C', 'W', 'S', 0)) {
         av_log(s, AV_LOG_ERROR, "Not a SWF file\n");
         return AVERROR(EIO);
     }
-    avio_rl32(pb);
+    file_length = avio_rl32(pb);
+        av_log(s, AV_LOG_ERROR, "uncompressed lenght %d / remaining bytes %d / actual size %d\n",
+               file_length, pb->buf_end - pb->buf_ptr, pb->buffer_size);
+
+    ret = inflateInit(&zstream);
+    if (ret != Z_OK) {
+        av_log(s, AV_LOG_ERROR, "zlib initialization error (%d)\n", ret);
+        return AVERROR_BUG;
+    }
+
+    ret = av_reallocp(&swf->uncompressed, file_length);
+    if (ret < 0)
+        return ret;
+
+    zstream.total_in =
+    zstream.total_out = 0;
+    zstream.next_in = pb->buf_ptr;
+    zstream.avail_in = pb->buf_end - pb->buf_ptr;
+    zstream.next_out = swf->uncompressed;
+    zstream.avail_out = file_length;
+    while (zstream.total_out < file_length && zstream.total_in < pb->buf_end - pb->buf_ptr) {
+        int err;
+        zstream.avail_in = zstream.avail_out = 1; /* force small buffers */
+        err = inflate(&zstream, Z_NO_FLUSH);
+        if (err == Z_STREAM_END) break;
+        if (err != Z_OK) {
+            fprintf(stderr, "error: %d\n", err);
+            exit(1);
+        }
+    }
+
+    pb->buffer = pb->buf_ptr = swf->uncompressed;
+    pb->buffer_size = file_length;
+    pb->buf_end = swf->uncompressed + file_length;
+        av_log(s, AV_LOG_WARNING, "hijack successful\n");
+
     /* skip rectangle size */
     nbits = avio_r8(pb) >> 3;
     len = (4 * nbits - 3 + 7) / 8;

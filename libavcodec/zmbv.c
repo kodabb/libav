@@ -510,7 +510,7 @@ static int decode_frame(AVCodecContext *avctx, void *data, int *got_frame, AVPac
         c->zstream.avail_in = len;
         c->zstream.next_out = c->decomp_buf;
         c->zstream.avail_out = c->decomp_size;
-        zret = inflate(&c->zstream, Z_SYNC_FLUSH);
+        zret = inflate(&c->zstream, Z_NO_FLUSH);
         if (zret != Z_OK && zret != Z_STREAM_END) {
             av_log(avctx, AV_LOG_ERROR, "inflate error %d\n", zret);
             return AVERROR_INVALIDDATA;
