@@ -100,8 +100,8 @@ static const int DXTR_DistOffset[] = {
 #define _BYTE uint8_t
 #define _DWORD uint32_t
 #define _WORD uint16_t
-#if 1
-static int DXTR_uncompressDXT1(uint32_t *dst, const uint8_t *inbuf, size_t a4)
+#if 0
+static int DXTR_uncompressDXT1(const uint8_t *inbuf, uint32_t *dst, size_t a4)
 {
   _BYTE *src_; // eax@1
   _DWORD *out; // edx@2
@@ -202,193 +202,186 @@ LABEL_20:
   return src_ - inbuf;
 }
 #else
-//static int DXTR_uncompressDXT1(uint32_t *dst, const uint8_t *inbuf, size_t a4)
 #if 0
-#include "libavcodec/mathops.h"
-#define sign_extend_64(x) sign_extend(x, 64)
-static int DXTR_uncompressDXT1(int arg2, int arg0, int arg3) {
-    int var_8 = arg0;
-    int var_38 = arg2 + arg3;
-    int var_3C = 0x2;
-    *(int32_t *)arg2 = *(int32_t *)var_8;
-    *(int32_t *)(arg2 + 0x4) = *(int32_t *)(var_8 + 0x4);
-    int var_30 = arg2 + 0x8;
-    int var_28 = var_8 + 0x8;
-    int var_40, var_50, var_60, var_70;
-    int rcx, rsi,rax;
-
-    while (var_30 < var_38) {
-            if (var_3C == 0x2) {
-                    rcx = *(int32_t *)var_28;
-                    var_28 = var_28 + 0x4;
-                    var_40 = rcx & 0x3;
-                    var_3C = (rcx >> 0x2) + 0x80000000;
-            }
-            else {
-                    var_40 = var_3C & 0x3;
-                    var_3C = var_3C >> 0x2;
-            }
-            if (var_40 != 0x0) {
-                    rsi = sign_extend_64(*(int16_t *)var_28 & 0xffff & *(int16_t *)(DXTR_DistMask + sign_extend_64(var_40) * 0x2) & 0xffff) + *(DXTR_DistOffset + sign_extend_64(var_40) * 0x8);
-                    var_28 = var_28 + *(DXTR_DistCost + sign_extend_64(var_40) * 0x8);
-                    *(int32_t *)var_30 = *(int32_t *)(var_30 + (0x0 - (rsi << 0x3)));
-                    var_50 = 0x4 + var_30 + (0x0 - (rsi << 0x3));
-                    *(int32_t *)(var_30 + 0x4) = *(int32_t *)var_50;
-                    var_30 = var_30 + 0x8;
-            }
-            else {
-                    if (var_3C == 0x2) {
-                            rcx = *(int32_t *)var_28;
-                            var_28 = var_28 + 0x4;
-                            var_40 = rcx & 0x3;
-                            var_3C = (rcx >> 0x2) + 0x80000000;
-                    }
-                    else {
-                            var_40 = var_3C & 0x3;
-                            var_3C = var_3C >> 0x2;
-                    }
-                    if (var_40 != 0x0) {
-                            var_60 = var_30 + (0x0 - (sign_extend_64(*(int16_t *)var_28 & 0xffff & *(int16_t *)(DXTR_DistMask + sign_extend_64(var_40) * 0x2) & 0xffff) + *(DXTR_DistOffset + sign_extend_64(var_40) * 0x8) << 0x3));
-                            var_28 = var_28 + *(DXTR_DistCost + sign_extend_64(var_40) * 0x8);
-                            *(int32_t *)var_30 = *(int32_t *)var_60;
-                            var_30 = var_30 + 0x4;
-                    }
-                    else {
-                            *(int32_t *)var_30 = *(int32_t *)var_28;
-                            var_30 = var_30 + 0x4;
-                            var_28 = var_28 + 0x4;
-                    }
-                    if (var_3C == 0x2) {
-                            rcx = *(int32_t *)var_28;
-                            var_28 = var_28 + 0x4;
-                            var_40 = rcx & 0x3;
-                            var_3C = (rcx >> 0x2) + 0x80000000;
-                    }
-                    else {
-                            var_40 = var_3C & 0x3;
-                            var_3C = var_3C >> 0x2;
-                    }
-                    if (var_40 != 0x0) {
-                            var_70 = var_30 + (0x0 - (sign_extend_64(*(int16_t *)var_28 & 0xffff & *(int16_t *)(DXTR_DistMask + sign_extend_64(var_40) * 0x2) & 0xffff) + *(DXTR_DistOffset + sign_extend_64(var_40) * 0x8) << 0x3));
-                            var_28 = var_28 + *(DXTR_DistCost + sign_extend_64(var_40) * 0x8);
-                            *(int32_t *)var_30 = *(int32_t *)var_70;
-                            var_30 = var_30 + 0x4;
-                    }
-                    else {
-                            *(int32_t *)var_30 = *(int32_t *)var_28;
-                            var_30 = var_30 + 0x4;
-                            var_28 = var_28 + 0x4;
-                    }
-            }
-    }
-    rax = var_28 - var_8;
-    return rax;
-}
-#else
-static int64_t DXTR_uncompressDXT1(uint64_t *dst, uint8_t *inbuf, int64_t size)
+#define __int64 int64_t
+static __int64 DXTR_uncompressDXT1int(__int64 a1, __int64 a2, __int64 a3, __int64 a4)
 {
   unsigned int v4; // ST34_4@4
-  int64_t v5; // ST20_8@7
-  int64_t v6; // ST40_8@7
+   __int64 v5; // ST20_8@7
+   __int64 v6; // ST40_8@7
   unsigned int v7; // ST34_4@9
-  int64_t v8; // ST18_8@12
+  __int64 v8; // ST18_8@12
   unsigned int v9; // ST34_4@15
-  int64_t v10; // ST08_8@18
+  __int64 v10; // ST08_8@18
   int v12; // [sp+30h] [bp-40h]@4
   int v13; // [sp+30h] [bp-40h]@9
   int v14; // [sp+30h] [bp-40h]@15
-  unsigned int status; // [sp+34h] [bp-3Ch]@1
+  unsigned int v15; // [sp+34h] [bp-3Ch]@1
   unsigned int v16; // [sp+34h] [bp-3Ch]@9
-  int64_t src_; // [sp+40h] [bp-30h]@1
-  int64_t v18; // [sp+40h] [bp-30h]@12
-  int64_t out; // [sp+48h] [bp-28h]@1
-  int64_t v20; // [sp+48h] [bp-28h]@12
+   __int64 v17; // [sp+40h] [bp-30h]@1
+   __int64 v18; // [sp+40h] [bp-30h]@12
+   __int64 v19; // [sp+48h] [bp-28h]@1
+   __int64 v20; // [sp+48h] [bp-28h]@12
 
-  status = 2;
-  *(_DWORD *)dst = *(_DWORD *)inbuf;
-  *(_DWORD *)(dst + 4) = *(_DWORD *)(inbuf + 4);
-  src_ = dst + 8;
-  out = inbuf + 8;
-  while ( src_ < (uint64_t)(size + dst) )
+  v15 = 2;
+  *(_DWORD *)a3 = *(_DWORD *)a1;
+  *(_DWORD *)(a3 + 4) = *(_DWORD *)(a1 + 4);
+  v17 = a3 + 8;
+  v19 = a1 + 8;
+  while ( v17 < (uint64_t)(a4 + a3) )
   {
-    if ( status == 2 )
+    if ( v15 == 2 )
     {
-      v4 = *(_DWORD *)out;
-      out += 4LL;
+      v4 = *(_DWORD *)v19;
+      v19 += 4LL;
       v12 = v4 & 3;
-      status = (v4 >> 2) + 2147483648;
+      v15 = (v4 >> 2) + 2147483648;
     }
     else
     {
-      v12 = status & 3;
-      status >>= 2;
+      v12 = v15 & 3;
+      v15 >>= 2;
     }
     if ( v12 )
     {
-      v5 = -8 * (DXTR_DistOffset[v12] + (uint16_t)(DXTR_DistMask[v12] & *(_WORD *)out)) + src_;
-      out += DXTR_DistCost[v12];
-      *(_DWORD *)src_ = *(_DWORD *)v5;
-      v6 = src_ + 4;
+      v5 = -8 * (DXTR_DistOffset[v12] + (uint16_t)(DXTR_DistMask[v12] & *(_WORD *)v19)) + v17;
+      v19 += DXTR_DistCost[v12];
+      *(_DWORD *)v17 = *(_DWORD *)v5;
+      v6 = v17 + 4;
       *(_DWORD *)v6 = *(_DWORD *)(v5 + 4);
-      src_ = v6 + 4;
+      v17 = v6 + 4;
     }
     else
     {
-      if ( status == 2 )
+      if ( v15 == 2 )
       {
-        v7 = *(_DWORD *)out;
-        out += 4LL;
+        v7 = *(_DWORD *)v19;
+        v19 += 4LL;
         v13 = v7 & 3;
         v16 = (v7 >> 2) + 2147483648;
       }
       else
       {
-        v13 = status & 3;
-        v16 = status >> 2;
+        v13 = v15 & 3;
+        v16 = v15 >> 2;
       }
       if ( v13 )
       {
-        v8 = DXTR_DistOffset[v13] + (uint16_t)(DXTR_DistMask[v13] & *(_WORD *)out);
-        v20 = DXTR_DistCost[v13] + out;
-        *(_DWORD *)src_ = *(_DWORD *)(-8 * v8 + src_);
-        v18 = src_ + 4;
+        v8 = DXTR_DistOffset[v13] + (uint16_t)(DXTR_DistMask[v13] & *(_WORD *)v19);
+        v20 = DXTR_DistCost[v13] + v19;
+        *(_DWORD *)v17 = *(_DWORD *)(-8 * v8 + v17);
+        v18 = v17 + 4;
       }
       else
       {
-        *(_DWORD *)src_ = *(_DWORD *)out;
-        v18 = src_ + 4;
-        v20 = out + 4;
+        *(_DWORD *)v17 = *(_DWORD *)v19;
+        v18 = v17 + 4;
+        v20 = v19 + 4;
       }
       if ( v16 == 2 )
       {
         v9 = *(_DWORD *)v20;
         v20 += 4LL;
         v14 = v9 & 3;
-        status = (v9 >> 2) + 2147483648;
+        v15 = (v9 >> 2) + 2147483648;
       }
       else
       {
         v14 = v16 & 3;
-        status = v16 >> 2;
+        v15 = v16 >> 2;
       }
       if ( v14 )
       {
         v10 = DXTR_DistOffset[v14] + (uint16_t)(DXTR_DistMask[v14] & *(_WORD *)v20);
-        out = DXTR_DistCost[v14] + v20;
+        v19 = DXTR_DistCost[v14] + v20;
         *(_DWORD *)v18 = *(_DWORD *)(-8 * v10 + v18);
-        src_ = v18 + 4;
+        v17 = v18 + 4;
       }
       else
       {
         *(_DWORD *)v18 = *(_DWORD *)v20;
-        src_ = v18 + 4;
-        out = v20 + 4;
+        v17 = v18 + 4;
+        v19 = v20 + 4;
       }
     }
   }
-  return out - inbuf;
+  return v19 - a1;
+}
+//static int DXTR_uncompressDXT1(uint32_t *dst, const uint8_t *inbuf, size_t a4)
+static __int64 DXTR_uncompressDXT1(const char *a2, char *a3, int a4)
+{
+  return (unsigned int)DXTR_uncompressDXT1int((__int64)a2, (signed int)a3, (__int64)a2, a4);
+}
+#else
+/* Not bytes, output is always in 32-bit elements. Also the answer is rather
+obvious if you look at the compression scheme they use. It addresses already
+decoded elements depending on 2-bit status:
+0 -> copy raw element
+1 -> copy one element from position -2
+2 -> copy one element from position -(get_byte() + 2) * 2
+3 -> copy one element from position -(get_16le() + 0x102) * 2
+
+so those 0x55555555s are actually control words telling you to copy a previous
+sample over and over again. DXT5 looks the same except that it works with four
+32-bit elements at once and can have a long copy (i.e. more than one element
+at a time).
+*/
+static int dxv_uncompress_dxt1(AVCodecContext *avctx)
+{
+
+    DXVContext *ctx = avctx->priv_data;
+    GetByteContext *gbc = &ctx->gbc;
+    uint32_t value;
+    uint8_t op;
+    uint32_t state = 2;
+    int pos = 2;
+    int idx;
+    int prev;
+    int size = bytestream2_get_bytes_left(gbc);
+
+    AV_WL32(ctx->tex_data, bytestream2_get_le32(gbc));
+    AV_WL32(ctx->tex_data + 4, bytestream2_get_le32(gbc));
+
+    av_log(avctx, AV_LOG_VERBOSE, "max size %d\n", ctx->tex_size);
+    while (pos < ctx->tex_size/4) {
+        if (state == 2) {
+            value = bytestream2_get_le32(gbc);
+            state = (value >> 2) + 2147483648;
+        } else {
+            state >>= 2;
+        }
+
+        op = value & 0x3;
+        av_log(avctx, AV_LOG_DEBUG, "STATE %d OP %d\n", state, op);
+        switch (op) {
+        case 1: // copy one element from position -2
+            idx = 2;
+        prev = AV_RL32(ctx->tex_data + 4 * (pos - idx));
+            break;
+        case 2: // copy one element from position -(get_byte() + 2) * 2
+            idx = (bytestream2_get_byte(gbc) + 2) * 2;
+        prev = AV_RL32(ctx->tex_data + 4 * (pos - idx));
+            break;
+        case 3: // copy one element from position -(get_16le() + 0x102) * 2
+            idx = (bytestream2_get_le16(gbc) + 258) * 2;
+        prev = AV_RL32(ctx->tex_data + 4 * (pos - idx));
+            break;
+        case 0:
+            idx = 0;
+        prev = bytestream2_get_le32(gbc) ;
+            break;
+        }
+        av_log(avctx, AV_LOG_DEBUG, "pos:%d op:%d idx:-%d\n", pos, op, idx);
+        AV_WL32(ctx->tex_data + 4 * pos, prev);
+
+        pos++;
+        if (pos % 4 == 0)
+            state = 2;
+    }
+    return pos;
 }
 #endif
+
 #endif
 
 static int dxv_decode(AVCodecContext *avctx, void *data,
@@ -438,8 +431,10 @@ static int dxv_decode(AVCodecContext *avctx, void *data,
     if (ret < 0)
         return ret;
 
-    consumed = DXTR_uncompressDXT1(ctx->tex_data, gbc->buffer, ctx->tex_size);
-    av_log(avctx, AV_LOG_WARNING, "Consumed %d bytes over %d (left %d)\n", consumed, size, size - consumed);
+    consumed = dxv_uncompress_dxt1(avctx);
+    av_log(avctx, AV_LOG_ERROR, "wrote %d bytes over %d\n", consumed * 4, ctx->tex_size);
+   // consumed = DXTR_uncompressDXT1(gbc->buffer, ctx->tex_data, ctx->tex_size);
+   // av_log(avctx, AV_LOG_WARNING, "Consumed %d bytes over %d (left %d)\n", consumed, size, size - consumed);
 
 #if 0
     /* Use the decompress function on the texture, one block per thread. */
