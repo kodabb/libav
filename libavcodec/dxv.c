@@ -101,6 +101,7 @@ static const int DXTR_DistOffset[] = {
 #define _DWORD uint32_t
 #define _WORD uint16_t
 #if 0
+#define DXTR
 static int DXTR_uncompressDXT1(const uint8_t *inbuf, uint32_t *dst, size_t a4)
 {
   _BYTE *src_; // eax@1
@@ -328,7 +329,6 @@ at a time).
 */
 static int dxv_uncompress_dxt1(AVCodecContext *avctx)
 {
-
     DXVContext *ctx = avctx->priv_data;
     GetByteContext *gbc = &ctx->gbc;
     uint32_t value;
@@ -343,40 +343,104 @@ static int dxv_uncompress_dxt1(AVCodecContext *avctx)
     AV_WL32(ctx->tex_data + 4, bytestream2_get_le32(gbc));
 
     av_log(avctx, AV_LOG_VERBOSE, "max size %d\n", ctx->tex_size);
-    while (pos < ctx->tex_size/4) {
+    while (pos < ctx->tex_size / 4) {
+        /// GET_OP ///
         if (state == 2) {
             value = bytestream2_get_le32(gbc);
-            state = (value >> 2) + 2147483648;
+            state = (value >> 2) + (2U << 30); // signal for empty states
         } else {
+            value = state;
             state >>= 2;
         }
 
         op = value & 0x3;
-        av_log(avctx, AV_LOG_DEBUG, "STATE %d OP %d\n", state, op);
         switch (op) {
         case 1: // copy one element from position -2
             idx = 2;
-        prev = AV_RL32(ctx->tex_data + 4 * (pos - idx));
             break;
         case 2: // copy one element from position -(get_byte() + 2) * 2
             idx = (bytestream2_get_byte(gbc) + 2) * 2;
-        prev = AV_RL32(ctx->tex_data + 4 * (pos - idx));
             break;
         case 3: // copy one element from position -(get_16le() + 0x102) * 2
             idx = (bytestream2_get_le16(gbc) + 258) * 2;
-        prev = AV_RL32(ctx->tex_data + 4 * (pos - idx));
-            break;
-        case 0:
-            idx = 0;
-        prev = bytestream2_get_le32(gbc) ;
             break;
         }
-        av_log(avctx, AV_LOG_DEBUG, "pos:%d op:%d idx:-%d\n", pos, op, idx);
-        AV_WL32(ctx->tex_data + 4 * pos, prev);
+        /// end of GET_OP ///
 
+        if (op) {
+            // copy TWO values with single offset
+            prev = AV_RL32(ctx->tex_data + 4 * (pos - idx));
+            AV_WL32(ctx->tex_data + 4 * pos, prev);
+            pos++;
+            prev = AV_RL32(ctx->tex_data + 4 * (pos - idx));
+            AV_WL32(ctx->tex_data + 4 * pos, prev);
+        } else {
+            /// GET_OP ///
+            if (state == 2) {
+                value = bytestream2_get_le32(gbc);
+                state = (value >> 2) + (2U << 30); // signal for empty states
+            } else {
+                value = state;
+                state >>= 2;
+            }
+
+            op = value & 0x3;
+            switch (op) {
+            case 1: // copy one element from position -2
+                idx = 2;
+                break;
+            case 2: // copy one element from position -(get_byte() + 2) * 2
+                idx = (bytestream2_get_byte(gbc) + 2) * 2;
+                break;
+            case 3: // copy one element from position -(get_16le() + 0x102) * 2
+                idx = (bytestream2_get_le16(gbc) + 258) * 2;
+                break;
+            }
+            /// end of GET_OP ///
+
+            if (op) {
+                prev = AV_RL32(ctx->tex_data + 4 * (pos - idx));
+                AV_WL32(ctx->tex_data + 4 * pos, prev);
+            } else {
+                prev = bytestream2_get_le32(gbc);
+                AV_WL32(ctx->tex_data + 4 * pos, prev);
+            }
+            pos++;
+
+            /* new round */
+            /// GET_OP ///
+            if (state == 2) {
+                value = bytestream2_get_le32(gbc);
+                state = (value >> 2) + (2U << 30); // signal for empty states
+            } else {
+                value = state;
+                state >>= 2;
+            }
+
+            op = value & 0x3;
+            switch (op) {
+            case 1: // copy one element from position -2
+                idx = 2;
+                break;
+            case 2: // copy one element from position -(get_byte() + 2) * 2
+                idx = (bytestream2_get_byte(gbc) + 2) * 2;
+                break;
+            case 3: // copy one element from position -(get_16le() + 0x102) * 2
+                idx = (bytestream2_get_le16(gbc) + 258) * 2;
+                break;
+            }
+            /// end of GET_OP ///
+
+            if (op) {
+                prev = AV_RL32(ctx->tex_data + 4 * (pos - idx));
+                AV_WL32(ctx->tex_data + 4 * pos, prev);
+            } else {
+                prev = bytestream2_get_le32(gbc);
+                AV_WL32(ctx->tex_data + 4 * pos, prev);
+            }
+
+        }
         pos++;
-        if (pos % 4 == 0)
-            state = 2;
     }
     return pos;
 }
@@ -431,10 +495,13 @@ static int dxv_decode(AVCodecContext *avctx, void *data,
     if (ret < 0)
         return ret;
 
+#ifndef DXTR
     consumed = dxv_uncompress_dxt1(avctx);
     av_log(avctx, AV_LOG_ERROR, "wrote %d bytes over %d\n", consumed * 4, ctx->tex_size);
-   // consumed = DXTR_uncompressDXT1(gbc->buffer, ctx->tex_data, ctx->tex_size);
-   // av_log(avctx, AV_LOG_WARNING, "Consumed %d bytes over %d (left %d)\n", consumed, size, size - consumed);
+#else
+    consumed = DXTR_uncompressDXT1(gbc->buffer, ctx->tex_data, ctx->tex_size);
+    av_log(avctx, AV_LOG_WARNING, "Consumed %d bytes over %d (left %d)\n", consumed, size, size - consumed);
+#endif
 
 #if 0
     /* Use the decompress function on the texture, one block per thread. */
