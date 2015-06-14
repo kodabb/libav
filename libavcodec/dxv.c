@@ -1,5 +1,5 @@
 /*
- * Resolume DXD3 decoder
+ * Resolume DXV decoder
  * Copyright (C) 2015 Vittorio Giovara <vittorio.giovara@gmail.com>
  *
  * This file is part of Libav.
@@ -40,7 +40,7 @@
 #define DDPF_PALETTE   (1 <<  5)
 #define DDPF_NORMALMAP (1 << 31)
 
-typedef struct DXD3Context {
+typedef struct DXVContext {
     TextureDSPContext texdsp;
     GetByteContext gbc;
 
@@ -53,12 +53,12 @@ typedef struct DXD3Context {
 
     /* Pointer to the selected compress or decompress function. */
     int (*tex_funct)(uint8_t *dst, ptrdiff_t stride, const uint8_t *block);
-} DXD3Context;
+} DXVContext;
 
 static int decompress_texture_thread(AVCodecContext *avctx, void *arg,
                                      int block_nb, int thread_nb)
 {
-    DXD3Context *ctx = avctx->priv_data;
+    DXVContext *ctx = avctx->priv_data;
     AVFrame *frame = arg;
     int x = (TEXTURE_BLOCK_W * block_nb) % avctx->coded_width;
     int y = TEXTURE_BLOCK_H * (TEXTURE_BLOCK_W * block_nb / avctx->coded_width);
@@ -71,7 +71,7 @@ static int decompress_texture_thread(AVCodecContext *avctx, void *arg,
 
 static void decompress_texture(AVCodecContext *avctx, AVFrame *frame)
 {
-    DXD3Context *ctx = avctx->priv_data;
+    DXVContext *ctx = avctx->priv_data;
     int x, y;
     uint8_t *src = ctx->tex_data;
 
@@ -100,7 +100,7 @@ static const int DXTR_DistOffset[] = {
 #define _BYTE uint8_t
 #define _DWORD uint32_t
 #define _WORD uint16_t
-#if 0
+#if 1
 static int DXTR_uncompressDXT1(uint32_t *dst, const uint8_t *inbuf, size_t a4)
 {
   _BYTE *src_; // eax@1
@@ -391,10 +391,10 @@ static int64_t DXTR_uncompressDXT1(uint64_t *dst, uint8_t *inbuf, int64_t size)
 #endif
 #endif
 
-static int dxd3_decode(AVCodecContext *avctx, void *data,
+static int dxv_decode(AVCodecContext *avctx, void *data,
                        int *got_frame, AVPacket *avpkt)
 {
-    DXD3Context *ctx = avctx->priv_data;
+    DXVContext *ctx = avctx->priv_data;
     GetByteContext *gbc = &ctx->gbc;
     AVFrame *frame = data;
     uint32_t version, tag;
@@ -457,9 +457,9 @@ static int dxd3_decode(AVCodecContext *avctx, void *data,
     return avpkt->size;
 }
 
-static int dxd3_init(AVCodecContext *avctx)
+static int dxv_init(AVCodecContext *avctx)
 {
-    DXD3Context *ctx = avctx->priv_data;
+    DXVContext *ctx = avctx->priv_data;
     int ret = av_image_check_size(avctx->width, avctx->height, 0, avctx);
 
     if (ret < 0) {
@@ -477,24 +477,24 @@ static int dxd3_init(AVCodecContext *avctx)
     return 0;
 }
 
-static int dxd3_close(AVCodecContext *avctx)
+static int dxv_close(AVCodecContext *avctx)
 {
-    DXD3Context *ctx = avctx->priv_data;
+    DXVContext *ctx = avctx->priv_data;
 
     av_freep(&ctx->tex_data);
 
     return 0;
 }
 
-AVCodec ff_dxd3_decoder = {
-    .name           = "dxd3",
-    .long_name      = NULL_IF_CONFIG_SMALL("Resolume DXD3"),
+AVCodec ff_dxv_decoder = {
+    .name           = "dxv",
+    .long_name      = NULL_IF_CONFIG_SMALL("Resolume DXV"),
     .type           = AVMEDIA_TYPE_VIDEO,
-    .id             = AV_CODEC_ID_DXD3,
-    .init           = dxd3_init,
-    .decode         = dxd3_decode,
-    .close          = dxd3_close,
-    .priv_data_size = sizeof(DXD3Context),
+    .id             = AV_CODEC_ID_DXV,
+    .init           = dxv_init,
+    .decode         = dxv_decode,
+    .close          = dxv_close,
+    .priv_data_size = sizeof(DXVContext),
     .capabilities   = CODEC_CAP_DR1,// | CODEC_CAP_SLICE_THREADS,
     .caps_internal  = FF_CODEC_CAP_INIT_THREADSAFE |
                       FF_CODEC_CAP_INIT_CLEANUP
