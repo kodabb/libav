@@ -19,13 +19,6 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-/**
- * @file
- * DDS decoder
- *
- * https://msdn.microsoft.com/en-us/library/bb943982%28v=vs.85%29.aspx
- */
-
 #include <stdint.h>
 
 #include "libavutil/imgutils.h"
@@ -36,10 +29,6 @@
 #include "texturedsp.h"
 #include "thread.h"
 
-#define DDPF_FOURCC    (1 <<  2)
-#define DDPF_PALETTE   (1 <<  5)
-#define DDPF_NORMALMAP (1 << 31)
-
 typedef struct DXVContext {
     TextureDSPContext texdsp;
     GetByteContext gbc;
@@ -47,11 +36,11 @@ typedef struct DXVContext {
     int compressed;
     int paletted;
 
-    uint8_t *tex_data; // Compressed texture
-    int tex_ratio;           // Compression ratio
-    int tex_size;           // Compression ratio
+    uint8_t *tex_data;  // Compressed texture
+    int tex_rat;        // Compression ratio
+    int tex_size;       // Texture size
 
-    /* Pointer to the selected compress or decompress function. */
+    /* Pointer to the selected decompression function */
     int (*tex_funct)(uint8_t *dst, ptrdiff_t stride, const uint8_t *block);
 } DXVContext;
 
@@ -63,7 +52,7 @@ static int decompress_texture_thread(AVCodecContext *avctx, void *arg,
     int x = (TEXTURE_BLOCK_W * block_nb) % avctx->coded_width;
     int y = TEXTURE_BLOCK_H * (TEXTURE_BLOCK_W * block_nb / avctx->coded_width);
     uint8_t *p = frame->data[0] + x * 4 + y * frame->linesize[0];
-    const uint8_t *d = ctx->tex_data + block_nb * ctx->tex_ratio;
+    const uint8_t *d = ctx->tex_data + block_nb * ctx->tex_rat;
 
     ctx->tex_funct(p, frame->linesize[0], d);
     return 0;
@@ -115,14 +104,13 @@ at a time).  */
         }                                                                     \
     } while(0)
 
-static int dxv_uncompress_dxt1(AVCodecContext *avctx)
+static int dxv_decompress_dxt1(AVCodecContext *avctx)
 {
     DXVContext *ctx = avctx->priv_data;
     GetByteContext *gbc = &ctx->gbc;
-    uint32_t value, state = 0;
-    uint8_t op;
+    uint32_t value, op;
+    int idx, prev, state = 0;
     int pos = 2;
-    int idx, prev;
 
     /* Copy the first two elements */
     AV_WL32(ctx->tex_data, bytestream2_get_le32(gbc));
@@ -166,13 +154,14 @@ static int dxv_uncompress_dxt1(AVCodecContext *avctx)
 }
 
 static int dxv_decode(AVCodecContext *avctx, void *data,
-                       int *got_frame, AVPacket *avpkt)
+                      int *got_frame, AVPacket *avpkt)
 {
     DXVContext *ctx = avctx->priv_data;
     GetByteContext *gbc = &ctx->gbc;
     AVFrame *frame = data;
     uint32_t version, tag;
     int ret, blocks, size, consumed;
+    int (*decompress_tex)(AVCodecContext *avctx);
 
     bytestream2_init(gbc, avpkt->data, avpkt->size);
 
@@ -183,34 +172,38 @@ static int dxv_decode(AVCodecContext *avctx, void *data,
     }
 
     tag = bytestream2_get_le32(gbc);
-    if (tag != MKBETAG('D', 'X', 'T', '1')) {
+    switch (tag) {
+    case MKBETAG('D', 'X', 'T', '1'):
+        ctx->tex_funct = ctx->texdsp.dxt1_block;
+        ctx->tex_rat   = 8;
+        decompress_tex = dxv_decompress_dxt1;
+        break;
+    default:
         av_log(avctx, AV_LOG_ERROR, "Unsupported tag header (0x%08X).\n", tag);
         return AVERROR_INVALIDDATA;
     }
-    avctx->pix_fmt = AV_PIX_FMT_RGBA;
-    ctx->tex_funct = ctx->texdsp.dxt1_block;
-    ctx->tex_ratio = 8;
 
     version = bytestream2_get_le32(gbc);
     if (version != 4) {
         av_log(avctx, AV_LOG_WARNING, "version %d\n", version);
     }
     size = bytestream2_get_le32(gbc);
-    if (size != bytestream2_get_bytes_left(gbc)) {
+    if (size > bytestream2_get_bytes_left(gbc)) {
         av_log(avctx, AV_LOG_ERROR, "Incomplete file (%u > %u)\n.",
                size, bytestream2_get_bytes_left(gbc));
+        return AVERROR_INVALIDDATA;
     }
 
     ret = ff_get_buffer(avctx, frame, 0);
     if (ret < 0)
         return ret;
 
-    ctx->tex_size = avctx->coded_width * avctx->coded_height * 4 / 8;
+    ctx->tex_size = avctx->coded_width * avctx->coded_height * 4 / ctx->tex_rat;
     ret = av_reallocp(&ctx->tex_data, ctx->tex_size);
     if (ret < 0)
         return ret;
 
-    consumed = dxv_uncompress_dxt1(avctx);
+    decompress_tex(avctx);
 
 #if 0
     /* Use the decompress function on the texture, one block per thread. */
@@ -244,6 +237,7 @@ static int dxv_init(AVCodecContext *avctx)
     avctx->coded_height = FFALIGN(avctx->height, TEXTURE_BLOCK_H);
 
     ff_texturedsp_init(&ctx->texdsp);
+    avctx->pix_fmt = AV_PIX_FMT_RGBA;
 
     return 0;
 }
