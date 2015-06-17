@@ -269,35 +269,49 @@ static int dxv_decode(AVCodecContext *avctx, void *data,
     DXVContext *ctx = avctx->priv_data;
     GetByteContext *gbc = &ctx->gbc;
     AVFrame *frame = data;
-    uint32_t version, tag;
-    int ret, blocks, size;
+    uint32_t tag;
+    int ret, blocks, size, channels;
     int (*decompress_tex)(AVCodecContext *avctx);
+    char buf[32];
+    const char *compression;
 
     bytestream2_init(gbc, avpkt->data, avpkt->size);
 
     tag = bytestream2_get_le32(gbc);
+    av_get_codec_tag_string(buf, sizeof(buf), tag);
+
     switch (tag) {
     case MKBETAG('D', 'X', 'T', '1'):
+        // likely to be default for unknown cases
         ctx->tex_funct = ctx->texdsp.dxt1_block;
         ctx->tex_rat   = 8;
         ctx->tex_step  = 8;
         decompress_tex = dxv_decompress_dxt1;
+        compression    = "DXT1";
         break;
     case MKBETAG('D', 'X', 'T', '5'):
         ctx->tex_funct = ctx->texdsp.dxt5_block;
         ctx->tex_rat   = 4;
         ctx->tex_step  = 16;
         decompress_tex = dxv_decompress_dxt5;
+        compression    = "DXT5";
         break;
+    case MKBETAG('Y', 'C', 'G', '6'):
+    case MKBETAG('Y', 'G', '1', '0'):
+    case MKBETAG('U', 'V', 'A', '0'):
+        avpriv_report_missing_feature(avctx, "Tag %s (0x%08X)", buf, tag);
+        return AVERROR_PATCHWELCOME;
     default:
-        av_log(avctx, AV_LOG_ERROR, "Unsupported tag header (0x%08X).\n", tag);
+        av_log(avctx, AV_LOG_ERROR,
+               "Unsupported tag header %s (0x%08X).\n", buf, tag);
         return AVERROR_INVALIDDATA;
     }
+    av_log(avctx, AV_LOG_VERBOSE, "%s texture\n", compression);
 
-    version = bytestream2_get_le32(gbc);
-    if (version != 4) {
-        av_log(avctx, AV_LOG_WARNING, "version %d\n", version);
-    }
+    channels = bytestream2_get_byte(gbc);
+    bytestream2_skip(gbc, 3); // unknown
+    av_log(avctx, AV_LOG_DEBUG, "%d channels\n", channels);
+
     size = bytestream2_get_le32(gbc);
     if (size > bytestream2_get_bytes_left(gbc)) {
         av_log(avctx, AV_LOG_ERROR, "Incomplete file (%u > %u)\n.",
