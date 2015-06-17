@@ -158,12 +158,8 @@ static int dxv_decompress_dxt1(AVCodecContext *avctx)
 32-bit elements at once and can have a long copy (i.e. more than one element
 at a time).  */
 
-/* This scheme addresses already decoded elements depending on 2-bit status:
- *   0 -> copy new element
- *   1 -> copy one element from position -2
- *   2 -> copy one element from position -(get_byte() + 2) * 2
- *   3 -> copy one element from position -(get_16le() + 0x102) * 2 */
-#define DXT1_CHECKPOINT()                                                     \
+#define DXT5_CHECKPOINT()                                                     \
+    if (pos == ctx->tex_size/4) return -1;  \
     do {                                                                      \
         if (state == 0) {                                                     \
             value = bytestream2_get_le32(gbc);                                \
@@ -174,13 +170,13 @@ at a time).  */
         state--;                                                              \
         switch (op) {                                                         \
         case 1: /* copy one element from position -2 */                       \
-            idx = 2;                                                          \
+            idx = 4;                                                          \
             break;                                                            \
         case 2: /* copy one element from position -(get_byte() + 2) * 2 */    \
-            idx = (bytestream2_get_byte(gbc) + 2) * 2;                        \
+            idx = (bytestream2_get_byte(gbc) + 2) * 4;                        \
             break;                                                            \
         case 3: /* copy one element from position -(get_16le() + 0x102) * 2 */\
-            idx = (bytestream2_get_le16(gbc) + 0x102) * 2;                    \
+            idx = (bytestream2_get_le16(gbc) + 0x102) * 4;                    \
             break;                                                            \
         }                                                                     \
     } while(0)
@@ -192,6 +188,8 @@ static int dxv_decompress_dxt5(AVCodecContext *avctx)
     uint32_t value, op;
     int idx, prev, state = 0;
     int pos = 4;
+    int init = 0;
+    int probe, check, offset;
 
     /* Copy the first four elements */
     AV_WL32(ctx->tex_data +  0, bytestream2_get_le32(gbc));
@@ -201,7 +199,101 @@ static int dxv_decompress_dxt5(AVCodecContext *avctx)
 
     /* Process input until the whole texture has been filled */
     while (pos < ctx->tex_size / 4) {
-        DXT1_CHECKPOINT();
+        if (init) {
+            init--;
+here:
+            prev = AV_RL32(ctx->tex_data + 4 * (pos - 4));
+            AV_WL32(ctx->tex_data + 4 * pos, prev);
+            pos++;
+            prev = AV_RL32(ctx->tex_data + 4 * (pos - 4));
+            AV_WL32(ctx->tex_data + 4 * pos, prev);
+            pos++;
+        } else {
+            if (state == 0) {
+                value = bytestream2_get_le32(gbc);
+                state = 16;
+            }
+            op = value & 0x3;
+            value >>= 2;
+            state--;
+
+            switch (op) {
+            case 0:
+                probe = bytestream2_get_byte(gbc);
+                check = probe + 1;
+                if (check != 256)
+                    goto there;
+                probe = bytestream2_get_le16(gbc);
+                for (idx = 256; probe == 0xFFFF; ) {
+                    idx += 0xFFFF;
+                    probe = bytestream2_get_le16(gbc);
+                }
+                check = idx + probe;
+                if (check) {
+there:
+                    offset = 4 * check;
+                    bytestream2_skip(gbc, offset);
+                    do {
+#if 0
+                        prev = AV_RL32(ctx->tex_data + 4 * (pos - 4));
+                        AV_WL32(ctx->tex_data + 4 * pos, prev);
+                        pos++;
+                        if (pos == ctx->tex_size/4) return -1;
+                        prev = AV_RL32(ctx->tex_data + 4 * (pos - 4));
+                        AV_WL32(ctx->tex_data + 4 * pos, prev);
+                        pos++;
+                        if (pos == ctx->tex_size/4) return -1;
+                        prev = AV_RL32(ctx->tex_data + 4 * (pos - 4));
+                        AV_WL32(ctx->tex_data + 4 * pos, prev);
+                        pos++;
+                        if (pos == ctx->tex_size/4) return -1;
+                        prev = AV_RL32(ctx->tex_data + 4 * (pos - 4));
+                        AV_WL32(ctx->tex_data + 4 * pos, prev);
+                        pos++;
+                        if (pos == ctx->tex_size/4) return -1;
+#endif
+                        check--;
+                    } while (check);
+                }
+
+                if (pos >= ctx->tex_size / 4)
+                    return 0;
+                break;
+            case 1:
+                init = bytestream2_get_byte(gbc);
+                if (init == 255) {
+                    probe = bytestream2_get_le16(gbc);
+                    while (probe == 0xFFFF) {
+                        init += 0xFFFF;
+                        probe = bytestream2_get_le16(gbc);
+                    }
+                    init += probe;
+                }
+                goto here;
+                break;
+            case 2:
+                idx = 32/4 + 4 * bytestream2_get_le16(gbc); // ?
+                prev = AV_RL32(ctx->tex_data + 4 * (pos - idx));
+                AV_WL32(ctx->tex_data + 4 * pos, prev);
+                pos++;
+                prev = AV_RL32(ctx->tex_data + 4 * (pos - idx));
+                AV_WL32(ctx->tex_data + 4 * pos, prev);
+                pos++;
+                break;
+            case 3:
+                prev = AV_RL32(ctx->tex_data + 4 * pos);
+                AV_WL32(ctx->tex_data + 4 * pos, prev);
+                pos++;
+                prev = AV_RL32(ctx->tex_data + 4 * pos);
+                AV_WL32(ctx->tex_data + 4 * pos, prev);
+                pos++;
+
+                break;
+            }
+            init = 0;
+        }
+
+        DXT5_CHECKPOINT();
 
         /* Copy two elements from a previous offset or from the input buffer */
         if (op) {
@@ -212,17 +304,8 @@ static int dxv_decompress_dxt5(AVCodecContext *avctx)
             prev = AV_RL32(ctx->tex_data + 4 * (pos - idx));
             AV_WL32(ctx->tex_data + 4 * pos, prev);
             pos++;
-
-            prev = AV_RL32(ctx->tex_data + 4 * (pos - idx));
-            AV_WL32(ctx->tex_data + 4 * pos, prev);
-            pos++;
-
-            prev = AV_RL32(ctx->tex_data + 4 * (pos - idx));
-            AV_WL32(ctx->tex_data + 4 * pos, prev);
-            pos++;
-
         } else {
-            DXT1_CHECKPOINT();
+            DXT5_CHECKPOINT();
 
             if (op)
                 prev = AV_RL32(ctx->tex_data + 4 * (pos - idx));
@@ -231,7 +314,7 @@ static int dxv_decompress_dxt5(AVCodecContext *avctx)
             AV_WL32(ctx->tex_data + 4 * pos, prev);
             pos++;
 
-            DXT1_CHECKPOINT();
+            DXT5_CHECKPOINT();
 
             if (op)
                 prev = AV_RL32(ctx->tex_data + 4 * (pos - idx));
@@ -240,7 +323,7 @@ static int dxv_decompress_dxt5(AVCodecContext *avctx)
             AV_WL32(ctx->tex_data + 4 * pos, prev);
             pos++;
 
-            DXT1_CHECKPOINT();
+            DXT5_CHECKPOINT();
 
             if (op)
                 prev = AV_RL32(ctx->tex_data + 4 * (pos - idx));
@@ -249,7 +332,7 @@ static int dxv_decompress_dxt5(AVCodecContext *avctx)
             AV_WL32(ctx->tex_data + 4 * pos, prev);
             pos++;
 
-            DXT1_CHECKPOINT();
+            DXT5_CHECKPOINT();
 
             if (op)
                 prev = AV_RL32(ctx->tex_data + 4 * (pos - idx));
