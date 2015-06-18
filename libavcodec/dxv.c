@@ -199,6 +199,7 @@ static int dxv_decompress_dxt5(AVCodecContext *avctx)
 
     /* Process input until the whole texture has been filled */
     while (pos < ctx->tex_size / 4) {
+start:
         if (init) {
             init--;
 here:
@@ -229,34 +230,29 @@ here:
                     probe = bytestream2_get_le16(gbc);
                 }
                 check = idx + probe;
-                if (check) {
+                while (check) {
 there:
-                    offset = 4 * check;
-                    bytestream2_skip(gbc, offset);
-                    do {
-#if 0
-                        prev = AV_RL32(ctx->tex_data + 4 * (pos - 4));
-                        AV_WL32(ctx->tex_data + 4 * pos, prev);
-                        pos++;
-                        if (pos == ctx->tex_size/4) return -1;
-                        prev = AV_RL32(ctx->tex_data + 4 * (pos - 4));
-                        AV_WL32(ctx->tex_data + 4 * pos, prev);
-                        pos++;
-                        if (pos == ctx->tex_size/4) return -1;
-                        prev = AV_RL32(ctx->tex_data + 4 * (pos - 4));
-                        AV_WL32(ctx->tex_data + 4 * pos, prev);
-                        pos++;
-                        if (pos == ctx->tex_size/4) return -1;
-                        prev = AV_RL32(ctx->tex_data + 4 * (pos - 4));
-                        AV_WL32(ctx->tex_data + 4 * pos, prev);
-                        pos++;
-                        if (pos == ctx->tex_size/4) return -1;
-#endif
-                        check--;
-                    } while (check);
+                    prev = AV_RL32(ctx->tex_data + 4 * (pos - 4));
+                    AV_WL32(ctx->tex_data + 4 * pos, prev);
+                    pos++;
+                    if (pos == ctx->tex_size/4) return -1;
+                    prev = AV_RL32(ctx->tex_data + 4 * (pos - 4));
+                    AV_WL32(ctx->tex_data + 4 * pos, prev);
+                    pos++;
+                    if (pos == ctx->tex_size/4) return -1;
+                    prev = AV_RL32(ctx->tex_data + 4 * (pos - 4));
+                    AV_WL32(ctx->tex_data + 4 * pos, prev);
+                    pos++;
+                    if (pos == ctx->tex_size/4) return -1;
+                    prev = AV_RL32(ctx->tex_data + 4 * (pos - 4));
+                    AV_WL32(ctx->tex_data + 4 * pos, prev);
+                    pos++;
+                    if (pos == ctx->tex_size/4) return -1;
+                    check--;
                 }
-
-                if (pos >= ctx->tex_size / 4)
+                if (pos < ctx->tex_size / 4)
+                    goto start;
+                else
                     return 0;
                 break;
             case 1:
@@ -271,23 +267,25 @@ there:
                 }
                 goto here;
                 break;
-            case 2:
-                idx = 32/4 + 4 * bytestream2_get_le16(gbc); // ?
+            case 2: /* Copy two dwords from previous data */
+                idx = 32/4 + bytestream2_get_le16(gbc); // ?
                 prev = AV_RL32(ctx->tex_data + 4 * (pos - idx));
                 AV_WL32(ctx->tex_data + 4 * pos, prev);
                 pos++;
+
+                idx = 32/4 + bytestream2_get_le16(gbc); // ?
                 prev = AV_RL32(ctx->tex_data + 4 * (pos - idx));
                 AV_WL32(ctx->tex_data + 4 * pos, prev);
                 pos++;
                 break;
-            case 3:
-                prev = AV_RL32(ctx->tex_data + 4 * pos);
-                AV_WL32(ctx->tex_data + 4 * pos, prev);
-                pos++;
-                prev = AV_RL32(ctx->tex_data + 4 * pos);
+            case 3: /* Copy two dwords from input */
+                prev = bytestream2_get_le32(gbc);
                 AV_WL32(ctx->tex_data + 4 * pos, prev);
                 pos++;
 
+                prev = bytestream2_get_le32(gbc);
+                AV_WL32(ctx->tex_data + 4 * pos, prev);
+                pos++;
                 break;
             }
             init = 0;
@@ -305,24 +303,6 @@ there:
             AV_WL32(ctx->tex_data + 4 * pos, prev);
             pos++;
         } else {
-            DXT5_CHECKPOINT();
-
-            if (op)
-                prev = AV_RL32(ctx->tex_data + 4 * (pos - idx));
-            else
-                prev = bytestream2_get_le32(gbc);
-            AV_WL32(ctx->tex_data + 4 * pos, prev);
-            pos++;
-
-            DXT5_CHECKPOINT();
-
-            if (op)
-                prev = AV_RL32(ctx->tex_data + 4 * (pos - idx));
-            else
-                prev = bytestream2_get_le32(gbc);
-            AV_WL32(ctx->tex_data + 4 * pos, prev);
-            pos++;
-
             DXT5_CHECKPOINT();
 
             if (op)
