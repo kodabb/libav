@@ -159,7 +159,6 @@ static int dxv_decompress_dxt1(AVCodecContext *avctx)
 at a time).  */
 
 #define DXT5_CHECKPOINT()                                                     \
-    if (pos == ctx->tex_size/4) return -1;  \
     do {                                                                      \
         if (state == 0) {                                                     \
             value = bytestream2_get_le32(gbc);                                \
@@ -199,10 +198,10 @@ static int dxv_decompress_dxt5(AVCodecContext *avctx)
 
     /* Process input until the whole texture has been filled */
     while (pos < ctx->tex_size / 4) {
-start:
         if (init) {
             init--;
-here:
+
+            /* Copy two dwords from previous data */
             prev = AV_RL32(ctx->tex_data + 4 * (pos - 4));
             AV_WL32(ctx->tex_data + 4 * pos, prev);
             pos++;
@@ -235,25 +234,20 @@ there:
                     prev = AV_RL32(ctx->tex_data + 4 * (pos - 4));
                     AV_WL32(ctx->tex_data + 4 * pos, prev);
                     pos++;
-                    if (pos == ctx->tex_size/4) return -1;
                     prev = AV_RL32(ctx->tex_data + 4 * (pos - 4));
                     AV_WL32(ctx->tex_data + 4 * pos, prev);
                     pos++;
-                    if (pos == ctx->tex_size/4) return -1;
                     prev = AV_RL32(ctx->tex_data + 4 * (pos - 4));
                     AV_WL32(ctx->tex_data + 4 * pos, prev);
                     pos++;
-                    if (pos == ctx->tex_size/4) return -1;
                     prev = AV_RL32(ctx->tex_data + 4 * (pos - 4));
                     AV_WL32(ctx->tex_data + 4 * pos, prev);
                     pos++;
-                    if (pos == ctx->tex_size/4) return -1;
                     check--;
                 }
-                if (pos < ctx->tex_size / 4)
-                    goto start;
-                else
-                    return 0;
+
+                /* Restart the loop */
+                continue;
                 break;
             case 1:
                 init = bytestream2_get_byte(gbc);
@@ -265,20 +259,31 @@ there:
                     }
                     init += probe;
                 }
-                goto here;
+
+                /* Copy two dwords from previous data */
+                prev = AV_RL32(ctx->tex_data + 4 * (pos - 4));
+                AV_WL32(ctx->tex_data + 4 * pos, prev);
+                pos++;
+
+                prev = AV_RL32(ctx->tex_data + 4 * (pos - 4));
+                AV_WL32(ctx->tex_data + 4 * pos, prev);
+                pos++;
+
                 break;
-            case 2: /* Copy two dwords from previous data */
-                idx = 32/4 + bytestream2_get_le16(gbc); // ?
+            case 2: /* Copy two dwords from previous data at given offset */
+                av_log(avctx, AV_LOG_WARNING, "experimental 2\n");
+                idx = 8 + bytestream2_get_le16(gbc);
                 prev = AV_RL32(ctx->tex_data + 4 * (pos - idx));
                 AV_WL32(ctx->tex_data + 4 * pos, prev);
                 pos++;
 
-                idx = 32/4 + bytestream2_get_le16(gbc); // ?
+                idx = 8 + bytestream2_get_le16(gbc);
                 prev = AV_RL32(ctx->tex_data + 4 * (pos - idx));
                 AV_WL32(ctx->tex_data + 4 * pos, prev);
                 pos++;
                 break;
             case 3: /* Copy two dwords from input */
+                av_log(avctx, AV_LOG_WARNING, "experimental 3\n");
                 prev = bytestream2_get_le32(gbc);
                 AV_WL32(ctx->tex_data + 4 * pos, prev);
                 pos++;
@@ -288,7 +293,7 @@ there:
                 pos++;
                 break;
             }
-            init = 0;
+            //init = 0;
         }
 
         DXT5_CHECKPOINT();
