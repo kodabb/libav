@@ -194,11 +194,12 @@ static int dxv_decompress_dxt5(AVCodecContext *avctx)
             case 0: /* Copy many dwords from previous data */
                 probe = bytestream2_get_byte(gbc) + 1;
                 if (probe == 256) {
-                    idx = 256;
-                    do {
+                    av_log(avctx, AV_LOG_WARNING, "experimental 256\n");
+                    probe = bytestream2_get_le16(gbc);
+                    for (idx = 256; probe == 0xFFFF; ) {
+                        idx += 0xFFFF;
                         probe = bytestream2_get_le16(gbc);
-                        idx  += 0xFFFF;
-                    } while (probe == 0xFFFF);
+                    }
                     probe += idx;
                 }
                 while (probe) {
