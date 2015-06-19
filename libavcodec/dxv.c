@@ -172,7 +172,6 @@ static int dxv_decompress_dxt5(AVCodecContext *avctx)
 
     /* Process input until the whole texture has been filled */
     while (pos < ctx->tex_size / 4) {
-start:
         if (init) {
             init--;
 
@@ -223,11 +222,7 @@ there:
                     if (pos == ctx->tex_size/4) return -1;
                     check--;
                 }
-                if (pos < ctx->tex_size / 4)
-                    goto start;
-                else
-                    return 0;
-                break;
+            continue;
             case 1:
                 init = bytestream2_get_byte(gbc);
                 if (init == 255) {
