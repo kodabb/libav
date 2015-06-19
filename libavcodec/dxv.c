@@ -202,7 +202,7 @@ static int dxv_decompress_dxt5(AVCodecContext *avctx)
                     probe = bytestream2_get_le16(gbc);
                 }
                 check = idx + probe;
-                while (check) {
+                while (check && pos < ctx->tex_size / 4) {
 there:
                     prev = AV_RL32(ctx->tex_data + 4 * (pos - 4));
                     AV_WL32(ctx->tex_data + 4 * pos, prev);
@@ -219,6 +219,7 @@ there:
                     prev = AV_RL32(ctx->tex_data + 4 * (pos - 4));
                     AV_WL32(ctx->tex_data + 4 * pos, prev);
                     pos++;
+
                     check--;
                 }
             continue;
