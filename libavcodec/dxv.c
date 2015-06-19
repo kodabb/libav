@@ -80,9 +80,9 @@ at a time).  */
 
 /* This scheme addresses already decoded elements depending on 2-bit status:
  *   0 -> copy new element
- *   1 -> copy one element from position -2
- *   2 -> copy one element from position -(get_byte() + 2) * 2
- *   3 -> copy one element from position -(get_16le() + 0x102) * 2 */
+ *   1 -> copy one element from position -x
+ *   2 -> copy one element from position -(get_byte() + 2) * x
+ *   3 -> copy one element from position -(get_16le() + 0x102) * x */
 #define CHECKPOINT(x)                                                         \
     do {                                                                      \
         if (state == 0) {                                                     \
@@ -93,13 +93,13 @@ at a time).  */
         value >>= 2;                                                          \
         state--;                                                              \
         switch (op) {                                                         \
-        case 1: /* copy one element from position -2 */                       \
+        case 1: /* copy one element from position -x */                       \
             idx = x;                                                          \
             break;                                                            \
-        case 2: /* copy one element from position -(get_byte() + 2) * 2 */    \
+        case 2: /* copy one element from position -(get_byte() + 2) * x */    \
             idx = (bytestream2_get_byte(gbc) + 2) * x;                        \
             break;                                                            \
-        case 3: /* copy one element from position -(get_16le() + 0x102) * 2 */\
+        case 3: /* copy one element from position -(get_16le() + 0x102) * x */\
             idx = (bytestream2_get_le16(gbc) + 0x102) * x;                    \
             break;                                                            \
         }                                                                     \
@@ -161,7 +161,7 @@ static int dxv_decompress_dxt5(AVCodecContext *avctx)
     uint32_t value, op;
     int idx, prev, state = 0;
     int pos = 4;
-    int init = 0;
+    int run = 0;
     int probe, check, offset;
 
     /* Copy the first four elements */
@@ -172,8 +172,8 @@ static int dxv_decompress_dxt5(AVCodecContext *avctx)
 
     /* Process input until the whole texture has been filled */
     while (pos < ctx->tex_size / 4) {
-        if (init) {
-            init--;
+        if (run) {
+            run--;
 
             prev = AV_RL32(ctx->tex_data + 4 * (pos - 4));
             AV_WL32(ctx->tex_data + 4 * pos, prev);
@@ -192,6 +192,7 @@ static int dxv_decompress_dxt5(AVCodecContext *avctx)
 
             switch (op) {
             case 0:
+                /* Long copy */
                 probe = bytestream2_get_byte(gbc);
                 check = probe + 1;
                 if (check != 256)
@@ -222,18 +223,23 @@ there:
 
                     check--;
                 }
-            continue;
+
+                /* Restart the loop */
+                continue;
+                break;
             case 1:
-                init = bytestream2_get_byte(gbc);
-                if (init == 255) {
+                /* Load new run value */
+                run = bytestream2_get_byte(gbc);
+                if (run == 255) {
                     probe = bytestream2_get_le16(gbc);
                     while (probe == 0xFFFF) {
-                        init += 0xFFFF;
+                        run += 0xFFFF;
                         probe = bytestream2_get_le16(gbc);
                     }
-                    init += probe;
+                    run += probe;
                 }
 
+                /* Copy two dwords from previous data */
                 prev = AV_RL32(ctx->tex_data + 4 * (pos - 4));
                 AV_WL32(ctx->tex_data + 4 * pos, prev);
                 pos++;
@@ -242,7 +248,8 @@ there:
                 AV_WL32(ctx->tex_data + 4 * pos, prev);
                 pos++;
                 break;
-            case 2: /* Copy two dwords from previous data */
+            case 2:
+                /* Copy two dwords from a previous index */
                 idx = 8 + bytestream2_get_le16(gbc);
                 prev = AV_RL32(ctx->tex_data + 4 * (pos - idx));
                 AV_WL32(ctx->tex_data + 4 * pos, prev);
@@ -252,7 +259,8 @@ there:
                 AV_WL32(ctx->tex_data + 4 * pos, prev);
                 pos++;
                 break;
-            case 3: /* Copy two dwords from input */
+            case 3:
+                /* Copy two dwords from input */
                 prev = bytestream2_get_le32(gbc);
                 AV_WL32(ctx->tex_data + 4 * pos, prev);
                 pos++;
