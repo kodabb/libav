@@ -136,6 +136,15 @@ fate-dxa-scummvm: CMD = framecrc -i $(TARGET_SAMPLES)/dxa/scummvm.dxa -pix_fmt r
 FATE_SAMPLES_AVCONV-$(call DEMDEC, DXA, DXA) += $(FATE_DXA)
 fate-dxa: $(FATE_DXA)
 
+FATE_DXV += fate-dxv-dxt1
+fate-dxv-dxt1: CMD = framecrc -i $(TARGET_SAMPLES)/dxv/dxv3-nqna.mov -pix_fmt rgba
+
+FATE_DXV += fate-dxv-dxt5
+fate-dxv-dxt5: CMD = framecrc -i $(TARGET_SAMPLES)/dxv/dxv3-nqwa.mov -pix_fmt rgba
+
+FATE_SAMPLES_AVCONV-$(call DEMDEC, MOV, DXV) += $(FATE_DXV)
+fate-dxv: $(FATE_DXV)
+
 FATE_SAMPLES_AVCONV-$(call DEMDEC, SEGAFILM, CINEPAK) += fate-film-cvid
 fate-film-cvid: CMD = framecrc -i $(TARGET_SAMPLES)/film/logo-capcom.cpk -an
 
