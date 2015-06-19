@@ -74,15 +74,12 @@ static void decompress_texture(AVCodecContext *avctx, AVFrame *frame)
     }
 }
 
-/* DXT5 looks the same except that it works with four
-32-bit elements at once and can have a long copy (i.e. more than one element
-at a time).  */
-
 /* This scheme addresses already decoded elements depending on 2-bit status:
  *   0 -> copy new element
  *   1 -> copy one element from position -x
  *   2 -> copy one element from position -(get_byte() + 2) * x
- *   3 -> copy one element from position -(get_16le() + 0x102) * x */
+ *   3 -> copy one element from position -(get_16le() + 0x102) * x
+ * x is 2 for dxt1 and 4 for dxt5. */
 #define CHECKPOINT(x)                                                         \
     do {                                                                      \
         if (state == 0) {                                                     \
