@@ -268,12 +268,11 @@ there:
                 goto here;
                 break;
             case 2: /* Copy two dwords from previous data */
-                idx = 32/4 + bytestream2_get_le16(gbc); // ?
+                idx = 8 + bytestream2_get_le16(gbc);
                 prev = AV_RL32(ctx->tex_data + 4 * (pos - idx));
                 AV_WL32(ctx->tex_data + 4 * pos, prev);
                 pos++;
 
-                idx = 32/4 + bytestream2_get_le16(gbc); // ?
                 prev = AV_RL32(ctx->tex_data + 4 * (pos - idx));
                 AV_WL32(ctx->tex_data + 4 * pos, prev);
                 pos++;
