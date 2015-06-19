@@ -175,7 +175,7 @@ static int dxv_decompress_dxt5(AVCodecContext *avctx)
 start:
         if (init) {
             init--;
-here:
+
             prev = AV_RL32(ctx->tex_data + 4 * (pos - 4));
             AV_WL32(ctx->tex_data + 4 * pos, prev);
             pos++;
@@ -238,7 +238,14 @@ there:
                     }
                     init += probe;
                 }
-                goto here;
+
+                prev = AV_RL32(ctx->tex_data + 4 * (pos - 4));
+                AV_WL32(ctx->tex_data + 4 * pos, prev);
+                pos++;
+
+                prev = AV_RL32(ctx->tex_data + 4 * (pos - 4));
+                AV_WL32(ctx->tex_data + 4 * pos, prev);
+                pos++;
                 break;
             case 2: /* Copy two dwords from previous data */
                 idx = 8 + bytestream2_get_le16(gbc);
@@ -260,7 +267,6 @@ there:
                 pos++;
                 break;
             }
-            init = 0;
         }
 
         CHECKPOINT(4);
