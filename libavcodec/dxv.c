@@ -193,18 +193,14 @@ static int dxv_decompress_dxt5(AVCodecContext *avctx)
             switch (op) {
             case 0:
                 /* Long copy */
-                probe = bytestream2_get_byte(gbc);
-                check = probe + 1;
-                if (check != 256)
-                    goto there;
-                probe = bytestream2_get_le16(gbc);
-                for (idx = 256; probe == 0xFFFF; ) {
-                    idx += 0xFFFF;
-                    probe = bytestream2_get_le16(gbc);
+                check = bytestream2_get_byte(gbc) + 1;
+                if (check == 256) {
+                    do {
+                        probe = bytestream2_get_le16(gbc);
+                        check += probe;
+                    } while (probe == 0xFFFF);
                 }
-                check = idx + probe;
                 while (check && pos < ctx->tex_size / 4) {
-there:
                     prev = AV_RL32(ctx->tex_data + 4 * (pos - 4));
                     AV_WL32(ctx->tex_data + 4 * pos, prev);
                     pos++;
@@ -224,19 +220,17 @@ there:
                     check--;
                 }
 
-                /* Restart the loop */
+                /* Restart (or exit) the loop */
                 continue;
                 break;
             case 1:
                 /* Load new run value */
                 run = bytestream2_get_byte(gbc);
                 if (run == 255) {
-                    probe = bytestream2_get_le16(gbc);
-                    while (probe == 0xFFFF) {
-                        run += 0xFFFF;
+                    do {
                         probe = bytestream2_get_le16(gbc);
-                    }
-                    run += probe;
+                        run += probe;
+                    } while (probe == 0xFFFF);
                 }
 
                 /* Copy two dwords from previous data */
