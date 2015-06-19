@@ -207,19 +207,18 @@ there:
                     prev = AV_RL32(ctx->tex_data + 4 * (pos - 4));
                     AV_WL32(ctx->tex_data + 4 * pos, prev);
                     pos++;
-                    if (pos == ctx->tex_size/4) return -1;
+
                     prev = AV_RL32(ctx->tex_data + 4 * (pos - 4));
                     AV_WL32(ctx->tex_data + 4 * pos, prev);
                     pos++;
-                    if (pos == ctx->tex_size/4) return -1;
+
                     prev = AV_RL32(ctx->tex_data + 4 * (pos - 4));
                     AV_WL32(ctx->tex_data + 4 * pos, prev);
                     pos++;
-                    if (pos == ctx->tex_size/4) return -1;
+
                     prev = AV_RL32(ctx->tex_data + 4 * (pos - 4));
                     AV_WL32(ctx->tex_data + 4 * pos, prev);
                     pos++;
-                    if (pos == ctx->tex_size/4) return -1;
                     check--;
                 }
             continue;
