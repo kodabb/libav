@@ -304,11 +304,13 @@ static int dxv_decode(AVCodecContext *avctx, void *data,
     DXVContext *ctx = avctx->priv_data;
     GetByteContext *gbc = &ctx->gbc;
     AVFrame *frame = data;
-    uint32_t tag;
-    int ret, blocks, size, channels;
     int (*decompress_tex)(AVCodecContext *avctx);
-    char buf[32];
     const char *compression;
+    uint32_t tag;
+    int blocks, channels;
+    int size = 0, old_type = 0;
+    char buf[32];
+    int ret;
 
     bytestream2_init(gbc, avpkt->data, avpkt->size);
 
@@ -337,17 +339,36 @@ static int dxv_decode(AVCodecContext *avctx, void *data,
         avpriv_report_missing_feature(avctx, "Tag %s (0x%08X)", buf, tag);
         return AVERROR_PATCHWELCOME;
     default:
-        av_log(avctx, AV_LOG_ERROR,
-               "Unsupported tag header %s (0x%08X).\n", buf, tag);
-        return AVERROR_INVALIDDATA;
+        size = tag & 0x00FFFFFF;
+        old_type = tag >> 24;
+        av_log(avctx, AV_LOG_DEBUG, "%d %d\n", size, channels);
+        // = tag & 0xFF;
+        switch (old_type) {
+            // lz4decompress
+            // lz4decompress
+            // lzfdecompress
+            // dxtrdxt1
+            // dxtrdxt5
+            // dxtrycog6
+            // dxtryacoc10
+            // none
+            case 0x23:
+            case 0x63:
+            default:
+                av_log(avctx, AV_LOG_ERROR,
+                       "Unsupported tag header %s (0x%08X).\n", buf, tag);
+                return AVERROR_INVALIDDATA;
+        }
     }
     av_log(avctx, AV_LOG_VERBOSE, "%s texture\n", compression);
 
-    channels = bytestream2_get_byte(gbc);
-    bytestream2_skip(gbc, 3); // unknown
-    av_log(avctx, AV_LOG_DEBUG, "%d channels\n", channels);
+    if (!old_type) {
+        channels = bytestream2_get_byte(gbc);
+        bytestream2_skip(gbc, 3); // unknown
+        av_log(avctx, AV_LOG_DEBUG, "%d channels\n", channels);
 
-    size = bytestream2_get_le32(gbc);
+        size = bytestream2_get_le32(gbc);
+    }
     if (size > bytestream2_get_bytes_left(gbc)) {
         av_log(avctx, AV_LOG_ERROR, "Incomplete file (%u > %u)\n.",
                size, bytestream2_get_bytes_left(gbc));
