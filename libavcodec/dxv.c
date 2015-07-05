@@ -211,8 +211,8 @@ static void decompress_texture(AVCodecContext *avctx, AVFrame *frame)
     int x, y;
     uint8_t *src = ctx->tex_data;
 
-    for (y = 0; y < FFALIGN(avctx->coded_height, 16); y += 4) {
-        for (x = 0; x < FFALIGN(avctx->coded_width, 16); x += 4) {
+    for (y = 0; y < avctx->coded_height; y += 4) {
+        for (x = 0; x < avctx->coded_width; x += 4) {
             uint8_t *p = frame->data[0] + x * 4 + y * frame->linesize[0];
             int step = ctx->tex_funct(p, frame->linesize[0], src);
             src += step;
@@ -305,7 +305,7 @@ static int dxv_decompress_dxt5(AVCodecContext *avctx)
     int idx, prev, state = 0;
     int pos = 4;
     int run = 0;
-    int probe, check, offset;
+    int probe, check;
 
     /* Copy the first four elements */
     AV_WL32(ctx->tex_data +  0, bytestream2_get_le32(gbc));
@@ -466,69 +466,67 @@ static int dxv_decode(AVCodecContext *avctx, void *data,
     GetByteContext *gbc = &ctx->gbc;
     AVFrame *frame = data;
     int (*decompress_tex)(AVCodecContext *avctx);
-    const char *compression;
     uint32_t tag;
     int blocks, channels;
     int size = 0, old_type = 0;
-    char buf[32];
     int ret;
 
     bytestream2_init(gbc, avpkt->data, avpkt->size);
 
     tag = bytestream2_get_le32(gbc);
-    av_get_codec_tag_string(buf, sizeof(buf), tag);
-
     switch (tag) {
     case MKBETAG('D', 'X', 'T', '1'):
-        // likely to be default for unknown cases
+        decompress_tex = dxv_decompress_dxt1;
         ctx->tex_funct = ctx->texdsp.dxt1_block;
         ctx->tex_rat   = 8;
         ctx->tex_step  = 8;
-        decompress_tex = dxv_decompress_dxt1;
-        av_log(avctx, AV_LOG_VERBOSE, "DXTR1 compression and DXT1 texture\n");
+        av_log(avctx, AV_LOG_DEBUG, "DXTR1 compression and DXT1 texture ");
         break;
     case MKBETAG('D', 'X', 'T', '5'):
+        decompress_tex = dxv_decompress_dxt5;
         ctx->tex_funct = ctx->texdsp.dxt5_block;
         ctx->tex_rat   = 4;
         ctx->tex_step  = 16;
-        decompress_tex = dxv_decompress_dxt5;
-        av_log(avctx, AV_LOG_VERBOSE, "DXTR5 compression and DXT5 texture\n");
+        av_log(avctx, AV_LOG_DEBUG, "DXTR5 compression and DXT5 texture ");
         break;
     case MKBETAG('Y', 'C', 'G', '6'):
     case MKBETAG('Y', 'G', '1', '0'):
-    case MKBETAG('U', 'V', 'A', '0'):
-        avpriv_report_missing_feature(avctx, "Tag %s (0x%08X)", buf, tag);
+        avpriv_report_missing_feature(avctx, "Tag 0x%08X", tag);
         return AVERROR_PATCHWELCOME;
     default:
         size = tag & 0x00FFFFFF;
         old_type = tag >> 24;
         channels = old_type & 0x0F;
         if (old_type & 0x40) {
-            av_log(avctx, AV_LOG_VERBOSE, "LZF compression and DXT5 texture\n");
+            av_log(avctx, AV_LOG_DEBUG, "LZF compression and DXT5 texture ");
             ctx->tex_funct = ctx->texdsp.dxt5_block;
             ctx->tex_step  = 16;
-        } else {
-            av_log(avctx, AV_LOG_VERBOSE, "LZF compression and DXT1 texture\n");
+        } else if (old_type & 0x20) {
+            av_log(avctx, AV_LOG_DEBUG, "LZF compression and DXT1 texture ");
             ctx->tex_funct = ctx->texdsp.dxt1_block;
             ctx->tex_step  = 8;
+        } else {
+            av_log(avctx, AV_LOG_ERROR, "Unsupported header (0x%08X)\n.", tag);
+            return AVERROR_INVALIDDATA;
         }
         decompress_tex = dxv_decompress_lzf;
         ctx->tex_rat = 1;
         break;
     }
 
-    /* Version 3 has a 12 byte header instead of a 4 byte one. */
+    /* Old header is 4 bytes, newer header is 12 bytes. */
     if (!old_type) {
         channels = bytestream2_get_byte(gbc);
         bytestream2_skip(gbc, 3); // unknown
         size = bytestream2_get_le32(gbc);
     }
-    if (size > bytestream2_get_bytes_left(gbc)) {
+    av_log(avctx, AV_LOG_DEBUG, "(%d channels)\n", channels);
+
+    if (size != bytestream2_get_bytes_left(gbc)) {
         av_log(avctx, AV_LOG_ERROR, "Incomplete or invalid file (%u > %u)\n.",
                size, bytestream2_get_bytes_left(gbc));
         return AVERROR_INVALIDDATA;
     }
-    av_log(avctx, AV_LOG_TRACE, "%d channels advertised\n", channels);
 
     ret = ff_get_buffer(avctx, frame, 0);
     if (ret < 0)

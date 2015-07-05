@@ -137,16 +137,16 @@ FATE_SAMPLES_AVCONV-$(call DEMDEC, DXA, DXA) += $(FATE_DXA)
 fate-dxa: $(FATE_DXA)
 
 FATE_DXV += fate-dxv-dxt1
-fate-dxv-dxt1: CMD = framecrc -i $(TARGET_SAMPLES)/dxv/dxv-na.mov -pix_fmt rgba
+fate-dxv-dxt1: CMD = framecrc -i $(TARGET_SAMPLES)/dxv/dxv-na.mov
 
 FATE_DXV += fate-dxv-dxt5
-fate-dxv-dxt5: CMD = framecrc -i $(TARGET_SAMPLES)/dxv/dxv-wa.mov -pix_fmt rgba
+fate-dxv-dxt5: CMD = framecrc -i $(TARGET_SAMPLES)/dxv/dxv-wa.mov
 
 FATE_DXV += fate-dxv3-dxt1
-fate-dxv3-dxt1: CMD = framecrc -i $(TARGET_SAMPLES)/dxv/dxv3-nqna.mov -pix_fmt rgba
+fate-dxv3-dxt1: CMD = framecrc -i $(TARGET_SAMPLES)/dxv/dxv3-nqna.mov
 
 FATE_DXV += fate-dxv3-dxt5
-fate-dxv3-dxt5: CMD = framecrc -i $(TARGET_SAMPLES)/dxv/dxv3-nqwa.mov -pix_fmt rgba
+fate-dxv3-dxt5: CMD = framecrc -i $(TARGET_SAMPLES)/dxv/dxv3-nqwa.mov
 
 FATE_SAMPLES_AVCONV-$(call DEMDEC, MOV, DXV) += $(FATE_DXV)
 fate-dxv: $(FATE_DXV)
