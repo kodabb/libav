@@ -1609,6 +1609,7 @@ CONFIG_EXTRA="
     jpegtables
     lgplv3
     lpc
+    lzf
     me_cmp
     mpeg_er
     mpegaudio
