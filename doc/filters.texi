@@ -1109,6 +1109,10 @@ delogo=x=0:y=0:w=100:h=77:band=10
 
 @end itemize
 
+@section diff
+
+Visually show frame difference from two input on a scale between 0-255.
+
 @section drawbox
 
 Draw a colored box on the input image.

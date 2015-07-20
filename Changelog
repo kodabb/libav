@@ -39,6 +39,7 @@ version <next>:
 - rewritten ASF demuxer
 - Go2Meeting decoding support
 - Intel QSV-accelerated MPEG-2 video and HEVC encoding
+- diff filter
 
 
 version 11:

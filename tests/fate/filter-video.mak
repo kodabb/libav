@@ -15,6 +15,14 @@ FATE_SAMPLES_AVCONV += $(FATE_FILTER-yes)
 FATE_FILTER_VSYNTH-$(CONFIG_BOXBLUR_FILTER) += fate-filter-boxblur
 fate-filter-boxblur: CMD = framecrc -c:v pgmyuv -i $(SRC) -vf boxblur=2:1
 
+FATE_DIFF-$(CONFIG_DIFF_FILTER) += fate-filter-diff-same
+fate-filter-diff-same: CMD = framecrc -c:v pgmyuv -i $(SRC) -c:v pgmyuv -i $(SRC) -filter_complex diff -frames 1
+
+FATE_DIFF-$(call ALLYES, NEGATE_FILTER DIFF_FILTER) += fate-filter-diff-neg
+fate-filter-diff-neg: CMD = framecrc -c:v pgmyuv -i $(SRC) -c:v pgmyuv -i $(SRC) -filter_complex [1:v]negate[cmp],[0][cmp]diff -frames 1
+
+FATE_FILTER_VSYNTH-$(CONFIG_DIFF_FILTER) += $(FATE_DIFF-yes)
+
 FATE_FILTER_VSYNTH-$(CONFIG_DRAWBOX_FILTER) += fate-filter-drawbox
 fate-filter-drawbox: CMD = framecrc -c:v pgmyuv -i $(SRC) -vf drawbox=10:20:200:60:red@0.5
 

@@ -46,6 +46,7 @@ OBJS-$(CONFIG_COPY_FILTER)                   += vf_copy.o
 OBJS-$(CONFIG_CROP_FILTER)                   += vf_crop.o
 OBJS-$(CONFIG_CROPDETECT_FILTER)             += vf_cropdetect.o
 OBJS-$(CONFIG_DELOGO_FILTER)                 += vf_delogo.o
+OBJS-$(CONFIG_DIFF_FILTER)                   += vf_diff.o
 OBJS-$(CONFIG_DRAWBOX_FILTER)                += vf_drawbox.o
 OBJS-$(CONFIG_DRAWTEXT_FILTER)               += vf_drawtext.o
 OBJS-$(CONFIG_FADE_FILTER)                   += vf_fade.o
