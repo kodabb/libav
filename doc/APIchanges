@@ -16,6 +16,8 @@ API changes, most recent first:
 2015-xx-xx - lavu 55.0.0
   xxxxxxx - Change type of AVPixFmtDescriptor.flags.
   xxxxxxx - Change type of AVComponentDescriptor fields and drop bit packing.
+  xxxxxxx - Add step, offset, and depth to AVComponentDescriptor to replace
+            the deprecated step_minus1, offset_plus1, and depth_minus1.
 
 2015-xx-xx - lavu 54.17.0
   xxxxxxx -  Add av_blowfish_alloc().
