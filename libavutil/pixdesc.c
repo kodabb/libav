@@ -244,7 +244,7 @@ static const AVPixFmtDescriptor av_pix_fmt_descriptors[AV_PIX_FMT_NB] = {
         .comp = {
             { 0, 1, 0, 0, 8, 0, 7, 1 },        /* Y */
         },
-        .flags = AV_PIX_FMT_FLAG_PSEUDOPAL,
+        .flags = AV_PIX_FMT_FLAG_PSEUDOPAL | AV_PIX_FMT_FLAG_GRAY,
         .alias = "gray8,y8",
     },
     [AV_PIX_FMT_MONOWHITE] = {
@@ -501,7 +501,7 @@ static const AVPixFmtDescriptor av_pix_fmt_descriptors[AV_PIX_FMT_NB] = {
         .comp = {
             { 0, 2, 0, 0, 16, 1, 15, 1 },       /* Y */
         },
-        .flags = AV_PIX_FMT_FLAG_BE,
+        .flags = AV_PIX_FMT_FLAG_BE | AV_PIX_FMT_FLAG_GRAY,
         .alias = "y16be",
     },
     [AV_PIX_FMT_GRAY16LE] = {
@@ -512,6 +512,7 @@ static const AVPixFmtDescriptor av_pix_fmt_descriptors[AV_PIX_FMT_NB] = {
         .comp = {
             { 0, 2, 0, 0, 16, 1, 15, 1 },       /* Y */
         },
+        .flags = AV_PIX_FMT_FLAG_GRAY,
         .alias = "y16le",
     },
     [AV_PIX_FMT_YUV440P] = {
@@ -1352,7 +1353,7 @@ static const AVPixFmtDescriptor av_pix_fmt_descriptors[AV_PIX_FMT_NB] = {
             { 0, 2, 0, 0, 8, 1, 7, 1 },        /* Y */
             { 0, 2, 1, 0, 8, 1, 7, 2 },        /* A */
         },
-        .flags = AV_PIX_FMT_FLAG_ALPHA,
+        .flags = AV_PIX_FMT_FLAG_ALPHA | AV_PIX_FMT_FLAG_GRAY,
         .alias = "gray8a",
     },
     [AV_PIX_FMT_YA16LE] = {
@@ -1362,7 +1363,7 @@ static const AVPixFmtDescriptor av_pix_fmt_descriptors[AV_PIX_FMT_NB] = {
             { 0, 4, 0, 0, 16, 3, 15, 1 },        /* Y */
             { 0, 4, 2, 0, 16, 3, 15, 3 },        /* A */
         },
-        .flags = AV_PIX_FMT_FLAG_ALPHA,
+        .flags = AV_PIX_FMT_FLAG_ALPHA | AV_PIX_FMT_FLAG_GRAY,
     },
     [AV_PIX_FMT_YA16BE] = {
         .name = "ya16be",
@@ -1371,7 +1372,7 @@ static const AVPixFmtDescriptor av_pix_fmt_descriptors[AV_PIX_FMT_NB] = {
             { 0, 4, 0, 0, 16, 3, 15, 1 },        /* Y */
             { 0, 4, 2, 0, 16, 3, 15, 3 },        /* A */
         },
-        .flags = AV_PIX_FMT_FLAG_BE | AV_PIX_FMT_FLAG_ALPHA,
+        .flags = AV_PIX_FMT_FLAG_BE | AV_PIX_FMT_FLAG_ALPHA | AV_PIX_FMT_FLAG_GRAY,
     },
     [AV_PIX_FMT_GBRP] = {
         .name = "gbrp",

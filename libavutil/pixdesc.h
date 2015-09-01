@@ -151,6 +151,10 @@ typedef struct AVPixFmtDescriptor {
  * The pixel format has an alpha channel.
  */
 #define AV_PIX_FMT_FLAG_ALPHA        (1 << 7)
+/**
+ * The pixel format contains grayscale data in the first component.
+ */
+#define AV_PIX_FMT_FLAG_GRAY         (1 << 8)
 
 /**
  * Read a line from an image, and write the values of the

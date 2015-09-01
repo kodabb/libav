@@ -13,6 +13,9 @@ libavutil:     2015-08-28
 
 API changes, most recent first:
 
+2015-xx-xx - xxxxxxx - lavu 55.1.0 - pixdesc.h
+  Add AV_PIX_FMT_FLAG_GRAY to identify grayscale pixel formats.
+
 2015-xx-xx - lavu 55.0.0
   xxxxxxx - Change type of AVPixFmtDescriptor.flags.
   xxxxxxx - Change type of AVComponentDescriptor fields and drop bit packing.
