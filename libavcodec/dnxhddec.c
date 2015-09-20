@@ -73,7 +73,7 @@ static av_cold int dnxhd_decode_init(AVCodecContext *avctx)
 static int dnxhd_init_vlc(DNXHDContext *ctx, int cid)
 {
     if (cid != ctx->cid) {
-        int index;
+        int index, ret;
 
         if ((index = ff_dnxhd_get_cid_table(cid)) < 0) {
             av_log(ctx->avctx, AV_LOG_ERROR, "unsupported cid %d\n", cid);
@@ -86,15 +86,21 @@ static int dnxhd_init_vlc(DNXHDContext *ctx, int cid)
         ff_free_vlc(&ctx->dc_vlc);
         ff_free_vlc(&ctx->run_vlc);
 
-        init_vlc(&ctx->ac_vlc, DNXHD_VLC_BITS, 257,
-                 ctx->cid_table->ac_bits, 1, 1,
-                 ctx->cid_table->ac_codes, 2, 2, 0);
-        init_vlc(&ctx->dc_vlc, DNXHD_DC_VLC_BITS, ctx->bit_depth + 4,
-                 ctx->cid_table->dc_bits, 1, 1,
-                 ctx->cid_table->dc_codes, 1, 1, 0);
-        init_vlc(&ctx->run_vlc, DNXHD_VLC_BITS, 62,
-                 ctx->cid_table->run_bits, 1, 1,
-                 ctx->cid_table->run_codes, 2, 2, 0);
+        ret = init_vlc(&ctx->ac_vlc, DNXHD_VLC_BITS, 257,
+                       ctx->cid_table->ac_bits, 1, 1,
+                       ctx->cid_table->ac_codes, 2, 2, 0);
+        if (ret < 0)
+            return ret;
+        ret = init_vlc(&ctx->dc_vlc, DNXHD_DC_VLC_BITS, ctx->bit_depth + 4,
+                       ctx->cid_table->dc_bits, 1, 1,
+                       ctx->cid_table->dc_codes, 1, 1, 0);
+        if (ret < 0)
+            return ret;
+        ret = init_vlc(&ctx->run_vlc, DNXHD_VLC_BITS, 62,
+                       ctx->cid_table->run_bits, 1, 1,
+                       ctx->cid_table->run_codes, 2, 2, 0);
+        if (ret < 0)
+            return ret;
 
         ff_init_scantable(ctx->idsp.idct_permutation, &ctx->scantable,
                           ff_zigzag_direct);
@@ -107,7 +113,7 @@ static int dnxhd_decode_header(DNXHDContext *ctx, AVFrame *frame,
                                const uint8_t *buf, int buf_size,
                                int first_field)
 {
-    static const uint8_t header_prefix[]    = { 0x00, 0x00, 0x02, 0x80, 0x01 };
+    static const uint8_t header_prefix[]    = { 0x00, 0x00, 0x02, 0x80, 0x03 };
     static const uint8_t header_prefix444[] = { 0x00, 0x00, 0x02, 0x80, 0x02 };
     int i, cid, ret;
     int old_bit_depth = ctx->bit_depth;
@@ -475,4 +481,6 @@ AVCodec ff_dnxhd_decoder = {
     .close          = dnxhd_decode_close,
     .decode         = dnxhd_decode_frame,
     .capabilities   = AV_CODEC_CAP_DR1,
+    .caps_internal  = FF_CODEC_CAP_INIT_THREADSAFE |
+                      FF_CODEC_CAP_INIT_CLEANUP,
 };
