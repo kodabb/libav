@@ -50,9 +50,7 @@ typedef struct ScreenpressoContext {
     int width, height;
     GetByteContext gbc;
 
-    AVFrame *refframe;          // full decoded frame (without cursor)
-    AVFrame *jpgframe;          // decoded JPEG tile
-    uint8_t *tilebuffer;        // buffer containing tile data
+    AVFrame *reference;          // full decoded frame (without cursor)
 
     /* zlib interation */
     uint8_t *deflatebuffer;
@@ -65,21 +63,12 @@ typedef struct ScreenpressoContext {
     int        cursor_hot_x, cursor_hot_y;
 } ScreenpressoContext;
 
-/* 1 byte bits, 1 byte planes, 2 bytes format (probably) */
-enum ScreenpressoCursorFormat {
-    CUR_FMT_MONO = 0x01010004,
-    CUR_FMT_BGRA = 0x20010004,
-    CUR_FMT_RGBA = 0x20010008,
-};
-
 static av_cold int screenpresso_close(AVCodecContext *avctx)
 {
     ScreenpressoContext *ctx = avctx->priv_data;
 
-    av_frame_free(&ctx->refframe);
-    av_frame_free(&ctx->jpgframe);
+    av_frame_free(&ctx->reference);
     av_freep(&ctx->deflatebuffer);
-    av_freep(&ctx->tilebuffer);
     av_freep(&ctx->cursor);
 
     return 0;
@@ -97,20 +86,13 @@ static av_cold int screenpresso_init(AVCodecContext *avctx)
         return ret;
     }
 
-    /* This value should be large enough for a RGB24 frame. */
-    ctx->deflatelen = avctx->width * avctx->height * 3;
-    ret = av_reallocp(&ctx->deflatebuffer, ctx->deflatelen);
-    if (ret < 0)
-        return ret;
-
-    /* Allocate reference and JPEG frame */
-    ctx->refframe = av_frame_alloc();
-    ctx->jpgframe = av_frame_alloc();
-    if (!ctx->refframe || !ctx->jpgframe)
+    /* Allocate reference frame */
+    ctx->reference = av_frame_alloc();
+    if (!ctx->reference)
         return AVERROR(ENOMEM);
 
     /* Set the output pixel format on the reference frame */
-    ctx->refframe->format = avctx->pix_fmt = AV_PIX_FMT_BGR24;
+    ctx->reference->format = avctx->pix_fmt = AV_PIX_FMT_BGR24;
 
     return 0;
 }
@@ -120,33 +102,54 @@ static int screenpresso_decode_frame(AVCodecContext *avctx, void *data,
 {
     ScreenpressoContext *ctx = avctx->priv_data;
     AVFrame *frame = data;
-    int ret, keyframe = 0;
-    uLongf dlen;
+    int keyframe = (avpkt->data[0] == 0x73);
+    int ret;
 
     /* Resize deflate buffer on resolution change */
-    /*if (ctx->width != avctx->width || ctx->height != avctx->height) {
+    if (ctx->deflatelen != avctx->width * avctx->height * 3) {
+        av_frame_unref(ctx->reference);
+
+        ctx->reference->width  = avctx->width;
+        ctx->reference->height = avctx->height;
+        ctx->reference->format = avctx->pix_fmt;
+        ret = av_frame_get_buffer(ctx->reference, 32);
+        if (ret < 0)
+            return ret;
+
         ctx->deflatelen = avctx->width * avctx->height * 3;
         ret = av_reallocp(&ctx->deflatebuffer, ctx->deflatelen);
         if (ret < 0)
             return ret;
-    }*/
-    dlen = ctx->deflatelen;
+    }
 
     /* Frames are deflated after a 2 byte header, need to inflate them first */
-    ret = uncompress(ctx->deflatebuffer, &dlen, avpkt->data + 2, avpkt->size - 2);
+    ret = uncompress(ctx->deflatebuffer, &ctx->deflatelen,
+                     avpkt->data + 2, avpkt->size - 2);
     if (ret) {
         av_log(avctx, AV_LOG_ERROR, "Deflate error %d.\n", ret);
         return AVERROR_UNKNOWN;
     }
+
+    av_log(NULL, AV_LOG_WARNING, "byte0 %X, byte1 %X\n",
+           avpkt->data[0], avpkt->data[1]);
 
     /* Get the output frame and copy the reference frame */
     ret = ff_get_buffer(avctx, frame, 0);
     if (ret < 0)
         return ret;
 
-    av_image_copy_plane(frame->data[0], frame->linesize[0],
-                        ctx->deflatebuffer, avctx->width * 3,
-                        avctx->width * 3, avctx->height);
+    if (keyframe) {
+        av_image_copy_plane(ctx->reference->data[0],
+                            ctx->reference->linesize[0],
+                            ctx->deflatebuffer, avctx->width * 3,
+                            avctx->width * 3, avctx->height);
+    } else {
+        //blit
+    }
+
+    ret = av_frame_copy(frame, ctx->reference);
+    if (ret < 0)
+        return ret;
 
     /* Frame is ready to be output */
     if (keyframe) {
