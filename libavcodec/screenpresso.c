@@ -23,53 +23,40 @@
  * @file
  * Screenpresso decoder
  *
- * Fourcc: TSDC
+ * Fourcc: SPV1
  *
- * Screenpresso is very simple. It codes picture by tiles, storing them in raw BGR24
- * format or compressing them in JPEG. Frames can be full pictures or just
- * updates to the previous frame. Cursor is found in its own frame or at the
- * bottom of the picture. Every frame is then packed with zlib.
+ * Screenpresso simply horizontally flips and then deflates frames, alternating
+ * full pictures and deltas (from the currently rebuilt frame).
+ * No coordinate system (or any meaningful header), so a full frame is
+ * sent every time, with black for delta frames instead of pixel data.
  *
  * Supports: BGR24
  */
 
 #include <stdint.h>
+#include <string.h>
 #include <zlib.h>
 
 #include "libavutil/imgutils.h"
+#include "libavutil/internal.h"
 
 #include "avcodec.h"
-#include "bytestream.h"
 #include "internal.h"
 
-#define BITMAPINFOHEADER_SIZE 0x28
-#define TDSF_HEADER_SIZE      0x56
-#define TDSB_HEADER_SIZE      0x08
-
 typedef struct ScreenpressoContext {
-    int width, height;
-    GetByteContext gbc;
-
-    AVFrame *reference;          // full decoded frame (without cursor)
+    AVFrame *current;
 
     /* zlib interation */
     uint8_t *deflatebuffer;
     uLongf deflatelen;
-
-    /* All that is cursor */
-    uint8_t    *cursor;
-    int        cursor_stride;
-    int        cursor_w, cursor_h, cursor_x, cursor_y;
-    int        cursor_hot_x, cursor_hot_y;
 } ScreenpressoContext;
 
 static av_cold int screenpresso_close(AVCodecContext *avctx)
 {
     ScreenpressoContext *ctx = avctx->priv_data;
 
-    av_frame_free(&ctx->reference);
+    av_frame_free(&ctx->current);
     av_freep(&ctx->deflatebuffer);
-    av_freep(&ctx->cursor);
 
     return 0;
 }
@@ -78,7 +65,7 @@ static av_cold int screenpresso_init(AVCodecContext *avctx)
 {
     ScreenpressoContext *ctx = avctx->priv_data;
 
-    /* These needs to be set to estimate buffer and frame size. */
+    /* These needs to be set to estimate uncompressed buffer */
     int ret = av_image_check_size(avctx->width, avctx->height, 0, avctx);
     if (ret < 0) {
         av_log(avctx, AV_LOG_ERROR, "Invalid image size %dx%d.\n",
@@ -86,13 +73,12 @@ static av_cold int screenpresso_init(AVCodecContext *avctx)
         return ret;
     }
 
-    /* Allocate reference frame */
-    ctx->reference = av_frame_alloc();
-    if (!ctx->reference)
+    /* Allocate current frame */
+    ctx->current = av_frame_alloc();
+    if (!ctx->current)
         return AVERROR(ENOMEM);
 
-    /* Set the output pixel format on the reference frame */
-    ctx->reference->format = avctx->pix_fmt = AV_PIX_FMT_BGR24;
+    avctx->pix_fmt = AV_PIX_FMT_BGR24;
 
     return 0;
 }
@@ -107,6 +93,18 @@ static void copy_plane_flipped(uint8_t       *dst, int dst_linesize,
     }
 }
 
+static void copy_delta_flipped(uint8_t       *dst, int dst_linesize,
+                               const uint8_t *src, int src_linesize,
+                               int bytewidth, int height)
+{
+    int i, j;
+    for (i = 0; i < height; i++) {
+        for (j = 0; j < bytewidth; j++)
+            dst[j] += src[(height - 1 - i) * src_linesize + j];
+        dst += dst_linesize;
+    }
+}
+
 static int screenpresso_decode_frame(AVCodecContext *avctx, void *data,
                                      int *got_frame, AVPacket *avpkt)
 {
@@ -115,14 +113,16 @@ static int screenpresso_decode_frame(AVCodecContext *avctx, void *data,
     int keyframe = (avpkt->data[0] == 0x73);
     int ret;
 
-    /* Resize deflate buffer on resolution change */
-    if (ctx->deflatelen != avctx->width * avctx->height * 3) {
-        av_frame_unref(ctx->reference);
+    /* Basic sanity check, but not really harmful */
+    if ((avpkt->data[0] != 0x73 && avpkt->data[0] != 0x72) ||
+        avpkt->data[1] != 8) { // bpp probably
+        av_log(avctx, AV_LOG_WARNING, "Unknown header 0x%02X%02X\n",
+               avpkt->data[0], avpkt->data[1]);
+    }
 
-        ctx->reference->width  = avctx->width;
-        ctx->reference->height = avctx->height;
-        ctx->reference->format = avctx->pix_fmt;
-        ret = av_frame_get_buffer(ctx->reference, 32);
+    /* Resize deflate buffer and frame on resolution change */
+    if (ctx->deflatelen != avctx->width * avctx->height * 3) {
+        ret = ff_get_buffer(avctx, ctx->current, 0);
         if (ret < 0)
             return ret;
 
@@ -132,7 +132,7 @@ static int screenpresso_decode_frame(AVCodecContext *avctx, void *data,
             return ret;
     }
 
-    /* Frames are deflated after a 2 byte header, need to inflate them first */
+    /* Skip the 2 byte header, and then inflate the frame */
     ret = uncompress(ctx->deflatebuffer, &ctx->deflatelen,
                      avpkt->data + 2, avpkt->size - 2);
     if (ret) {
@@ -140,27 +140,23 @@ static int screenpresso_decode_frame(AVCodecContext *avctx, void *data,
         return AVERROR_UNKNOWN;
     }
 
-    av_log(NULL, AV_LOG_WARNING, "byte0 %X, byte1 %X\n",
-           avpkt->data[0], avpkt->data[1]);
-
-    /* Get the output frame and copy the reference frame */
-    ret = ff_get_buffer(avctx, frame, 0);
-    if (ret < 0)
-        return ret;
-
-    if (keyframe) {
-        copy_plane_flipped(ctx->reference->data[0], ctx->reference->linesize[0],
+    /* When a keyframe is sent copy it as it contains the whole picture */
+    if (keyframe)
+        copy_plane_flipped(ctx->current->data[0], ctx->current->linesize[0],
                            ctx->deflatebuffer, avctx->width * 3,
                            avctx->width * 3, avctx->height);
-    } else {
-        //blit
-    }
+    /* Otherwise sum the delta on top of the current frame */
+    else
+        copy_delta_flipped(ctx->current->data[0], ctx->current->linesize[0],
+                           ctx->deflatebuffer, avctx->width * 3,
+                           avctx->width * 3, avctx->height);
 
-    ret = av_frame_copy(frame, ctx->reference);
+    /* Frame is ready to be output */
+    ret = av_frame_ref(frame, ctx->current);
     if (ret < 0)
         return ret;
 
-    /* Frame is ready to be output */
+    /* Usual properties */
     if (keyframe) {
         frame->pict_type = AV_PICTURE_TYPE_I;
         frame->key_frame = 1;
