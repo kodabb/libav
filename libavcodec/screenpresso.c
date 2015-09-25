@@ -97,6 +97,16 @@ static av_cold int screenpresso_init(AVCodecContext *avctx)
     return 0;
 }
 
+static void copy_plane_flipped(uint8_t       *dst, int dst_linesize,
+                               const uint8_t *src, int src_linesize,
+                               int bytewidth, int height)
+{
+    for (; height > 0; height--) {
+        memcpy(dst, src + (height - 1) * src_linesize, bytewidth);
+        dst += dst_linesize;
+    }
+}
+
 static int screenpresso_decode_frame(AVCodecContext *avctx, void *data,
                                      int *got_frame, AVPacket *avpkt)
 {
@@ -139,10 +149,9 @@ static int screenpresso_decode_frame(AVCodecContext *avctx, void *data,
         return ret;
 
     if (keyframe) {
-        av_image_copy_plane(ctx->reference->data[0],
-                            ctx->reference->linesize[0],
-                            ctx->deflatebuffer, avctx->width * 3,
-                            avctx->width * 3, avctx->height);
+        copy_plane_flipped(ctx->reference->data[0], ctx->reference->linesize[0],
+                           ctx->deflatebuffer, avctx->width * 3,
+                           avctx->width * 3, avctx->height);
     } else {
         //blit
     }
