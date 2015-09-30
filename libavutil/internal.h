@@ -73,6 +73,16 @@
 #        define FF_DISABLE_DEPRECATION_WARNINGS _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
 #        define FF_ENABLE_DEPRECATION_WARNINGS  _Pragma("GCC diagnostic warning \"-Wdeprecated-declarations\"")
 #    endif
+#    if defined(__llvm__)
+#        define FF_DISABLE_QUALIFIERS_WARNINGS _Pragma("GCC diagnostic ignored \"-Wincompatible-pointer-types-discards-qualifiers\"")
+#        define FF_ENABLE_QUALIFIERS_WARNINGS  _Pragma("GCC diagnostic warning \"-Wincompatible-pointer-types-discards-qualifiers\"")
+#    elif defined(__GNUC__)
+#        define FF_DISABLE_QUALIFIERS_WARNINGS _Pragma("GCC diagnostic ignored \"-Wdiscarded-qualifiers\"")
+#        define FF_ENABLE_QUALIFIERS_WARNINGS  _Pragma("GCC diagnostic warning \"-Wdiscarded-qualifiers\"")
+#    else
+#        define FF_DISABLE_QUALIFIERS_WARNINGS
+#        define FF_ENABLE_QUALIFIERS_WARNINGS
+#    endif
 #else
 #    define FF_DISABLE_DEPRECATION_WARNINGS
 #    define FF_ENABLE_DEPRECATION_WARNINGS

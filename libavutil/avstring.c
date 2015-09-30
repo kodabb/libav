@@ -53,6 +53,7 @@ int av_stristart(const char *str, const char *pfx, const char **ptr)
 
 char *av_stristr(const char *s1, const char *s2)
 {
+FF_DISABLE_QUALIFIERS_WARNINGS
     if (!*s2)
         return s1;
 
@@ -62,10 +63,12 @@ char *av_stristr(const char *s1, const char *s2)
     while (*s1++);
 
     return NULL;
+FF_ENABLE_QUALIFIERS_WARNINGS
 }
 
 char *av_strnstr(const char *haystack, const char *needle, size_t hay_length)
 {
+FF_DISABLE_QUALIFIERS_WARNINGS
     size_t needle_len = strlen(needle);
     if (!needle_len)
         return haystack;
@@ -76,6 +79,7 @@ char *av_strnstr(const char *haystack, const char *needle, size_t hay_length)
         haystack++;
     }
     return NULL;
+FF_ENABLE_QUALIFIERS_WARNINGS
 }
 
 size_t av_strlcpy(char *dst, const char *src, size_t size)
