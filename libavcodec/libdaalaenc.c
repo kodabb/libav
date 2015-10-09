@@ -49,7 +49,7 @@ static int concatenate_packet(AVCodecContext* avctx,
                               unsigned int *offset)
 {
     const char *message = NULL;
-    int newsize = 0x80;
+    int newsize = avctx->extradata_size + 2 + packet->bytes;
     int ret = AVERROR_INVALIDDATA;
 
     if (packet->bytes < 0) {
@@ -72,8 +72,8 @@ static int concatenate_packet(AVCodecContext* avctx,
     }
 
     avctx->extradata_size = newsize;
-    //AV_WB16(avctx->extradata + *offset, packet->bytes);
-    //*offset += 2;
+    AV_WB16(avctx->extradata + *offset, packet->bytes);
+    *offset += 2;
     memcpy(avctx->extradata + *offset, packet->packet, packet->bytes);
     *offset += packet->bytes;
 
@@ -181,7 +181,6 @@ static av_cold int libdaala_init(AVCodecContext *avctx)
         ret = concatenate_packet(avctx, &dpkt, &offset);
         if (ret < 0)
             return ret;
-        break;
     }
 
     return 0;
