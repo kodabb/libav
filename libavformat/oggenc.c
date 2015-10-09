@@ -434,7 +434,8 @@ static int ogg_write_header(AVFormatContext *s)
             st->codec->codec_id != AV_CODEC_ID_THEORA &&
             st->codec->codec_id != AV_CODEC_ID_SPEEX  &&
             st->codec->codec_id != AV_CODEC_ID_FLAC   &&
-            st->codec->codec_id != AV_CODEC_ID_OPUS) {
+            st->codec->codec_id != AV_CODEC_ID_OPUS   &&
+            st->codec->codec_id != AV_CODEC_ID_DAALA) {
             av_log(s, AV_LOG_ERROR, "Unsupported codec id in stream %d\n", i);
             return -1;
         }

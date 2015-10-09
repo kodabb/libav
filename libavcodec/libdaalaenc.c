@@ -34,23 +34,98 @@
 #include "texturedsp.h"
 
 typedef struct LibDaalaContext {
+    AVClass *class;
+
     int opt;
+    daala_info info;
+    daala_enc_ctx *encoder;
+    daala_comment comment;
 } LibDaalaContext;
 
-static int libdaala_encode(AVCodecContext *avctx, AVPacket *pkt,
+
+/* Concatenate a daala_packet into extradata. */
+static int concatenate_packet(AVCodecContext* avctx,
+                              const daala_packet* packet,
+                              unsigned int *offset)
+{
+    const char *message = NULL;
+    int newsize = 0x80;
+    int ret = AVERROR_INVALIDDATA;
+
+    if (packet->bytes < 0) {
+        message = "packet has negative size";
+    } else if (packet->bytes > 0xffff) {
+        message = "packet is larger than 65535 bytes";
+    } else if (newsize < avctx->extradata_size) {
+        message = "extradata_size would overflow";
+    } else {
+        ret = av_reallocp(&avctx->extradata, newsize);
+        if (ret < 0) {
+            avctx->extradata_size = 0;
+            message = "av_realloc failed";
+        }
+    }
+    if (message) {
+        av_log(avctx, AV_LOG_ERROR,
+               "concatenate_packet failed: %s\n", message);
+        return ret;
+    }
+
+    avctx->extradata_size = newsize;
+    //AV_WB16(avctx->extradata + *offset, packet->bytes);
+    //*offset += 2;
+    memcpy(avctx->extradata + *offset, packet->packet, packet->bytes);
+    *offset += packet->bytes;
+
+    return 0;
+}
+
+static int libdaala_encode(AVCodecContext *avctx, AVPacket *avpkt,
                            const AVFrame *frame, int *got_packet)
 {
     LibDaalaContext *ctx = avctx->priv_data;
-    int ret;
-    int pktsize;
+    int i, ret;
+    int pktsize = avctx->width * avctx->height * 4;
+    od_img img;
+    daala_packet dpkt;
+
+    // daala_encode_flush_header?
+
+    img.nplanes = 3;
+    img.width   = frame->width;
+    img.height  = frame->height;
+    for (i = 0; i < img.nplanes; i++) {
+        img.planes[i].data = frame->data[i];
+        img.planes[i].xstride = avctx->bits_per_coded_sample > 8 ? 1 : 2;
+        img.planes[i].ystride = frame->linesize[i];
+        img.planes[i].xdec = !!i;
+        img.planes[i].ydec = !!i;
+    }
+
+    ret = daala_encode_img_in(ctx->encoder, &img, 0);
+    if (ret) {
+        av_log(avctx, AV_LOG_ERROR, "Cannot accept this frame (err %d)\n", ret);
+        return AVERROR_INVALIDDATA;
+    }
 
     /* Allocate maximum size packet, shrink later. */
-    ret = ff_alloc_packet(pkt, pktsize);
+    ret = ff_alloc_packet(avpkt, pktsize);
     if (ret < 0)
         return ret;
 
-    av_shrink_packet(pkt, pktsize);
-    pkt->flags |= AV_PKT_FLAG_KEY;
+    dpkt.packet = avpkt->data;
+    dpkt.bytes  = pktsize;
+
+    ret = daala_encode_packet_out(ctx->encoder, 0, &dpkt);
+    if (ret <= 0) {
+        av_log(avctx, AV_LOG_ERROR, "Encoding error (err %d)\n", ret);
+        return AVERROR_INVALIDDATA;
+    }
+
+    av_shrink_packet(avpkt, dpkt.bytes);
+    if (daala_packet_iskeyframe(avpkt->data, dpkt.bytes))
+        avpkt->flags |= AV_PKT_FLAG_KEY;
+
     *got_packet = 1;
     return 0;
 }
@@ -58,8 +133,8 @@ static int libdaala_encode(AVCodecContext *avctx, AVPacket *pkt,
 static av_cold int libdaala_init(AVCodecContext *avctx)
 {
     LibDaalaContext *ctx = avctx->priv_data;
-    int ratio;
-    int corrected_chunk_count;
+    daala_packet dpkt;
+    int offset = 0;
     int ret = av_image_check_size(avctx->width, avctx->height, 0, avctx);
 
     if (ret < 0) {
@@ -68,12 +143,55 @@ static av_cold int libdaala_init(AVCodecContext *avctx)
         return ret;
     }
 
+    daala_info_init(&ctx->info);
+
+    av_log(avctx, AV_LOG_VERBOSE, "libdaala version %d.%d.%d\n",
+           ctx->info.version_major, ctx->info.version_minor,
+           ctx->info.version_sub);
+
+    ctx->info.pic_width  = avctx->width;
+    ctx->info.pic_height = avctx->height;
+
+    /* Default bitdepth is 8 */
+    if (avctx->pix_fmt == AV_PIX_FMT_YUV420P10)
+        ctx->info.bitdepth_mode = OD_BITDEPTH_MODE_10;
+    ctx->info.nplanes = 3;
+    ctx->info.plane_info[1].xdec = 1;
+    ctx->info.plane_info[1].ydec = 1;
+    ctx->info.plane_info[2].xdec = 1;
+    ctx->info.plane_info[2].ydec = 1;
+
+    ctx->info.timebase_numerator   = avctx->time_base.num;
+    ctx->info.timebase_denominator = avctx->time_base.den;
+    ctx->info.frame_duration = 1;
+    ctx->info.keyframe_rate = avctx->gop_size;
+
+    ctx->info.pixel_aspect_numerator   = avctx->sample_aspect_ratio.num;
+    ctx->info.pixel_aspect_denominator = avctx->sample_aspect_ratio.den;
+
+    ctx->encoder = daala_encode_create(&ctx->info);
+    if (!ctx->encoder) {
+        av_log(avctx, AV_LOG_ERROR, "Invalid parameters for encoder\n");
+        return AVERROR_INVALIDDATA;
+    }
+    daala_comment_init(&ctx->comment);
+    // various daala_encode_ctl
+
+    while (daala_encode_flush_header(ctx->encoder, &ctx->comment, &dpkt)) {
+        ret = concatenate_packet(avctx, &dpkt, &offset);
+        if (ret < 0)
+            return ret;
+        break;
+    }
+
     return 0;
 }
 
 static av_cold int libdaala_close(AVCodecContext *avctx)
 {
     LibDaalaContext *ctx = avctx->priv_data;
+
+    daala_encode_free(ctx->encoder);
 
     return 0;
 }
@@ -103,9 +221,8 @@ AVCodec ff_libdaala_encoder = {
     .encode2        = libdaala_encode,
     .close          = libdaala_close,
     .pix_fmts       = (const enum AVPixelFormat[]) {
-        AV_PIX_FMT_YUV420P, AV_PIX_FMT_NONE,
+        AV_PIX_FMT_YUV420P, AV_PIX_FMT_YUV420P10, AV_PIX_FMT_NONE,
     },
     .caps_internal  = FF_CODEC_CAP_INIT_THREADSAFE |
                       FF_CODEC_CAP_INIT_CLEANUP,
 };
-
