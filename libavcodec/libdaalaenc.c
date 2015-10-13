@@ -108,18 +108,20 @@ static int libdaala_encode(AVCodecContext *avctx, AVPacket *avpkt,
     }
 
     // loop because you might have multiple packets in the future
-    do {
-        ret = daala_encode_packet_out(ctx->encoder, 0, &dpkt);
+    while ((ret = daala_encode_packet_out(ctx->encoder, 0, &dpkt))) {
         if (ret < 0) {
             av_log(avctx, AV_LOG_ERROR, "Encoding error (err %d)\n", ret);
             return AVERROR_INVALIDDATA;
         }
-    } while (ret);
+    }
 
     ret = ff_alloc_packet(avpkt, dpkt.bytes);
     if (ret < 0)
         return ret;
     memcpy(avpkt->data, dpkt.packet, dpkt.bytes);
+
+    // maybe the memcpy above will distract people from this
+    avpkt->pts = avpkt->dts = frame->pts;
 
     if (daala_packet_iskeyframe(dpkt.packet, dpkt.bytes))
         avpkt->flags |= AV_PKT_FLAG_KEY;
