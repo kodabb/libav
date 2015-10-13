@@ -183,7 +183,7 @@ External library support:
   --enable-gnutls          enable gnutls [no]
   --enable-libbs2b         enable bs2b DSP library [no]
   --enable-libcdio         enable audio CD grabbing with libcdio
-  --enable-libdaala        enable Daala encoding via libdaala [no]
+  --enable-libdaala        enable Daala de/encoding via libdaala [no]
   --enable-libdc1394       enable IIDC-1394 grabbing using libdc1394
                            and libraw1394 [no]
   --enable-libdcadec       enable DCA decoding via libdcadec [no]
@@ -2124,6 +2124,7 @@ vc1_parser_select="mpegvideo startcode vc1_decoder"
 mjpeg2jpeg_bsf_select="jpegtables"
 
 # external libraries
+libdaala_decoder_deps="libdaala"
 libdaala_encoder_deps="libdaala"
 libdcadec_decoder_deps="libdcadec"
 libfaac_encoder_deps="libfaac"
@@ -4416,11 +4417,15 @@ enabled frei0r            && { check_header frei0r.h || die "ERROR: frei0r.h hea
 enabled gnutls            && require_pkg_config gnutls gnutls/gnutls.h gnutls_global_init
 enabled libbs2b           && require_pkg_config libbs2b bs2b.h bs2b_open
 enabled libdaala          && {
+    enabled libdaala_decoder && {
+        require_pkg_config daaladec "daala/daaladec.h" daala_decode_alloc ||
+            disable libdaala_decoder;
+    }
     enabled libdaala_encoder && {
         require_pkg_config daalaenc "daala/daalaenc.h" daala_encode_create ||
             disable libdaala_encoder;
     }
-    if disabled_all libdaala_encoder; then
+    if disabled_all libdaala_decoder libdaala_encoder; then
         die "libdaala enabled but no encoder/decoder found"
     fi
 }

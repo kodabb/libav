@@ -26,12 +26,11 @@
 #include "libavutil/frame.h"
 #include "libavutil/imgutils.h"
 #include "libavutil/intreadwrite.h"
+#include "libavutil/internal.h"
 #include "libavutil/opt.h"
 
 #include "avcodec.h"
-#include "bytestream.h"
 #include "internal.h"
-#include "texturedsp.h"
 
 typedef struct LibDaalaContext {
     AVClass *class;
@@ -41,7 +40,6 @@ typedef struct LibDaalaContext {
     daala_enc_ctx *encoder;
     daala_comment comment;
 } LibDaalaContext;
-
 
 /* Concatenate a daala_packet into extradata. */
 static int concatenate_packet(AVCodecContext* avctx,
