@@ -85,9 +85,8 @@ static int libdaala_encode(AVCodecContext *avctx, AVPacket *avpkt,
 {
     LibDaalaContext *ctx = avctx->priv_data;
     int i, ret;
-    int pktsize = avctx->width * avctx->height * 4;
     od_img img;
-    daala_packet dpkt;
+    daala_packet dpkt = { 0 };
 
     // daala_encode_flush_header?
 
@@ -108,22 +107,21 @@ static int libdaala_encode(AVCodecContext *avctx, AVPacket *avpkt,
         return AVERROR_INVALIDDATA;
     }
 
-    /* Allocate maximum size packet, shrink later. */
-    ret = ff_alloc_packet(avpkt, pktsize);
+    // loop because you might have multiple packets in the future
+    do {
+        ret = daala_encode_packet_out(ctx->encoder, 0, &dpkt);
+        if (ret < 0) {
+            av_log(avctx, AV_LOG_ERROR, "Encoding error (err %d)\n", ret);
+            return AVERROR_INVALIDDATA;
+        }
+    } while (ret);
+
+    ret = ff_alloc_packet(avpkt, dpkt.bytes);
     if (ret < 0)
         return ret;
+    memcpy(avpkt->data, dpkt.packet, dpkt.bytes);
 
-    dpkt.packet = avpkt->data;
-    dpkt.bytes  = pktsize;
-
-    ret = daala_encode_packet_out(ctx->encoder, 0, &dpkt);
-    if (ret <= 0) {
-        av_log(avctx, AV_LOG_ERROR, "Encoding error (err %d)\n", ret);
-        return AVERROR_INVALIDDATA;
-    }
-
-    av_shrink_packet(avpkt, dpkt.bytes);
-    if (daala_packet_iskeyframe(avpkt->data, dpkt.bytes))
+    if (daala_packet_iskeyframe(dpkt.packet, dpkt.bytes))
         avpkt->flags |= AV_PKT_FLAG_KEY;
 
     *got_packet = 1;
