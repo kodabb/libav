@@ -85,8 +85,18 @@ static av_cold int libdaala_init(AVCodecContext *avctx)
         return ret;
     }
 
-    avctx->pix_fmt = AV_PIX_FMT_YUV420P;
-    ctx->info.bitdepth_mode = OD_BITDEPTH_MODE_8;
+    if (avctx->bits_per_raw_sample == 8) {
+        ctx->info.bitdepth_mode = OD_BITDEPTH_MODE_8;
+        avctx->pix_fmt = AV_PIX_FMT_YUV420P;
+    } else if (avctx->bits_per_raw_sample == 10) {
+        ctx->info.bitdepth_mode = OD_BITDEPTH_MODE_10;
+        avctx->pix_fmt = AV_PIX_FMT_YUV420P10;
+    } else {
+        av_log(avctx, AV_LOG_ERROR, "Unsupported bitdepth %d.\n",
+               avctx->bits_per_raw_sample);
+        return AVERROR_INVALIDDATA;
+    }
+
     ctx->info.nplanes = 3;
     ctx->info.plane_info[1].xdec = 1;
     ctx->info.plane_info[1].ydec = 1;

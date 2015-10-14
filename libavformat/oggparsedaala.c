@@ -29,7 +29,7 @@
 typedef struct DaalaParams {
     int gpshift;
     int gpmask;
-    unsigned version;
+    unsigned int version;
 } DaalaParams;
 
 static int daala_header(AVFormatContext *s, int idx)
@@ -39,6 +39,7 @@ static int daala_header(AVFormatContext *s, int idx)
     AVStream *st          = s->streams[idx];
     DaalaParams *dpar     = os->private;
     int cds               = st->codec->extradata_size + os->psize + 2;
+    GetByteContext gb;
     int err;
     uint8_t *cdp;
 
@@ -54,7 +55,6 @@ static int daala_header(AVFormatContext *s, int idx)
 
     switch (os->buf[os->pstart]) {
     case 0x80: {
-        GetByteContext gb;
         AVRational timebase;
         int bitdepth;
         int nplanes;
@@ -65,13 +65,6 @@ static int daala_header(AVFormatContext *s, int idx)
         bytestream2_skip(&gb, 6);
 
         dpar->version = bytestream2_get_le24(&gb);
-#if 0
-        if (dpar->version < 0x030100) {
-            av_log(s, AV_LOG_ERROR,
-                   "Too old or unsupported Daala (%x)\n", dpar->version);
-            return AVERROR(ENOSYS);
-        }
-#endif
 
         st->codec->width  = bytestream2_get_le32(&gb);
         st->codec->height = bytestream2_get_le32(&gb);
@@ -95,8 +88,7 @@ static int daala_header(AVFormatContext *s, int idx)
         dpar->gpmask  = (1 << dpar->gpshift) - 1;
 
         bitdepth = bytestream2_get_byte(&gb);
-        st->codec->bits_per_raw_sample = bitdepth ? bitdepth == 1 ? 10 : 12
-                                                  : 8;
+        st->codec->bits_per_raw_sample = bitdepth == 1 ? 8 : 10;
         nplanes = bytestream2_get_byte(&gb);
         bytestream2_skip(&gb, 2 * nplanes); //planeinfo
 
@@ -106,14 +98,16 @@ static int daala_header(AVFormatContext *s, int idx)
     }
     break;
     case 0x81:
-        ff_vorbis_stream_comment(s, st, os->buf + os->pstart + 6, os->psize - 7);
-    case 0x82:
-#if 0
-        if (!dpar->version)
-            return AVERROR_INVALIDDATA;
-#endif
-        av_log(s, AV_LOG_WARNING, "Unknown header %02X\n", os->buf[os->pstart]);
+        /* skip 0x81"daala" */
+        ff_vorbis_stream_comment(s, st,
+                                 os->buf + os->pstart + 6, os->psize - 6);
         break;
+    case 0x82:
+        bytestream2_init(&gb, os->buf + os->pstart, os->psize);
+
+        /* 0x82"daala" */
+        bytestream2_skip(&gb, 6);
+    break;
     default:
         av_log(s, AV_LOG_ERROR, "Unknown header %02X\n", os->buf[os->pstart]);
         return AVERROR_INVALIDDATA;
@@ -158,7 +152,7 @@ static uint64_t daala_gptopts(AVFormatContext *ctx, int idx,
 
 const struct ogg_codec ff_daala_codec = {
     .magic     = "\200daala",
-    .magicsize = 7,
+    .magicsize = 6,
     .header    = daala_header,
     .gptopts   = daala_gptopts,
     .nb_header = 3,
