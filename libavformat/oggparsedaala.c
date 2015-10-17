@@ -94,7 +94,7 @@ static int daala_header(AVFormatContext *s, int idx)
 
         st->codec->codec_type = AVMEDIA_TYPE_VIDEO;
         st->codec->codec_id   = AV_CODEC_ID_DAALA;
-        st->need_parsing      = AVSTREAM_PARSE_HEADERS;
+        st->need_parsing      = AVFMT_FLAG_NOPARSE;
     }
     break;
     case 0x81:

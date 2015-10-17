@@ -91,7 +91,7 @@ static av_cold int libdaala_init(AVCodecContext *avctx)
     daala_info info = { 0 };
     daala_comment comment = { 0 };
     daala_packet dpkt = { 0 };
-    int off, i;
+    int offset, i;
     int ret = av_image_check_size(avctx->width, avctx->height, 0, avctx);
 
     if (ret < 0) {
@@ -107,16 +107,16 @@ static av_cold int libdaala_init(AVCodecContext *avctx)
 
     /* Parse the three headers from extradata */
     daala_info_init(&info);
-    for (i = 0, off = 0; i < 3; i++) {
-        off += 2 + dpkt.bytes;
-        if (off >= avctx->extradata_size) {
+    for (i = 0, offset = 0; i < 3; i++) {
+        offset += dpkt.bytes + 2;
+        if (offset >= avctx->extradata_size) {
             av_log(avctx, AV_LOG_ERROR, "Invalid extradata size (%d >= %d).\n",
-                   off, avctx->extradata_size);
+                   offset, avctx->extradata_size);
             return AVERROR_INVALIDDATA;
         }
 
-        dpkt.packet = avctx->extradata + off;
-        dpkt.bytes = AV_RB16(avctx->extradata + off - 2);
+        dpkt.packet = avctx->extradata + offset;
+        dpkt.bytes = AV_RB16(avctx->extradata + offset - 2);
         dpkt.b_o_s = 1;
 
         ret = daala_decode_header_in(&info, &comment, &setup, &dpkt);

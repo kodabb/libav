@@ -37,9 +37,7 @@ typedef struct LibDaalaContext {
     AVClass *class;
 
     int opt;
-    daala_info info;
     daala_enc_ctx *encoder;
-    daala_comment comment;
 } LibDaalaContext;
 
 /* Concatenate a daala_packet into extradata. */
@@ -85,9 +83,9 @@ static int libdaala_encode(AVCodecContext *avctx, AVPacket *avpkt,
     LibDaalaContext *ctx = avctx->priv_data;
     int i, ret;
     od_img img;
-    daala_packet dpkt = { 0 };
-
-    // daala_encode_flush_header?
+    daala_packet dpkt;
+    memset(&img, 0, sizeof(img));
+    memset(&dpkt, 0, sizeof(dpkt));
 
     img.nplanes = 3;
     img.width   = frame->width;
@@ -107,12 +105,13 @@ static int libdaala_encode(AVCodecContext *avctx, AVPacket *avpkt,
     }
 
     // loop because you might have multiple packets in the future
-    while ((ret = daala_encode_packet_out(ctx->encoder, 0, &dpkt))) {
+    do {
+        ret = daala_encode_packet_out(ctx->encoder, 0, &dpkt);
         if (ret < 0) {
             av_log(avctx, AV_LOG_ERROR, "Encoding error (err %d)\n", ret);
             return AVERROR_INVALIDDATA;
         }
-    }
+    } while (ret);
 
     ret = ff_alloc_packet(avpkt, dpkt.bytes);
     if (ret < 0)
@@ -132,7 +131,9 @@ static int libdaala_encode(AVCodecContext *avctx, AVPacket *avpkt,
 static av_cold int libdaala_init(AVCodecContext *avctx)
 {
     LibDaalaContext *ctx = avctx->priv_data;
-    daala_packet dpkt;
+    daala_comment comment = { 0 };
+    daala_info info = { 0 };
+    daala_packet dpkt = { 0 };
     int offset = 0;
     int ret = av_image_check_size(avctx->width, avctx->height, 0, avctx);
 
@@ -142,46 +143,46 @@ static av_cold int libdaala_init(AVCodecContext *avctx)
         return ret;
     }
 
-    daala_info_init(&ctx->info);
+    daala_info_init(&info);
 
     av_log(avctx, AV_LOG_VERBOSE, "libdaala version %d.%d.%d\n",
-           ctx->info.version_major, ctx->info.version_minor,
-           ctx->info.version_sub);
+           info.version_major, info.version_minor, info.version_sub);
 
-    ctx->info.pic_width  = avctx->width;
-    ctx->info.pic_height = avctx->height;
+    info.pic_width  = avctx->width;
+    info.pic_height = avctx->height;
 
     /* Default bitdepth is 8 */
     if (avctx->pix_fmt == AV_PIX_FMT_YUV420P10)
-        ctx->info.bitdepth_mode = OD_BITDEPTH_MODE_10;
-    ctx->info.nplanes = 3;
-    ctx->info.plane_info[1].xdec = 1;
-    ctx->info.plane_info[1].ydec = 1;
-    ctx->info.plane_info[2].xdec = 1;
-    ctx->info.plane_info[2].ydec = 1;
+        info.bitdepth_mode = OD_BITDEPTH_MODE_10;
+    info.nplanes = 3;
+    info.plane_info[1].xdec = 1;
+    info.plane_info[1].ydec = 1;
+    info.plane_info[2].xdec = 1;
+    info.plane_info[2].ydec = 1;
 
-    ctx->info.timebase_numerator   = avctx->time_base.num;
-    ctx->info.timebase_denominator = avctx->time_base.den;
-    ctx->info.frame_duration = 1;
-    ctx->info.keyframe_rate = avctx->gop_size;
+    info.timebase_numerator   = avctx->time_base.num;
+    info.timebase_denominator = avctx->time_base.den;
+    info.frame_duration = 1;
+    info.keyframe_rate = avctx->gop_size;
 
-    ctx->info.pixel_aspect_numerator   = avctx->sample_aspect_ratio.num;
-    ctx->info.pixel_aspect_denominator = avctx->sample_aspect_ratio.den;
+    info.pixel_aspect_numerator   = avctx->sample_aspect_ratio.num;
+    info.pixel_aspect_denominator = avctx->sample_aspect_ratio.den;
 
-    ctx->encoder = daala_encode_create(&ctx->info);
+    ctx->encoder = daala_encode_create(&info);
     if (!ctx->encoder) {
         av_log(avctx, AV_LOG_ERROR, "Invalid encoder parameters.\n");
         return AVERROR_INVALIDDATA;
     }
-    daala_comment_init(&ctx->comment);
+    daala_comment_init(&comment);
     // various daala_encode_ctl
 
-    while (daala_encode_flush_header(ctx->encoder, &ctx->comment, &dpkt)) {
+    while (daala_encode_flush_header(ctx->encoder, &comment, &dpkt)) {
         ret = concatenate_packet(avctx, &dpkt, &offset);
         if (ret < 0)
             return ret;
     }
 
+    daala_comment_clear(&comment);
     return 0;
 }
 
@@ -189,7 +190,6 @@ static av_cold int libdaala_close(AVCodecContext *avctx)
 {
     LibDaalaContext *ctx = avctx->priv_data;
 
-    daala_comment_clear(&ctx->comment);
     daala_encode_free(ctx->encoder);
 
     return 0;

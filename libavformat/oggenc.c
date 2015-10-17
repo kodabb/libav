@@ -524,7 +524,8 @@ static int ogg_write_header(AVFormatContext *s)
                 return -1;
             }
 
-            p = ogg_write_vorbiscomment(7, s->flags & AVFMT_FLAG_BITEXACT,
+            p = ogg_write_vorbiscomment(strlen(cstr) + 1,
+                                        s->flags & AVFMT_FLAG_BITEXACT,
                                         &oggstream->header_len[1], &s->metadata,
                                         framing_bit);
             oggstream->header[1] = p;
@@ -544,6 +545,7 @@ static int ogg_write_header(AVFormatContext *s)
             }
         }
     }
+        oggstream->page.flags |= 2; // bos
 
     for (j = 0; j < s->nb_streams; j++) {
         OGGStreamContext *oggstream = s->streams[j]->priv_data;
