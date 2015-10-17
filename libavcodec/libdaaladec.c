@@ -25,6 +25,7 @@
 #include "daala/daaladec.h"
 
 #include "libavutil/imgutils.h"
+#include "libavutil/intreadwrite.h"
 #include "libavutil/internal.h"
 
 #include "avcodec.h"
@@ -41,26 +42,33 @@ static int libdaala_decode(AVCodecContext *avctx, void *data,
 {
     LibDaalaContext *ctx = avctx->priv_data;
     AVFrame *frame = data;
+    const uint8_t *src_data[4];
+    int src_linesizes[4];
     int ret, i;
     od_img img;
     daala_packet dpkt;
+    memset(&img, 0, sizeof(img));
+    memset(&dpkt, 0, sizeof(dpkt));
+
     dpkt.packet = avpkt->data;
     dpkt.bytes  = avpkt->size;
-
-    ret = ff_get_buffer(avctx, frame, 0);
-    if (ret < 0)
-        return ret;
 
     ret = daala_decode_packet_in(ctx->decoder, &img, &dpkt);
     if (ret < 0) {
         av_log(avctx, AV_LOG_ERROR, "Decoding error (err %d)\n", ret);
         return AVERROR_INVALIDDATA;
     }
-    for (i = 0; i < img.nplanes; i++) {
-        av_image_copy_plane(frame->data[i], frame->linesize[i],
-                            img.planes[i].data, img.planes[i].ystride,
-                            frame->linesize[i], frame->height);
+
+    ret = ff_get_buffer(avctx, frame, 0);
+    if (ret < 0)
+        return ret;
+
+    for (i = 0; i < 4; i++) {
+        src_data[i] = img.planes[i].data;
+        src_linesizes[i] = img.planes[i].ystride;
     }
+    av_image_copy(frame->data, frame->linesize, src_data, src_linesizes,
+                  frame->format, frame->width, frame->height);
 
     /* Frame is ready to be output */
     if (daala_packet_iskeyframe(dpkt.packet, dpkt.bytes)) {
@@ -77,6 +85,9 @@ static int libdaala_decode(AVCodecContext *avctx, void *data,
 static av_cold int libdaala_init(AVCodecContext *avctx)
 {
     LibDaalaContext *ctx = avctx->priv_data;
+    daala_setup_info *setup = NULL;
+    daala_packet dpkt = { 0 };
+    int off, i;
     int ret = av_image_check_size(avctx->width, avctx->height, 0, avctx);
 
     if (ret < 0) {
@@ -85,31 +96,48 @@ static av_cold int libdaala_init(AVCodecContext *avctx)
         return ret;
     }
 
-    if (avctx->bits_per_raw_sample == 8) {
-        ctx->info.bitdepth_mode = OD_BITDEPTH_MODE_8;
+    if (!avctx->extradata) {
+        av_log(avctx, AV_LOG_ERROR, "Missing extradata information.\n");
+        return AVERROR_INVALIDDATA;
+    }
+
+    daala_info_init(&ctx->info);
+
+    for (i = 0, off = 0; i < 3; i++) {
+        off += 2 + dpkt.bytes;
+        if (off >= avctx->extradata_size) {
+            av_log(avctx, AV_LOG_ERROR, "Invalid extradata size (%d >= %d).\n",
+                   off, avctx->extradata_size);
+            return AVERROR_INVALIDDATA;
+        }
+
+        dpkt.packet = avctx->extradata + off;
+        dpkt.bytes = AV_RB16(avctx->extradata + off - 2);
+        dpkt.b_o_s = 1;
+
+        ret = daala_decode_header_in(&ctx->info, &ctx->comment, &setup, &dpkt);
+        if (ret < 0) {
+            av_log(avctx, AV_LOG_ERROR, "Error decoding headers.\n");
+            return AVERROR_INVALIDDATA;
+        }
+    }
+
+    if (ctx->info.bitdepth_mode == OD_BITDEPTH_MODE_8)
         avctx->pix_fmt = AV_PIX_FMT_YUV420P;
-    } else if (avctx->bits_per_raw_sample == 10) {
-        ctx->info.bitdepth_mode = OD_BITDEPTH_MODE_10;
+    else if (ctx->info.bitdepth_mode == OD_BITDEPTH_MODE_10)
         avctx->pix_fmt = AV_PIX_FMT_YUV420P10;
-    } else {
+    else {
         av_log(avctx, AV_LOG_ERROR, "Unsupported bitdepth %d.\n",
-               avctx->bits_per_raw_sample);
+               ctx->info.bitdepth_mode);
         return AVERROR_INVALIDDATA;
     }
 
-    ctx->info.nplanes = 3;
-    ctx->info.plane_info[1].xdec = 1;
-    ctx->info.plane_info[1].ydec = 1;
-    ctx->info.plane_info[2].xdec = 1;
-    ctx->info.plane_info[2].ydec = 1;
-    ctx->info.pic_width  = avctx->width;
-    ctx->info.pic_height = avctx->height;
-
-    ctx->decoder = daala_decode_alloc(&ctx->info, NULL);
+    ctx->decoder = daala_decode_alloc(&ctx->info, setup);
     if (!ctx->decoder) {
-        av_log(avctx, AV_LOG_ERROR, "Invalid parameters for decoder\n");
+        av_log(avctx, AV_LOG_ERROR, "Invalid decoder parameters.\n");
         return AVERROR_INVALIDDATA;
     }
+    daala_setup_free(setup);
 
     return 0;
 }
@@ -118,6 +146,7 @@ static av_cold int libdaala_close(AVCodecContext *avctx)
 {
     LibDaalaContext *ctx = avctx->priv_data;
 
+    daala_comment_clear(&ctx->comment);
     daala_decode_free(ctx->decoder);
 
     return 0;

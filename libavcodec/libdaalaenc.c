@@ -169,7 +169,7 @@ static av_cold int libdaala_init(AVCodecContext *avctx)
 
     ctx->encoder = daala_encode_create(&ctx->info);
     if (!ctx->encoder) {
-        av_log(avctx, AV_LOG_ERROR, "Invalid parameters for encoder\n");
+        av_log(avctx, AV_LOG_ERROR, "Invalid encoder parameters.\n");
         return AVERROR_INVALIDDATA;
     }
     daala_comment_init(&ctx->comment);
