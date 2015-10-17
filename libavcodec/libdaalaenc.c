@@ -20,6 +20,7 @@
  */
 
 #include <stdint.h>
+#include <string.h>
 
 #include "daala/daalaenc.h"
 
@@ -188,6 +189,7 @@ static av_cold int libdaala_close(AVCodecContext *avctx)
 {
     LibDaalaContext *ctx = avctx->priv_data;
 
+    daala_comment_clear(&ctx->comment);
     daala_encode_free(ctx->encoder);
 
     return 0;

@@ -32,9 +32,7 @@
 #include "internal.h"
 
 typedef struct LibDaalaContext {
-    daala_info info;
     daala_dec_ctx *decoder;
-    daala_comment comment;
 } LibDaalaContext;
 
 static int libdaala_decode(AVCodecContext *avctx, void *data,
@@ -47,22 +45,26 @@ static int libdaala_decode(AVCodecContext *avctx, void *data,
     int ret, i;
     od_img img;
     daala_packet dpkt;
+
+    /* Init input/output structures */
     memset(&img, 0, sizeof(img));
     memset(&dpkt, 0, sizeof(dpkt));
-
     dpkt.packet = avpkt->data;
     dpkt.bytes  = avpkt->size;
 
+    /* Decode */
     ret = daala_decode_packet_in(ctx->decoder, &img, &dpkt);
     if (ret < 0) {
         av_log(avctx, AV_LOG_ERROR, "Decoding error (err %d)\n", ret);
         return AVERROR_INVALIDDATA;
     }
 
+    /* Create output frame */
     ret = ff_get_buffer(avctx, frame, 0);
     if (ret < 0)
         return ret;
 
+    /* Copy decoded data to output frame */
     for (i = 0; i < 4; i++) {
         src_data[i] = img.planes[i].data;
         src_linesizes[i] = img.planes[i].ystride;
@@ -70,7 +72,7 @@ static int libdaala_decode(AVCodecContext *avctx, void *data,
     av_image_copy(frame->data, frame->linesize, src_data, src_linesizes,
                   frame->format, frame->width, frame->height);
 
-    /* Frame is ready to be output */
+    /* Frame is ready */
     if (daala_packet_iskeyframe(dpkt.packet, dpkt.bytes)) {
         frame->pict_type = AV_PICTURE_TYPE_I;
         frame->key_frame = 1;
@@ -86,6 +88,8 @@ static av_cold int libdaala_init(AVCodecContext *avctx)
 {
     LibDaalaContext *ctx = avctx->priv_data;
     daala_setup_info *setup = NULL;
+    daala_info info = { 0 };
+    daala_comment comment = { 0 };
     daala_packet dpkt = { 0 };
     int off, i;
     int ret = av_image_check_size(avctx->width, avctx->height, 0, avctx);
@@ -101,8 +105,8 @@ static av_cold int libdaala_init(AVCodecContext *avctx)
         return AVERROR_INVALIDDATA;
     }
 
-    daala_info_init(&ctx->info);
-
+    /* Parse the three headers from extradata */
+    daala_info_init(&info);
     for (i = 0, off = 0; i < 3; i++) {
         off += 2 + dpkt.bytes;
         if (off >= avctx->extradata_size) {
@@ -115,38 +119,43 @@ static av_cold int libdaala_init(AVCodecContext *avctx)
         dpkt.bytes = AV_RB16(avctx->extradata + off - 2);
         dpkt.b_o_s = 1;
 
-        ret = daala_decode_header_in(&ctx->info, &ctx->comment, &setup, &dpkt);
+        ret = daala_decode_header_in(&info, &comment, &setup, &dpkt);
         if (ret < 0) {
             av_log(avctx, AV_LOG_ERROR, "Error decoding headers.\n");
             return AVERROR_INVALIDDATA;
         }
     }
 
-    if (ctx->info.bitdepth_mode == OD_BITDEPTH_MODE_8)
+    if (info.bitdepth_mode == OD_BITDEPTH_MODE_8)
         avctx->pix_fmt = AV_PIX_FMT_YUV420P;
-    else if (ctx->info.bitdepth_mode == OD_BITDEPTH_MODE_10)
+    else if (info.bitdepth_mode == OD_BITDEPTH_MODE_10)
         avctx->pix_fmt = AV_PIX_FMT_YUV420P10;
     else {
         av_log(avctx, AV_LOG_ERROR, "Unsupported bitdepth %d.\n",
-               ctx->info.bitdepth_mode);
-        return AVERROR_INVALIDDATA;
+               info.bitdepth_mode);
+        ret = AVERROR_INVALIDDATA;
+        goto out;
     }
 
-    ctx->decoder = daala_decode_alloc(&ctx->info, setup);
+    ctx->decoder = daala_decode_alloc(&info, setup);
     if (!ctx->decoder) {
         av_log(avctx, AV_LOG_ERROR, "Invalid decoder parameters.\n");
-        return AVERROR_INVALIDDATA;
+        ret = AVERROR_INVALIDDATA;
+        goto out;
     }
+
+out:
+    daala_comment_clear(&comment);
+    daala_info_clear(&info);
     daala_setup_free(setup);
 
-    return 0;
+    return ret;
 }
 
 static av_cold int libdaala_close(AVCodecContext *avctx)
 {
     LibDaalaContext *ctx = avctx->priv_data;
 
-    daala_comment_clear(&ctx->comment);
     daala_decode_free(ctx->decoder);
 
     return 0;

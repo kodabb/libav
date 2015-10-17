@@ -82,7 +82,7 @@ static int daala_header(AVFormatContext *s, int idx)
             timebase.den = 25;
         }
         avpriv_set_pts_info(st, 64, timebase.num, timebase.den);
-        bytestream2_skip(&gb, 4); //frameduration
+        bytestream2_skip(&gb, 4); // frameduration
 
         dpar->gpshift = bytestream2_get_byte(&gb);
         dpar->gpmask  = (1 << dpar->gpshift) - 1;
@@ -90,7 +90,7 @@ static int daala_header(AVFormatContext *s, int idx)
         bitdepth = bytestream2_get_byte(&gb);
         st->codec->bits_per_raw_sample = bitdepth == 1 ? 8 : 10;
         nplanes = bytestream2_get_byte(&gb);
-        bytestream2_skip(&gb, 2 * nplanes); //planeinfo
+        bytestream2_skip(&gb, 2 * nplanes); // planeinfo
 
         st->codec->codec_type = AVMEDIA_TYPE_VIDEO;
         st->codec->codec_id   = AV_CODEC_ID_DAALA;
@@ -98,7 +98,7 @@ static int daala_header(AVFormatContext *s, int idx)
     }
     break;
     case 0x81:
-        /* skip 0x81"daala" */
+        /* 0x81"daala" */
         ff_vorbis_stream_comment(s, st,
                                  os->buf + os->pstart + 6, os->psize - 6);
         break;
@@ -118,6 +118,7 @@ static int daala_header(AVFormatContext *s, int idx)
         st->codec->extradata_size = 0;
         return err;
     }
+
     cdp    = st->codec->extradata + st->codec->extradata_size;
     *cdp++ = os->psize >> 8;
     *cdp++ = os->psize & 0xff;
