@@ -510,7 +510,7 @@ static int ogg_write_header(AVFormatContext *s)
                 break;
             case AV_CODEC_ID_DAALA:
                 cstr = "daala";
-                header_type = 0x80;
+                header_type = 0x81;
                 framing_bit = 0;
                 first_header_size = 46;
                 break;
@@ -533,7 +533,7 @@ static int ogg_write_header(AVFormatContext *s)
                 return AVERROR(ENOMEM);
 
             bytestream_put_byte(&p, header_type);
-            bytestream_put_buffer(&p, cstr, 6);
+            bytestream_put_buffer(&p, cstr, strlen(cstr));
 
             if (st->codec->codec_id == AV_CODEC_ID_THEORA) {
                 /** KFGSHIFT is the width of the less significant section of the granule position
@@ -545,7 +545,6 @@ static int ogg_write_header(AVFormatContext *s)
             }
         }
     }
-        oggstream->page.flags |= 2; // bos
 
     for (j = 0; j < s->nb_streams; j++) {
         OGGStreamContext *oggstream = s->streams[j]->priv_data;
