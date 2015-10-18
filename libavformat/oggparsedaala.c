@@ -149,9 +149,11 @@ static uint64_t daala_gptopts(AVFormatContext *ctx, int idx,
 }
 
 const struct ogg_codec ff_daala_codec = {
-    .magic     = "\200daala",
-    .magicsize = 6,
-    .header    = daala_header,
-    .gptopts   = daala_gptopts,
-    .nb_header = 3,
+    .name             = "Daala",
+    .magic            = "\200daala",
+    .magicsize        = 6,
+    .header           = daala_header,
+    .gptopts          = daala_gptopts,
+    .granule_is_start = 1,
+    .nb_header        = 3,
 };
