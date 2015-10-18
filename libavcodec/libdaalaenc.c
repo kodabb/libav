@@ -92,7 +92,7 @@ static int libdaala_encode(AVCodecContext *avctx, AVPacket *avpkt,
     img.height  = frame->height;
     for (i = 0; i < img.nplanes; i++) {
         img.planes[i].data = frame->data[i];
-        img.planes[i].xstride = avctx->bits_per_coded_sample > 8 ? 1 : 2;
+        img.planes[i].xstride = avctx->pix_fmt == AV_PIX_FMT_YUV420P10 ? 2 : 1;
         img.planes[i].ystride = frame->linesize[i];
         img.planes[i].xdec = !!i;
         img.planes[i].ydec = !!i;

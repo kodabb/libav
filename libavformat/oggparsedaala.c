@@ -56,7 +56,6 @@ static int daala_header(AVFormatContext *s, int idx)
     switch (os->buf[os->pstart]) {
     case 0x80: {
         AVRational timebase;
-        int bitdepth;
         int nplanes;
 
         bytestream2_init(&gb, os->buf + os->pstart, os->psize);
@@ -87,14 +86,12 @@ static int daala_header(AVFormatContext *s, int idx)
         dpar->gpshift = bytestream2_get_byte(&gb);
         dpar->gpmask  = (1 << dpar->gpshift) - 1;
 
-        bitdepth = bytestream2_get_byte(&gb);
-        st->codec->bits_per_raw_sample = bitdepth == 1 ? 8 : 10;
+        bytestream2_skip(&gb, 1); // bitdepth
         nplanes = bytestream2_get_byte(&gb);
         bytestream2_skip(&gb, 2 * nplanes); // planeinfo
 
         st->codec->codec_type = AVMEDIA_TYPE_VIDEO;
         st->codec->codec_id   = AV_CODEC_ID_DAALA;
-        st->need_parsing      = AVFMT_FLAG_NOPARSE;
     }
     break;
     case 0x81:
