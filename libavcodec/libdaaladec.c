@@ -137,7 +137,7 @@ static av_cold int libdaala_init(AVCodecContext *avctx)
         goto out;
     }
 
-    ctx->decoder = daala_decode_alloc(&info, setup);
+    ctx->decoder = daala_decode_create(&info, setup);
     if (!ctx->decoder) {
         av_log(avctx, AV_LOG_ERROR, "Invalid decoder parameters.\n");
         ret = AVERROR_INVALIDDATA;
