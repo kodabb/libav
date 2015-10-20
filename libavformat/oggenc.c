@@ -434,7 +434,8 @@ static int ogg_write_header(AVFormatContext *s)
             st->codecpar->codec_id != AV_CODEC_ID_THEORA &&
             st->codecpar->codec_id != AV_CODEC_ID_SPEEX  &&
             st->codecpar->codec_id != AV_CODEC_ID_FLAC   &&
-            st->codecpar->codec_id != AV_CODEC_ID_OPUS) {
+            st->codecpar->codec_id != AV_CODEC_ID_OPUS   &&
+            st->codecpar->codec_id != AV_CODEC_ID_DAALA) {
             av_log(s, AV_LOG_ERROR, "Unsupported codec id in stream %d\n", i);
             return -1;
         }
@@ -489,19 +490,42 @@ static int ogg_write_header(AVFormatContext *s)
             }
         } else {
             uint8_t *p;
-            const char *cstr = st->codecpar->codec_id == AV_CODEC_ID_VORBIS ? "vorbis" : "theora";
-            int header_type = st->codecpar->codec_id == AV_CODEC_ID_VORBIS ? 3 : 0x81;
-            int framing_bit = st->codecpar->codec_id == AV_CODEC_ID_VORBIS ? 1 : 0;
+            const char *cstr;
+            int header_type;
+            int framing_bit;
+            int first_header_size;
+
+            switch (st->codecpar->codec_id) {
+            case AV_CODEC_ID_VORBIS:
+                cstr = "vorbis";
+                header_type = 3;
+                framing_bit = 1;
+                first_header_size = 30;
+                break;
+            case AV_CODEC_ID_THEORA:
+                cstr = "theora";
+                header_type = 0x81;
+                framing_bit = 0;
+                first_header_size = 42;
+                break;
+            case AV_CODEC_ID_DAALA:
+                cstr = "daala";
+                header_type = 0x81;
+                framing_bit = 0;
+                first_header_size = 46;
+                break;
+            }
 
             if (avpriv_split_xiph_headers(st->codecpar->extradata, st->codecpar->extradata_size,
-                                      st->codecpar->codec_id == AV_CODEC_ID_VORBIS ? 30 : 42,
+                                      first_header_size,
                                       oggstream->header, oggstream->header_len) < 0) {
                 av_log(s, AV_LOG_ERROR, "Extradata corrupted\n");
                 av_freep(&st->priv_data);
                 return -1;
             }
 
-            p = ogg_write_vorbiscomment(7, s->flags & AVFMT_FLAG_BITEXACT,
+            p = ogg_write_vorbiscomment(strlen(cstr) + 1,
+                                        s->flags & AVFMT_FLAG_BITEXACT,
                                         &oggstream->header_len[1], &s->metadata,
                                         framing_bit);
             oggstream->header[1] = p;
@@ -509,7 +533,7 @@ static int ogg_write_header(AVFormatContext *s)
                 return AVERROR(ENOMEM);
 
             bytestream_put_byte(&p, header_type);
-            bytestream_put_buffer(&p, cstr, 6);
+            bytestream_put_buffer(&p, cstr, strlen(cstr));
 
             if (st->codecpar->codec_id == AV_CODEC_ID_THEORA) {
                 /** KFGSHIFT is the width of the less significant section of the granule position
