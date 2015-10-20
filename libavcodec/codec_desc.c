@@ -1191,6 +1191,13 @@ static const AVCodecDescriptor codec_descriptors[] = {
         .long_name = NULL_IF_CONFIG_SMALL("innoHeim/Rsupport Screen Capture Codec"),
         .props     = AV_CODEC_PROP_LOSSLESS,
     },
+    {
+        .id        = AV_CODEC_ID_DAALA,
+        .type      = AVMEDIA_TYPE_VIDEO,
+        .name      = "daala",
+        .long_name = NULL_IF_CONFIG_SMALL("Daala"),
+        .props     = AV_CODEC_PROP_LOSSY | AV_CODEC_PROP_LOSSLESS,
+    },
 
     /* image codecs */
     {

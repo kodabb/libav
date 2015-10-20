@@ -649,6 +649,8 @@ OBJS-$(CONFIG_WEBM_MUXER)              += mpeg4audio.o mpegaudiodata.o  \
                                           flac.o flacdata.o
 
 # external codec libraries
+OBJS-$(CONFIG_LIBDAALA_DECODER)           += libdaaladec.o
+OBJS-$(CONFIG_LIBDAALA_ENCODER)           += libdaalaenc.o
 OBJS-$(CONFIG_LIBDCADEC_DECODER)          += libdcadec.o dca.o
 OBJS-$(CONFIG_LIBFAAC_ENCODER)            += libfaac.o
 OBJS-$(CONFIG_LIBFDK_AAC_DECODER)         += libfdk-aacdec.o
