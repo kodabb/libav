@@ -1,6 +1,7 @@
 /*
  * daala ogg demuxer
  * Copyright (C) 2015 Vittorio Giovara <vittorio.giovara@gmail.com>
+ * Copyright (C) 2015 Rostislav Pehlivanov <atomnuker@gmail.com>
  *
  * This file is part of Libav.
  *
@@ -29,6 +30,7 @@
 typedef struct DaalaParams {
     int gpshift;
     int gpmask;
+    int header_nb;
     unsigned int version;
 } DaalaParams;
 
@@ -73,16 +75,16 @@ static int daala_header(AVFormatContext *s, int idx)
 
         timebase.den = bytestream2_get_le32(&gb);
         timebase.num = bytestream2_get_le32(&gb);
-        if (!(timebase.num > 0 && timebase.den > 0)) {
+        if (timebase.num <= 0 && timebase.den <= 0) {
             av_log(s, AV_LOG_WARNING,
-                   "Invalid time base in stream (%d/%d), assuming 25fps\n",
+                   "Invalid time base (%d/%d), assuming 25fps\n",
                    timebase.num, timebase.den);
             timebase.num = 1;
             timebase.den = 25;
         }
         avpriv_set_pts_info(st, 64, timebase.num, timebase.den);
-        bytestream2_skip(&gb, 4); // frameduration
 
+        bytestream2_skip(&gb, 4); // frameduration
         dpar->gpshift = bytestream2_get_byte(&gb);
         dpar->gpmask  = (1 << dpar->gpshift) - 1;
 
@@ -95,15 +97,26 @@ static int daala_header(AVFormatContext *s, int idx)
     }
     break;
     case 0x81:
+        if (dpar->header_nb != 1) {
+            av_log(s, AV_LOG_ERROR,
+                   "Header 0x%02X received out of order (position %d).\n",
+                   os->buf[os->pstart], dpar->header_nb);
+            return AVERROR_INVALIDDATA;
+        }
+
         /* 0x81"daala" */
         ff_vorbis_stream_comment(s, st,
                                  os->buf + os->pstart + 6, os->psize - 6);
         break;
     case 0x82:
-        bytestream2_init(&gb, os->buf + os->pstart, os->psize);
+        if (dpar->header_nb != 2) {
+            av_log(s, AV_LOG_ERROR,
+                   "Header 0x%02X received out of order (position %d).\n",
+                   os->buf[os->pstart], dpar->header_nb);
+            return AVERROR_INVALIDDATA;
+        }
 
         /* 0x82"daala" */
-        bytestream2_skip(&gb, 6);
     break;
     default:
         av_log(s, AV_LOG_ERROR, "Unknown header %02X\n", os->buf[os->pstart]);
@@ -122,6 +135,7 @@ static int daala_header(AVFormatContext *s, int idx)
     memcpy(cdp, os->buf + os->pstart, os->psize);
     st->codec->extradata_size = cds;
 
+    dpar->header_nb++;
     return 1;
 }
 
@@ -148,11 +162,49 @@ static uint64_t daala_gptopts(AVFormatContext *ctx, int idx,
     return iframe + pframe;
 }
 
+static int daala_packet(AVFormatContext *s, int idx)
+{
+    struct ogg *ogg = s->priv_data;
+    struct ogg_stream *os = ogg->streams + idx;
+    int duration;
+
+    /* first packet handling
+     * here we parse the duration of each packet in the first page and compare
+     * the total duration to the page granule to find the encoder delay and
+     * set the first timestamp */
+    if ((!os->lastpts || os->lastpts == AV_NOPTS_VALUE) &&
+        !(os->flags & OGG_FLAG_EOS)) {
+        int seg;
+
+        duration = 1;
+        for (seg = os->segp; seg < os->nsegs; seg++) {
+            if (os->segments[seg] < 255)
+                duration++;
+        }
+
+        os->lastpts =
+        os->lastdts = daala_gptopts(s, idx, os->granule, NULL) - duration;
+        if (s->streams[idx]->start_time == AV_NOPTS_VALUE) {
+            s->streams[idx]->start_time = os->lastpts;
+            if (s->streams[idx]->duration)
+                s->streams[idx]->duration -= s->streams[idx]->start_time;
+        }
+    }
+
+    /* parse packet duration */
+    if (os->psize > 0) {
+        os->pduration = 1;
+    }
+
+    return 0;
+}
+
 const struct ogg_codec ff_daala_codec = {
     .name             = "Daala",
     .magic            = "\200daala",
     .magicsize        = 6,
     .header           = daala_header,
+    .packet           = daala_packet,
     .gptopts          = daala_gptopts,
     .granule_is_start = 1,
     .nb_header        = 3,
