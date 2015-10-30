@@ -84,6 +84,8 @@ typedef struct RateControlContext{
     float dry_run_qscale;         ///< for xvid rc
     int last_picture_number;      ///< for xvid rc
     AVExpr * rc_eq_eval;
+
+    float border_masking;
 }RateControlContext;
 
 struct MpegEncContext;

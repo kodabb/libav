@@ -336,7 +336,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
 #if FF_API_MPV_OPT
     FF_DISABLE_DEPRECATION_WARNINGS
     if (avctx->border_masking != 0.0)
-        s->border_masking = avctx->border_masking;
+        s->rc_context.border_masking = avctx->border_masking;
     FF_ENABLE_DEPRECATION_WARNINGS
 #endif
 
@@ -345,7 +345,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
                          s->avctx->temporal_cplx_masking ||
                          s->avctx->spatial_cplx_masking  ||
                          s->avctx->p_masking      ||
-                         s->border_masking ||
+                         s->rc_context.border_masking ||
                          (s->mpv_flags & FF_MPV_FLAG_QP_RD)) &&
                         !s->fixed_qscale;
 

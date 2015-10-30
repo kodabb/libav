@@ -507,7 +507,7 @@ typedef struct MpegEncContext {
     int   rc_qmod_freq;
     float rc_initial_cplx;
     float rc_buffer_aggressivity;
-    float border_masking;
+    //float border_masking;
     int lmin, lmax;
 
     char *rc_eq;
@@ -536,6 +536,7 @@ typedef struct MpegEncContext {
 #define FF_MPV_FLAG_MV0          0x0020
 
 #define FF_MPV_OFFSET(x) offsetof(MpegEncContext, x)
+#define FF_MRC_OFFSET(x) offsetof(MpegEncContext, rc_context.x)
 #define FF_MPV_OPT_FLAGS (AV_OPT_FLAG_VIDEO_PARAM | AV_OPT_FLAG_ENCODING_PARAM)
 #define FF_MPV_COMMON_OPTS \
 { "mpv_flags",      "Flags common for all mpegvideo-based encoders.", FF_MPV_OFFSET(mpv_flags), AV_OPT_TYPE_FLAGS, { .i64 = 0 }, INT_MIN, INT_MAX, FF_MPV_OPT_FLAGS, "mpv_flags" },\
@@ -563,7 +564,7 @@ typedef struct MpegEncContext {
                                                                     FF_MPV_OFFSET(rc_eq), AV_OPT_TYPE_STRING,                           .flags = FF_MPV_OPT_FLAGS },            \
 {"rc_init_cplx", "initial complexity for 1-pass encoding",          FF_MPV_OFFSET(rc_initial_cplx), AV_OPT_TYPE_FLOAT, {.dbl = 0 }, -FLT_MAX, FLT_MAX, FF_MPV_OPT_FLAGS},       \
 {"rc_buf_aggressivity", "currently useless",                        FF_MPV_OFFSET(rc_buffer_aggressivity), AV_OPT_TYPE_FLOAT, {.dbl = 1.0 }, -FLT_MAX, FLT_MAX, FF_MPV_OPT_FLAGS}, \
-{"border_mask", "increase the quantizer for macroblocks close to borders", FF_MPV_OFFSET(border_masking), AV_OPT_TYPE_FLOAT, {.dbl = 0 }, -FLT_MAX, FLT_MAX, FF_MPV_OPT_FLAGS},    \
+{"border_mask", "increase the quantizer for macroblocks close to borders", FF_MRC_OFFSET(border_masking), AV_OPT_TYPE_FLOAT, {.dbl = 0 }, -FLT_MAX, FLT_MAX, FF_MPV_OPT_FLAGS},    \
 {"lmin", "minimum Lagrange factor (VBR)",                           FF_MPV_OFFSET(lmin), AV_OPT_TYPE_INT, {.i64 =  2*FF_QP2LAMBDA }, 0, INT_MAX, FF_MPV_OPT_FLAGS },            \
 {"lmax", "maximum Lagrange factor (VBR)",                           FF_MPV_OFFSET(lmax), AV_OPT_TYPE_INT, {.i64 = 31*FF_QP2LAMBDA }, 0, INT_MAX, FF_MPV_OPT_FLAGS },            \
 {"ibias", "intra quant bias",                                       FF_MPV_OFFSET(intra_quant_bias), AV_OPT_TYPE_INT, {.i64 = FF_DEFAULT_QUANT_BIAS }, INT_MIN, INT_MAX, FF_MPV_OPT_FLAGS },   \
