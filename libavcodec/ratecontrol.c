@@ -129,11 +129,12 @@ av_cold int ff_rate_control_init(MpegEncContext *s)
     emms_c();
 
     res = av_expr_parse(&rcc->rc_eq_eval,
-                        s->rc_eq ? s->rc_eq : "tex^qComp",
+                        rcc->eq ? rcc->eq : "tex^qComp",
                         const_names, func1_names, func1,
                         NULL, NULL, 0, s->avctx);
     if (res < 0) {
-        av_log(s->avctx, AV_LOG_ERROR, "Error parsing rc_eq \"%s\"\n", s->rc_eq);
+        av_log(s->avctx, AV_LOG_ERROR,
+               "Error parsing eq \"%s\"\n", rcc->eq);
         return res;
     }
 
@@ -250,9 +251,9 @@ FF_ENABLE_DEPRECATION_WARNINGS
             return -1;
         }
         /* init stuff with the user specified complexity */
-        if (s->rc_initial_cplx) {
+        if (rcc->initial_cplx) {
             for (i = 0; i < 60 * 30; i++) {
-                double bits = s->rc_initial_cplx * (i / 10000.0 + 1.0) * s->mb_num;
+                double bits = rcc->initial_cplx * (i / 10000.0 + 1.0) * s->mb_num;
                 RateControlEntry rce;
 
                 if (i % ((s->gop_size + 3) / 4) == 0)
@@ -396,7 +397,8 @@ static double get_qscale(MpegEncContext *s, RateControlEntry *rce,
 
     bits = av_expr_eval(rcc->rc_eq_eval, const_values, rce);
     if (isnan(bits)) {
-        av_log(s->avctx, AV_LOG_ERROR, "Error evaluating rc_eq \"%s\"\n", s->rc_eq);
+        av_log(s->avctx, AV_LOG_ERROR,
+               "Error evaluating rc_eq \"%s\"\n", rcc->eq);
         return -1;
     }
 
@@ -474,8 +476,8 @@ static double get_diff_limited_q(MpegEncContext *s, RateControlEntry *rce, doubl
  */
 static void get_qminmax(int *qmin_ret, int *qmax_ret, MpegEncContext *s, int pict_type)
 {
-    int qmin = s->lmin;
-    int qmax = s->lmax;
+    int qmin = s->rc_context.lmin;
+    int qmax = s->rc_context.lmax;
 
     assert(qmin <= qmax);
 
@@ -514,10 +516,10 @@ static double modify_qscale(MpegEncContext *s, RateControlEntry *rce,
     get_qminmax(&qmin, &qmax, s, pict_type);
 
     /* modulation */
-    if (s->rc_qmod_freq &&
-        frame_num % s->rc_qmod_freq == 0 &&
+    if (rcc->qmod_freq &&
+        frame_num % rcc->qmod_freq == 0 &&
         pict_type == AV_PICTURE_TYPE_P)
-        q *= s->rc_qmod_amp;
+        q *= rcc->qmod_amp;
 
     /* buffer overflow/underflow protection */
     if (buffer_size) {
@@ -530,7 +532,7 @@ static double modify_qscale(MpegEncContext *s, RateControlEntry *rce,
                 d = 1.0;
             else if (d < 0.0001)
                 d = 0.0001;
-            q *= pow(d, 1.0 / s->rc_buffer_aggressivity);
+            q *= pow(d, 1.0 / s->rc_context.buffer_aggressivity);
 
             q_limit = bits2qp(rce,
                               FFMAX((min_rate - buffer_size + rcc->buffer_index) *
@@ -550,7 +552,7 @@ static double modify_qscale(MpegEncContext *s, RateControlEntry *rce,
                 d = 1.0;
             else if (d < 0.0001)
                 d = 0.0001;
-            q /= pow(d, 1.0 / s->rc_buffer_aggressivity);
+            q /= pow(d, 1.0 / rcc->buffer_aggressivity);
 
             q_limit = bits2qp(rce,
                               FFMAX(rcc->buffer_index *
@@ -566,8 +568,8 @@ static double modify_qscale(MpegEncContext *s, RateControlEntry *rce,
     }
     ff_dlog(s, "q:%f max:%f min:%f size:%f index:%f agr:%f\n",
             q, max_rate, min_rate, buffer_size, rcc->buffer_index,
-            s->rc_buffer_aggressivity);
-    if (s->rc_qsquish == 0.0 || qmin == qmax) {
+            rcc->buffer_aggressivity);
+    if (rcc->qsquish == 0.0 || qmin == qmax) {
         if (q < qmin)
             q = qmin;
         else if (q > qmax)
