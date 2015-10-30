@@ -87,6 +87,7 @@ typedef struct RateControlContext{
 
     float border_masking;
     float *cplx_tab, *bits_tab;   ///< temp buffers
+    int strategy;
 
     /**
      * ratecontrol qmin qmax limiting method
