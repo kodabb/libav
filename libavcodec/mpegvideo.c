@@ -687,9 +687,9 @@ static int init_context_frame(MpegEncContext *s)
         FF_ALLOCZ_OR_GOTO(s->avctx, s->lambda_table, mb_array_size *
                           sizeof(int), fail);
 
-        FF_ALLOC_OR_GOTO(s->avctx, s->cplx_tab,
+        FF_ALLOC_OR_GOTO(s->avctx, s->rc_context.cplx_tab,
                          mb_array_size * sizeof(float), fail);
-        FF_ALLOC_OR_GOTO(s->avctx, s->bits_tab,
+        FF_ALLOC_OR_GOTO(s->avctx, s->rc_context.bits_tab,
                          mb_array_size * sizeof(float), fail);
 
     }
@@ -917,8 +917,8 @@ static void free_context_frame(MpegEncContext *s)
     av_freep(&s->er.er_temp_buffer);
     av_freep(&s->mb_index2xy);
     av_freep(&s->lambda_table);
-    av_freep(&s->cplx_tab);
-    av_freep(&s->bits_tab);
+    av_freep(&s->rc_context.cplx_tab);
+    av_freep(&s->rc_context.bits_tab);
 
     s->linesize = s->uvlinesize = 0;
 }

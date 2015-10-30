@@ -507,13 +507,9 @@ typedef struct MpegEncContext {
     int   rc_qmod_freq;
     float rc_initial_cplx;
     float rc_buffer_aggressivity;
-    //float border_masking;
     int lmin, lmax;
 
     char *rc_eq;
-
-    /* temp buffers for rate control */
-    float *cplx_tab, *bits_tab;
 
     /* flag to indicate a reinitialization is required, e.g. after
      * a frame size change */
