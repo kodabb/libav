@@ -282,7 +282,7 @@ library:
 @item framecrc testing format   @tab X @tab
 @item FunCom ISS                @tab   @tab X
     @tab Audio format used in various games from FunCom like The Longest Journey.
-@item GIF Animation             @tab X @tab
+@item GIF Animation             @tab X @tab X
 @item GXF                       @tab X @tab X
     @tab General eXchange Format SMPTE 360M, used by Thomson Grass Valley
          playout servers.

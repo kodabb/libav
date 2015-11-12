@@ -52,6 +52,7 @@ version <next>:
 - G.723.1 muxer and encoder
 - compressed SWF
 - G.729 raw demuxer
+- GIF demuxer
 
 
 version 11:
