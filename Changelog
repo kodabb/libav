@@ -51,6 +51,7 @@ version <next>:
 - support Apple AVFoundation video capture
 - G.723.1 muxer and encoder
 - compressed SWF
+- G.729 raw demuxer
 
 
 version 11:
