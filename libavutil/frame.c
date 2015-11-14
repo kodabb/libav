@@ -24,7 +24,7 @@
 #include "imgutils.h"
 #include "mem.h"
 #include "samplefmt.h"
-#include "formaton.h"
+#include "pixformaton.h"
 
 static void get_frame_defaults(AVFrame *frame)
 {
