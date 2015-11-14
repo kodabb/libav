@@ -365,7 +365,7 @@ typedef struct AVFrame {
      */
     AVBufferRef *hw_frames_ctx;
 
-    AVPixelFormaton *formaton;
+    AVPixelFormatonRef *formaton;
 } AVFrame;
 
 /**
