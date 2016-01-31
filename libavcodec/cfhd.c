@@ -512,10 +512,10 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
 
         if (tag == 55 && s->subband_num_actual != 255 &&
             s->a_width && s->a_height) {
-            int highpass_height   = s->plane[s->channel_num].band[s->level][s->subband_num].height;
-            int highpass_width    = s->plane[s->channel_num].band[s->level][s->subband_num].width;
-            int highpass_a_width  = s->plane[s->channel_num].band[s->level][s->subband_num].a_width;
-            int highpass_a_height = s->plane[s->channel_num].band[s->level][s->subband_num].a_height;
+            int highpass_height       = s->plane[s->channel_num].band[s->level][s->subband_num].height;
+            int highpass_width        = s->plane[s->channel_num].band[s->level][s->subband_num].width;
+            int highpass_a_width      = s->plane[s->channel_num].band[s->level][s->subband_num].a_width;
+            int highpass_a_height     = s->plane[s->channel_num].band[s->level][s->subband_num].a_height;
             ptrdiff_t highpass_stride = s->plane[s->channel_num].band[s->level][s->subband_num].stride;
             int expected   = highpass_height   * highpass_stride;
             int a_expected = highpass_a_height * highpass_a_width;
@@ -624,8 +624,8 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
     planes = av_pix_fmt_count_planes(avctx->pix_fmt);
     for (plane = 0; plane < planes && !ret; plane++) {
         /* level 1 */
-        int lowpass_height  = s->plane[plane].band[0][0].height;
-        int lowpass_width   = s->plane[plane].band[0][0].width;
+        int lowpass_height        = s->plane[plane].band[0][0].height;
+        int lowpass_width         = s->plane[plane].band[0][0].width;
         ptrdiff_t highpass_stride = s->plane[plane].band[0][1].stride;
         int act_plane = plane == 1 ? 2 : plane == 2 ? 1 : plane;
         int16_t *low, *high, *output, *dst;
