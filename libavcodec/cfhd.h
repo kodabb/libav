@@ -23,14 +23,10 @@
 
 #include <stdint.h>
 
-#include "libavutil/avassert.h"
-
 #include "avcodec.h"
 #include "get_bits.h"
 
 #define VLC_BITS 9
-#define NB_VLC_TABLE_9 (71+3)
-#define NB_VLC_TABLE_18 (263+1)
 
 typedef struct CFHD_RL_VLC_ELEM {
     int16_t level;

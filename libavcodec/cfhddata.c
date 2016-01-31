@@ -18,8 +18,15 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#include "stdint.h"
+#include <stdint.h>
+
+#include "libavutil/attributes.h"
+#include "libavutil/avassert.h"
+
 #include "cfhd.h"
+
+#define NB_VLC_TABLE_9   (71 + 3)
+#define NB_VLC_TABLE_18 (263 + 1)
 
 /* some special codewords, not sure what they all mean */
 #define TABLE_9_BAND_END1 0x1C7859Eh
