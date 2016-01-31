@@ -158,7 +158,9 @@ static int alloc_buffers(AVCodecContext *avctx)
         return ret;
     avctx->pix_fmt = s->coded_format;
 
-    avcodec_get_chroma_sub_sample(avctx->pix_fmt, &s->chroma_x_shift, &s->chroma_y_shift);
+    if ((ret = av_pix_fmt_get_chroma_sub_sample(avctx->pix_fmt, &s->chroma_x_shift,
+                                                &s->chroma_y_shift)) < 0)
+        return ret;
     planes = av_pix_fmt_count_planes(avctx->pix_fmt);
 
     for (i = 0; i < planes; i++) {
