@@ -26,13 +26,13 @@
 #include "libavutil/attributes.h"
 #include "libavutil/buffer.h"
 #include "libavutil/common.h"
-#include "libavutil/intreadwrite.h"
 #include "libavutil/imgutils.h"
+#include "libavutil/intreadwrite.h"
 #include "libavutil/opt.h"
 
 #include "avcodec.h"
-#include "internal.h"
 #include "bytestream.h"
+#include "internal.h"
 #include "thread.h"
 #include "cfhd.h"
 
@@ -42,8 +42,8 @@ static av_cold int cfhd_decode_init(AVCodecContext *avctx)
 {
     CFHDContext *s = avctx->priv_data;
 
-    avctx->bits_per_raw_sample = 10;
     s->avctx                   = avctx;
+    avctx->bits_per_raw_sample = 10;
     avctx->width               = 0;
     avctx->height              = 0;
 
@@ -77,61 +77,67 @@ static void init_frame_defaults(CFHDContext *s)
 static inline int dequant_and_decompand(int level, int quantisation)
 {
     int64_t abslevel = abs(level);
-    return (abslevel + ((768 * abslevel * abslevel * abslevel) / (255 * 255 * 255))) * FFSIGN(level) * quantisation;
+    return (abslevel + ((768 * abslevel * abslevel * abslevel) / (255 * 255 * 255))) *
+           FFSIGN(level) * quantisation;
 }
 
-static inline void filter(int16_t *output, ptrdiff_t out_stride, int16_t *low, ptrdiff_t low_stride,
-                          int16_t *high, ptrdiff_t high_stride, int len, uint8_t clip)
+static inline void filter(int16_t *output, ptrdiff_t out_stride,
+                          int16_t *low, ptrdiff_t low_stride,
+                          int16_t *high, ptrdiff_t high_stride,
+                          int len, uint8_t clip)
 {
     int16_t tmp;
-
     int i;
+
     for (i = 0; i < len; i++) {
         if (i == 0) {
-            tmp = (11*low[0*low_stride] - 4*low[1*low_stride] + low[2*low_stride] + 4) >> 3;
-            output[(2*i+0)*out_stride] = (tmp + high[0*high_stride]) >> 1;
+            tmp = (11 * low[0 * low_stride] - 4 * low[1 * low_stride] + low[2 * low_stride] + 4) >> 3;
+            output[(2 * i + 0) * out_stride] = (tmp + high[0 * high_stride]) >> 1;
             if (clip)
-                output[(2*i+0)*out_stride] = av_clip_uintp2_c(output[(2*i+0)*out_stride], clip);
+                output[(2 * i + 0) * out_stride] = av_clip_uintp2_c(output[(2 * i + 0) * out_stride], clip);
 
-            tmp = ( 5*low[0*low_stride] + 4*low[1*low_stride] - low[2*low_stride] + 4) >> 3;
-            output[(2*i+1)*out_stride] = (tmp - high[0*high_stride]) >> 1;
+            tmp = (5 * low[0 * low_stride] + 4 * low[1 * low_stride] - low[2 * low_stride] + 4) >> 3;
+            output[(2 * i + 1) * out_stride] = (tmp - high[0 * high_stride]) >> 1;
             if (clip)
-                output[(2*i+1)*out_stride] = av_clip_uintp2_c(output[(2*i+1)*out_stride], clip);
-        } else if (i == len-1) {
-            tmp = ( 5*low[i*low_stride] + 4*low[(i-1)*low_stride] - low[(i-2)*low_stride] + 4) >> 3;
-            output[(2*i+0)*out_stride] = (tmp + high[i*high_stride]) >> 1;
+                output[(2 * i + 1) * out_stride] = av_clip_uintp2_c(output[(2 * i + 1) * out_stride], clip);
+        } else if (i == len - 1) {
+            tmp = (5 * low[i * low_stride] + 4 * low[(i - 1) * low_stride] - low[(i - 2) * low_stride] + 4) >> 3;
+            output[(2 * i + 0) * out_stride] = (tmp + high[i * high_stride]) >> 1;
             if (clip)
-                output[(2*i+0)*out_stride] = av_clip_uintp2_c(output[(2*i+0)*out_stride], clip);
+                output[(2 * i + 0) * out_stride] = av_clip_uintp2_c(output[(2 * i + 0) * out_stride], clip);
 
-            tmp = (11*low[i*low_stride] - 4*low[(i-1)*low_stride] + low[(i-2)*low_stride] + 4) >> 3;
-            output[(2*i+1)*out_stride] = (tmp - high[i*high_stride]) >> 1;
+            tmp = (11 * low[i * low_stride] - 4 * low[(i - 1) * low_stride] + low[(i - 2) * low_stride] + 4) >> 3;
+            output[(2 * i + 1) * out_stride] = (tmp - high[i * high_stride]) >> 1;
             if (clip)
-                output[(2*i+1)*out_stride] = av_clip_uintp2_c(output[(2*i+1)*out_stride], clip);
+                output[(2 * i + 1) * out_stride] = av_clip_uintp2_c(output[(2 * i + 1) * out_stride], clip);
         } else {
-            tmp = (low[(i-1)*low_stride] - low[(i+1)*low_stride] + 4) >> 3;
-            output[(2*i+0)*out_stride] = (tmp + low[i*low_stride] + high[i*high_stride]) >> 1;
+            tmp = (low[(i - 1) * low_stride] - low[(i + 1) * low_stride] + 4) >> 3;
+            output[(2 * i + 0) * out_stride] = (tmp + low[i * low_stride] + high[i * high_stride]) >> 1;
             if (clip)
-                output[(2*i+0)*out_stride] = av_clip_uintp2_c(output[(2*i+0)*out_stride], clip);
+                output[(2 * i + 0) * out_stride] = av_clip_uintp2_c(output[(2 * i + 0) * out_stride], clip);
 
-            tmp = (low[(i+1)*low_stride] - low[(i-1)*low_stride] + 4) >> 3;
-            output[(2*i+1)*out_stride] = (tmp + low[i*low_stride] - high[i*high_stride]) >> 1;
+            tmp = (low[(i + 1) * low_stride] - low[(i - 1) * low_stride] + 4) >> 3;
+            output[(2 * i + 1) * out_stride] = (tmp + low[i * low_stride] - high[i * high_stride]) >> 1;
             if (clip)
-                output[(2*i+1)*out_stride] = av_clip_uintp2_c(output[(2*i+1)*out_stride], clip);
+                output[(2 * i + 1) * out_stride] = av_clip_uintp2_c(output[(2 * i + 1) * out_stride], clip);
         }
     }
 }
 
-static void horiz_filter(int16_t *output, int16_t *low, int16_t *high, int width)
+static void horiz_filter(int16_t *output, int16_t *low, int16_t *high,
+                         int width)
 {
     filter(output, 1, low, 1, high, 1, width, 0);
 }
 
-static void horiz_filter_clip(int16_t *output, int16_t *low, int16_t *high, int width, uint8_t clip)
+static void horiz_filter_clip(int16_t *output, int16_t *low, int16_t *high,
+                              int width, uint8_t clip)
 {
     filter(output, 1, low, 1, high, 1, width, clip);
 }
 
-static void vert_filter(int16_t *output, int out_stride, int16_t *low, int low_stride,
+static void vert_filter(int16_t *output, int out_stride,
+                        int16_t *low, int low_stride,
                         int16_t *high, int high_stride, int len)
 {
     filter(output, out_stride, low, low_stride, high, high_stride, len, 0);
@@ -165,16 +171,16 @@ static int alloc_buffers(AVCodecContext *avctx)
     planes = av_pix_fmt_count_planes(avctx->pix_fmt);
 
     for (i = 0; i < planes; i++) {
-        int width = i ? avctx->width >> s->chroma_x_shift : avctx->width;
-        int height = i ? avctx->height >> s->chroma_y_shift : avctx->height;
-        int stride = FFALIGN(width / 8, 8) * 8;
         int w8, h8, w4, h4, w2, h2;
-        height = FFALIGN(height / 8, 2) * 8;
-        s->plane[i].width = width;
+        int width  = i ? avctx->width  >> s->chroma_x_shift : avctx->width;
+        int height = i ? avctx->height >> s->chroma_y_shift : avctx->height;
+        int stride = FFALIGN(width  / 8, 8) * 8;
+        height     = FFALIGN(height / 8, 2) * 8;
+        s->plane[i].width  = width;
         s->plane[i].height = height;
         s->plane[i].stride = stride;
 
-        w8 = FFALIGN(s->plane[i].width / 8, 8);
+        w8 = FFALIGN(s->plane[i].width  / 8, 8);
         h8 = FFALIGN(s->plane[i].height / 8, 2);
         w4 = w8 * 2;
         h4 = h8 * 2;
@@ -183,9 +189,8 @@ static int alloc_buffers(AVCodecContext *avctx)
 
         s->plane[i].idwt_buf = av_malloc_array(height * stride, sizeof(*s->plane[i].idwt_buf));
         s->plane[i].idwt_tmp = av_malloc_array(height * stride, sizeof(*s->plane[i].idwt_tmp));
-        if (!s->plane[i].idwt_buf || !s->plane[i].idwt_tmp) {
+        if (!s->plane[i].idwt_buf || !s->plane[i].idwt_tmp)
             return AVERROR(ENOMEM);
-        }
 
         s->plane[i].subband[0] = s->plane[i].idwt_buf;
         s->plane[i].subband[1] = s->plane[i].idwt_buf + 2 * w8 * h8;
@@ -199,7 +204,7 @@ static int alloc_buffers(AVCodecContext *avctx)
         s->plane[i].subband[9] = s->plane[i].idwt_buf + 3 * w2 * h2;
 
         for (j = 0; j < DWT_LEVELS; j++) {
-            for(k = 0; k < 4; k++) {
+            for (k = 0; k < 4; k++) {
                 s->plane[i].band[j][k].a_width  = w8 << j;
                 s->plane[i].band[j][k].a_height = h8 << j;
             }
@@ -208,10 +213,10 @@ static int alloc_buffers(AVCodecContext *avctx)
         /* ll2 and ll1 commented out because they are done in-place */
         s->plane[i].l_h[0] = s->plane[i].idwt_tmp;
         s->plane[i].l_h[1] = s->plane[i].idwt_tmp + 2 * w8 * h8;
-        //s->plane[i].l_h[2] = ll2;
+        // s->plane[i].l_h[2] = ll2;
         s->plane[i].l_h[3] = s->plane[i].idwt_tmp;
         s->plane[i].l_h[4] = s->plane[i].idwt_tmp + 2 * w4 * h4;
-        //s->plane[i].l_h[5] = ll1;
+        // s->plane[i].l_h[5] = ll1;
         s->plane[i].l_h[6] = s->plane[i].idwt_tmp;
         s->plane[i].l_h[7] = s->plane[i].idwt_tmp + 2 * w2 * h2;
     }
@@ -247,6 +252,7 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
         uint16_t abstag = abs(tag);
         int8_t abs_tag8 = abs(tag8);
         uint16_t data   = bytestream2_get_be16(&gb);
+
         if (abs_tag8 >= 0x60 && abs_tag8 <= 0x6f) {
             av_log(avctx, AV_LOG_DEBUG, "large len %x\n", ((tagu & 0xff) << 16) | data);
         } else if (tag == 20) {
@@ -305,9 +311,9 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
                 ret = AVERROR(EINVAL);
                 break;
             }
-        } else if (tag == 35)
+        } else if (tag == 35) {
             av_log(avctx, AV_LOG_DEBUG, "Lowpass precision bits: %"PRIu16"\n", data);
-        else if (tag == 53) {
+        } else if (tag == 53) {
             s->quantisation = data;
             av_log(avctx, AV_LOG_DEBUG, "Quantisation: %"PRIu16"\n", data);
         } else if (tag == 109) {
@@ -332,9 +338,9 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
                 ret = AVERROR(EINVAL);
                 break;
             }
-        } else if (tag == 1)
+        } else if (tag == 1) {
             av_log(avctx, AV_LOG_DEBUG, "Sample type? %"PRIu16"\n", data);
-        else if (tag == 10) {
+        } else if (tag == 10) {
             if (data != 0) {
                 avpriv_report_missing_feature(avctx, "Transform type of %"PRIu16" is unsupported\n", data);
                 ret = AVERROR_PATCHWELCOME;
@@ -441,7 +447,7 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
             if ((ret = ff_thread_get_buffer(avctx, &frame, 0)) < 0)
                 return ret;
 
-            s->coded_width = 0;
+            s->coded_width  = 0;
             s->coded_height = 0;
             s->coded_format = AV_PIX_FMT_NONE;
             got_buffer = 1;
@@ -450,8 +456,8 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
 
         /* Lowpass coefficients */
         if (tag == 4 && data == 0xf0f && s->a_width && s->a_height) {
-            int lowpass_height = s->plane[s->channel_num].band[0][0].height;
-            int lowpass_width  = s->plane[s->channel_num].band[0][0].width;
+            int lowpass_height   = s->plane[s->channel_num].band[0][0].height;
+            int lowpass_width    = s->plane[s->channel_num].band[0][0].width;
             int lowpass_a_height = s->plane[s->channel_num].band[0][0].a_height;
             int lowpass_a_width  = s->plane[s->channel_num].band[0][0].a_width;
 
@@ -481,12 +487,12 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
         }
 
         if (tag == 55 && s->subband_num_actual != 255 && s->a_width && s->a_height) {
-            int highpass_height = s->plane[s->channel_num].band[s->level][s->subband_num].height;
-            int highpass_width  = s->plane[s->channel_num].band[s->level][s->subband_num].width;
-            int highpass_a_width = s->plane[s->channel_num].band[s->level][s->subband_num].a_width;
+            int highpass_height   = s->plane[s->channel_num].band[s->level][s->subband_num].height;
+            int highpass_width    = s->plane[s->channel_num].band[s->level][s->subband_num].width;
+            int highpass_a_width  = s->plane[s->channel_num].band[s->level][s->subband_num].a_width;
             int highpass_a_height = s->plane[s->channel_num].band[s->level][s->subband_num].a_height;
-            int highpass_stride = s->plane[s->channel_num].band[s->level][s->subband_num].stride;
-            int expected = highpass_height * highpass_stride;
+            int highpass_stride   = s->plane[s->channel_num].band[s->level][s->subband_num].stride;
+            int expected   = highpass_height   * highpass_stride;
             int a_expected = highpass_a_height * highpass_a_width;
             int level, run, coeff;
             int count = 0, bytes;
@@ -563,14 +569,14 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
 
             /* Copy last line of coefficients if odd height */
             if (highpass_height & 1) {
-                memcpy(&coeff_data[highpass_height * highpass_stride],
+                memcpy(&coeff_data[ highpass_height      * highpass_stride],
                        &coeff_data[(highpass_height - 1) * highpass_stride],
                        highpass_stride * sizeof(*coeff_data));
             }
         }
     }
 
-    if (!s->a_width || !s->a_height || s->a_format == AV_PIX_FMT_NONE ||
+    if (!s->a_width    || !s->a_height    || s->a_format     == AV_PIX_FMT_NONE ||
         s->coded_width || s->coded_height || s->coded_format != AV_PIX_FMT_NONE) {
         av_log(avctx, AV_LOG_ERROR, "Invalid dimensions\n");
         ret = AVERROR(EINVAL);
@@ -592,8 +598,10 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
         int act_plane = plane == 1 ? 2 : plane == 2 ? 1 : plane;
         int16_t *low, *high, *output, *dst;
 
-        if (lowpass_height > s->plane[plane].band[0][0].a_height || lowpass_width > s->plane[plane].band[0][0].a_width ||
-            !highpass_stride || s->plane[plane].band[0][1].width > s->plane[plane].band[0][1].a_width) {
+        if (lowpass_height                   > s->plane[plane].band[0][0].a_height ||
+            lowpass_width                    > s->plane[plane].band[0][0].a_width  ||
+            s->plane[plane].band[0][1].width > s->plane[plane].band[0][1].a_width  ||
+            !highpass_stride) {
             av_log(avctx, AV_LOG_ERROR, "Invalid plane dimensions\n");
             ret = AVERROR(EINVAL);
             goto end;
@@ -614,7 +622,6 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
         low    = s->plane[plane].subband[1];
         high   = s->plane[plane].subband[3];
         output = s->plane[plane].l_h[1];
-
         for (i = 0; i < lowpass_width; i++) {
             // note the stride of "low" is highpass_stride
             vert_filter(output, lowpass_width, low, highpass_stride, high, highpass_stride, lowpass_height);
@@ -647,8 +654,10 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
         lowpass_width   = s->plane[plane].band[1][1].width;
         highpass_stride = s->plane[plane].band[1][1].stride;
 
-        if (lowpass_height > s->plane[plane].band[1][1].a_height || lowpass_width > s->plane[plane].band[1][1].a_width ||
-            !highpass_stride || s->plane[plane].band[1][1].width > s->plane[plane].band[1][1].a_width) {
+        if (lowpass_height                   > s->plane[plane].band[1][1].a_height ||
+            lowpass_width                    > s->plane[plane].band[1][1].a_width  ||
+            s->plane[plane].band[1][1].width > s->plane[plane].band[1][1].a_width  ||
+            !highpass_stride) {
             av_log(avctx, AV_LOG_ERROR, "Invalid plane dimensions\n");
             ret = AVERROR(EINVAL);
             goto end;
@@ -699,8 +708,10 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
         lowpass_width   = s->plane[plane].band[2][1].width;
         highpass_stride = s->plane[plane].band[2][1].stride;
 
-        if (lowpass_height > s->plane[plane].band[2][1].a_height || lowpass_width > s->plane[plane].band[2][1].a_width ||
-            !highpass_stride || s->plane[plane].band[2][1].width > s->plane[plane].band[2][1].a_width) {
+        if (lowpass_height                   > s->plane[plane].band[2][1].a_height ||
+            lowpass_width                    > s->plane[plane].band[2][1].a_width  ||
+            s->plane[plane].band[2][1].width > s->plane[plane].band[2][1].a_width  ||
+            !highpass_stride) {
             av_log(avctx, AV_LOG_ERROR, "Invalid plane dimensions\n");
             ret = AVERROR(EINVAL);
             goto end;
@@ -738,7 +749,6 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
             dst  += pic->linesize[act_plane] / 2;
         }
     }
-
 
 end:
     if (ret < 0)

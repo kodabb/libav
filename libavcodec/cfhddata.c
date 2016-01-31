@@ -29,11 +29,11 @@
 #define NB_VLC_TABLE_18 (263 + 1)
 
 /* some special codewords, not sure what they all mean */
-#define TABLE_9_BAND_END1 0x1C7859Eh
+#define TABLE_9_BAND_END1     0x1C7859Eh
 #define TABLE_9_BAND_END_LEN1 25
-#define TABLE_9_BAND_END2 0x38F0B3Fh
+#define TABLE_9_BAND_END2     0x38F0B3Fh
 #define TABLE_9_BAND_END_LEN2 26
-#define TABLE_9_BAND_END3 0x38F0B3Eh
+#define TABLE_9_BAND_END3     0x38F0B3Eh
 #define TABLE_9_BAND_END_LEN3 26
 
 static const uint8_t table_9_vlc_len[NB_VLC_TABLE_9] = {
@@ -161,39 +161,39 @@ static const uint8_t table_18_vlc_len[NB_VLC_TABLE_18] = {
 };
 
 static const uint16_t table_18_vlc_run[NB_VLC_TABLE_18] = {
-    1,    1,    1,    1,    1,    1,    1,    1,
-   12,    1,   20,    1,    1,    1,   32,    1,
-    1,    1,    1,    1,   60,    1,    1,    1,
-    1,  100,    1,    1,    1,    1,    1,    1,
-    1,    1,    1,    1,    1,    1,  180,    1,
-    1,  320,    1,    1,    1,    1,    1,    1,
-    1,    1,    1,    1,    1,    1,    1,    1,
-    1,    1,    1,    1,    1,    1,    1,    1,
-    1,    1,    1,    1,    1,    1,    1,    1,
-    1,    1,    1,    1,    1,    1,    1,    1,
-    1,    1,    1,    1,    1,    1,    1,    1,
-    1,    1,    1,    1,    1,    1,    1,    1,
-    1,    1,    1,    1,    1,    1,    1,    1,
-    1,    1,    1,    1,    1,    1,    1,    1,
-    1,    1,    1,    1,    1,    1,    1,    1,
-    1,    1,    1,    1,    1,    1,    1,    1,
-    1,    1,    1,    1,    1,    1,    1,    1,
-    1,    1,    1,    1,    1,    1,    1,    1,
-    1,    1,    1,    1,    1,    1,    1,    1,
-    1,    1,    1,    1,    1,    1,    1,    1,
-    1,    1,    1,    1,    1,    1,    1,    1,
-    1,    1,    1,    1,    1,    1,    1,    1,
-    1,    1,    1,    1,    1,    1,    1,    1,
-    1,    1,    1,    1,    1,    1,    1,    1,
-    1,    1,    1,    1,    1,    1,    1,    1,
-    1,    1,    1,    1,    1,    1,    1,    1,
-    1,    1,    1,    1,    1,    1,    1,    1,
-    1,    1,    1,    1,    1,    1,    1,    1,
-    1,    1,    1,    1,    1,    1,    1,    1,
-    1,    1,    1,    1,    1,    1,    1,    1,
-    1,    1,    1,    1,    1,    1,    1,    1,
-    1,    1,    1,    1,    1,    1,    1,    1,
-    1,    1,    1,    1,    1,    1,    1,    2,
+     1,    1,    1,    1,    1,    1,    1,    1,
+    12,    1,   20,    1,    1,    1,   32,    1,
+     1,    1,    1,    1,   60,    1,    1,    1,
+     1,  100,    1,    1,    1,    1,    1,    1,
+     1,    1,    1,    1,    1,    1,  180,    1,
+     1,  320,    1,    1,    1,    1,    1,    1,
+     1,    1,    1,    1,    1,    1,    1,    1,
+     1,    1,    1,    1,    1,    1,    1,    1,
+     1,    1,    1,    1,    1,    1,    1,    1,
+     1,    1,    1,    1,    1,    1,    1,    1,
+     1,    1,    1,    1,    1,    1,    1,    1,
+     1,    1,    1,    1,    1,    1,    1,    1,
+     1,    1,    1,    1,    1,    1,    1,    1,
+     1,    1,    1,    1,    1,    1,    1,    1,
+     1,    1,    1,    1,    1,    1,    1,    1,
+     1,    1,    1,    1,    1,    1,    1,    1,
+     1,    1,    1,    1,    1,    1,    1,    1,
+     1,    1,    1,    1,    1,    1,    1,    1,
+     1,    1,    1,    1,    1,    1,    1,    1,
+     1,    1,    1,    1,    1,    1,    1,    1,
+     1,    1,    1,    1,    1,    1,    1,    1,
+     1,    1,    1,    1,    1,    1,    1,    1,
+     1,    1,    1,    1,    1,    1,    1,    1,
+     1,    1,    1,    1,    1,    1,    1,    1,
+     1,    1,    1,    1,    1,    1,    1,    1,
+     1,    1,    1,    1,    1,    1,    1,    1,
+     1,    1,    1,    1,    1,    1,    1,    1,
+     1,    1,    1,    1,    1,    1,    1,    1,
+     1,    1,    1,    1,    1,    1,    1,    1,
+     1,    1,    1,    1,    1,    1,    1,    1,
+     1,    1,    1,    1,    1,    1,    1,    1,
+     1,    1,    1,    1,    1,    1,    1,    1,
+     1,    1,    1,    1,    1,    1,    1,    2,
 };
 
 static const uint8_t table_18_vlc_level[NB_VLC_TABLE_18] = {
@@ -251,7 +251,7 @@ av_cold int ff_cfhd_init_vlcs(CFHDContext *s)
 
         /* Don't include the zero level nor escape bits */
         if (table_9_vlc_level[i] &&
-            new_cfhd_vlc_bits[j] != table_9_vlc_bits[NB_VLC_TABLE_9-1]) {
+            new_cfhd_vlc_bits[j] != table_9_vlc_bits[NB_VLC_TABLE_9 - 1]) {
             new_cfhd_vlc_bits[j] <<= 1;
             new_cfhd_vlc_len[j]++;
             j++;
@@ -292,7 +292,7 @@ av_cold int ff_cfhd_init_vlcs(CFHDContext *s)
 
         /* Don't include the zero level nor escape bits */
         if (table_18_vlc_level[i] &&
-            new_cfhd_vlc_bits[j] != table_18_vlc_bits[NB_VLC_TABLE_18-1]) {
+            new_cfhd_vlc_bits[j] != table_18_vlc_bits[NB_VLC_TABLE_18 - 1]) {
             new_cfhd_vlc_bits[j] <<= 1;
             new_cfhd_vlc_len[j]++;
             j++;
