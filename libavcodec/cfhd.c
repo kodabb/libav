@@ -136,9 +136,9 @@ static void horiz_filter_clip(int16_t *output, int16_t *low, int16_t *high,
     filter(output, 1, low, 1, high, 1, width, clip);
 }
 
-static void vert_filter(int16_t *output, int out_stride,
-                        int16_t *low, int low_stride,
-                        int16_t *high, int high_stride, int len)
+static void vert_filter(int16_t *output, ptrdiff_t out_stride,
+                        int16_t *low, ptrdiff_t low_stride,
+                        int16_t *high, ptrdiff_t high_stride, int len)
 {
     filter(output, out_stride, low, low_stride, high, high_stride, len, 0);
 }
@@ -175,8 +175,8 @@ static int alloc_buffers(AVCodecContext *avctx)
         int w8, h8, w4, h4, w2, h2;
         int width  = i ? avctx->width  >> s->chroma_x_shift : avctx->width;
         int height = i ? avctx->height >> s->chroma_y_shift : avctx->height;
-        int stride = FFALIGN(width  / 8, 8) * 8;
-        height     = FFALIGN(height / 8, 2) * 8;
+        ptrdiff_t stride = FFALIGN(width  / 8, 8) * 8;
+        height           = FFALIGN(height / 8, 2) * 8;
         s->plane[i].width  = width;
         s->plane[i].height = height;
         s->plane[i].stride = stride;
@@ -516,7 +516,7 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
             int highpass_width    = s->plane[s->channel_num].band[s->level][s->subband_num].width;
             int highpass_a_width  = s->plane[s->channel_num].band[s->level][s->subband_num].a_width;
             int highpass_a_height = s->plane[s->channel_num].band[s->level][s->subband_num].a_height;
-            int highpass_stride   = s->plane[s->channel_num].band[s->level][s->subband_num].stride;
+            ptrdiff_t highpass_stride = s->plane[s->channel_num].band[s->level][s->subband_num].stride;
             int expected   = highpass_height   * highpass_stride;
             int a_expected = highpass_a_height * highpass_a_width;
             int level, run, coeff;
@@ -626,7 +626,7 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
         /* level 1 */
         int lowpass_height  = s->plane[plane].band[0][0].height;
         int lowpass_width   = s->plane[plane].band[0][0].width;
-        int highpass_stride = s->plane[plane].band[0][1].stride;
+        ptrdiff_t highpass_stride = s->plane[plane].band[0][1].stride;
         int act_plane = plane == 1 ? 2 : plane == 2 ? 1 : plane;
         int16_t *low, *high, *output, *dst;
 
@@ -639,7 +639,7 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
             goto end;
         }
 
-        av_log(avctx, AV_LOG_DEBUG, "Decoding level 1 plane %i %i %i %i\n",
+        av_log(avctx, AV_LOG_DEBUG, "Decoding level 1 plane %i %i %i %ti\n",
                plane, lowpass_height, lowpass_width, highpass_stride);
 
         low    = s->plane[plane].subband[0];
@@ -698,7 +698,7 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
             goto end;
         }
 
-        av_log(avctx, AV_LOG_DEBUG, "Level 2 plane %i %i %i %i\n", plane,
+        av_log(avctx, AV_LOG_DEBUG, "Level 2 plane %i %i %i %ti\n", plane,
                lowpass_height, lowpass_width, highpass_stride);
 
         low    = s->plane[plane].subband[0];
@@ -755,7 +755,7 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
             goto end;
         }
 
-        av_log(avctx, AV_LOG_DEBUG, "Level 3 plane %i %i %i %i\n",
+        av_log(avctx, AV_LOG_DEBUG, "Level 3 plane %i %i %i %ti\n",
                plane, lowpass_height, lowpass_width, highpass_stride);
 
         low    = s->plane[plane].subband[0];
