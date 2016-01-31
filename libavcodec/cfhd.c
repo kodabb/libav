@@ -20,7 +20,7 @@
 
 /**
  * @file
- * CFHD Video Decoder
+ * Cineform HD video decoder
  */
 
 #include "libavutil/attributes.h"
@@ -265,7 +265,7 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
             av_log(avctx, AV_LOG_DEBUG, "Bits per component: %"PRIu16"\n", data);
             s->bpc = data;
         } else if (tag == 12) {
-            av_log(avctx, AV_LOG_DEBUG, "Channel Count: %"PRIu16"\n", data);
+            av_log(avctx, AV_LOG_DEBUG, "Channel count: %"PRIu16"\n", data);
             s->channel_cnt = data;
             if (data > 4) {
                 av_log(avctx, AV_LOG_ERROR, "Channel Count of %"PRIu16" is unsupported\n", data);
@@ -273,7 +273,7 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
                 break;
             }
         } else if (tag == 14) {
-            av_log(avctx, AV_LOG_DEBUG, "Subband Count: %"PRIu16"\n", data);
+            av_log(avctx, AV_LOG_DEBUG, "Subband count: %"PRIu16"\n", data);
             if (data != SUBBAND_COUNT) {
                 av_log(avctx, AV_LOG_ERROR, "Subband Count of %"PRIu16" is unsupported\n", data);
                 ret = AVERROR_PATCHWELCOME;
@@ -476,7 +476,7 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
                 coeff_data += lowpass_width;
             }
 
-            /* Copy last line of coefficients if odd height */
+            /* Copy last coefficients line if odd height */
             if (lowpass_height & 1) {
                 memcpy(&coeff_data[lowpass_height * lowpass_width],
                        &coeff_data[(lowpass_height - 1) * lowpass_width],
@@ -498,7 +498,7 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
             int count = 0, bytes;
 
             if (highpass_height > highpass_a_height || highpass_width > highpass_a_width || a_expected < expected) {
-                av_log(avctx, AV_LOG_ERROR, "Too many highpass coefficents\n");
+                av_log(avctx, AV_LOG_ERROR, "Too many highpass coefficients\n");
                 ret = AVERROR(EINVAL);
                 goto end;
             }
