@@ -268,14 +268,14 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
             av_log(avctx, AV_LOG_DEBUG, "Channel count: %"PRIu16"\n", data);
             s->channel_cnt = data;
             if (data > 4) {
-                av_log(avctx, AV_LOG_ERROR, "Channel Count of %"PRIu16" is unsupported\n", data);
+                avpriv_report_missing_feature(avctx, "Channel count %"PRIu16, data);
                 ret = AVERROR_PATCHWELCOME;
                 break;
             }
         } else if (tag == 14) {
             av_log(avctx, AV_LOG_DEBUG, "Subband count: %"PRIu16"\n", data);
             if (data != SUBBAND_COUNT) {
-                av_log(avctx, AV_LOG_ERROR, "Subband Count of %"PRIu16" is unsupported\n", data);
+                avpriv_report_missing_feature(avctx, "Subband count %"PRIu16, data);
                 ret = AVERROR_PATCHWELCOME;
                 break;
             }
@@ -351,7 +351,6 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
             av_log(avctx, AV_LOG_DEBUG, "Small chunk length %"PRIu16" %s\n", data * 4, tag < 0 ? "optional" : "required");
             bytestream2_skipu(&gb, data * 4);
         } else if (tag == 23) {
-            av_log(avctx, AV_LOG_DEBUG, "Skip frame\n");
             avpriv_report_missing_feature(avctx, "Skip frame");
             ret = AVERROR_PATCHWELCOME;
             break;
