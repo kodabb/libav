@@ -742,14 +742,18 @@ static void x8_init_block_index(MpegEncContext *s)
     s->dest[2] += (s->mb_y & (~1)) * uvlinesize << 2;
 }
 
-av_cold void ff_intrax8_common_init(IntraX8Context *w, MpegEncContext *const s)
+av_cold int ff_intrax8_common_init(IntraX8Context *w, MpegEncContext *const s)
 {
+    int ret = x8_vlc_init();
+    if (ret < 0)
+        return ret;
+
     w->s = s;
-    x8_vlc_init();
-    assert(s->mb_width > 0);
 
     // two rows, 2 blocks per cannon mb
     w->prediction_table = av_mallocz(s->mb_width * 2 * 2);
+    if (!w->prediction_table)
+        return AVERROR(ENOMEM);
 
     ff_init_scantable(s->idsp.idct_permutation, &w->scantable[0],
                       ff_wmv1_scantable[0]);
@@ -759,6 +763,8 @@ av_cold void ff_intrax8_common_init(IntraX8Context *w, MpegEncContext *const s)
                       ff_wmv1_scantable[3]);
 
     ff_intrax8dsp_init(&w->dsp);
+
+    return 0;
 }
 
 av_cold void ff_intrax8_common_end(IntraX8Context *w)
