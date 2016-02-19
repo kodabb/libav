@@ -45,7 +45,7 @@ static VLC j_ac_vlc[2][2][8];  // [quant < 13], [intra / inter], [select]
 static VLC j_dc_vlc[2][8];     // [quant], [select]
 static VLC j_orient_vlc[2][4]; // [quant], [select]
 
-static av_cold void x8_vlc_init(void)
+static av_cold int x8_vlc_init(void)
 {
     int i;
     int offset = 0;
@@ -114,9 +114,13 @@ static av_cold void x8_vlc_init(void)
         init_or_vlc(j_orient_vlc[1][i], x8_orient_lowquant_table[i][0]);
 #undef init_or_vlc
 
-    if (offset != sizeof(table) / sizeof(VLC_TYPE) / 2)
+    if (offset != sizeof(table) / sizeof(VLC_TYPE) / 2) {
         av_log(NULL, AV_LOG_ERROR, "table size %i does not match needed %i\n",
                (int) (sizeof(table) / sizeof(VLC_TYPE) / 2), offset);
+        return AVERROR_INVALIDDATA;
+    }
+
+    return 0;
 }
 
 static void x8_reset_vlc_tables(IntraX8Context *w)
