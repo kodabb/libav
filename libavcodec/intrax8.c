@@ -29,6 +29,7 @@
 #include "intrax8huf.h"
 #include "intrax8.h"
 #include "intrax8dsp.h"
+#include "mpegutils.h"
 
 #define MAX_TABLE_DEPTH(table_bits, max_bits) \
     ((max_bits + table_bits - 1) / table_bits)
@@ -834,7 +835,9 @@ int ff_intrax8_decode_picture(IntraX8Context *const w, Picture *pict,
             w->dest[0] += 8;
         }
         if (w->mb_y & 1)
-            ff_mpeg_draw_horiz_band(s, (w->mb_y - 1) * 8, 16);
+            ff_draw_horiz_band(w->avctx, w->frame, w->frame,
+                               (w->mb_y - 1) * 8, 16,
+                               PICT_FRAME, 0, lowdelay);
     }
 
 error:
