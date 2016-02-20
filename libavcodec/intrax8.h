@@ -51,6 +51,7 @@ typedef struct IntraX8Context {
     int divide_quant_dc_luma;
     int divide_quant_dc_chroma;
     uint8_t *dest[3];
+    uint8_t scratchpad[42]; // answer to everything and size of the block
 
     // changed per block
     int edges;
