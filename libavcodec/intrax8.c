@@ -828,8 +828,6 @@ int ff_intrax8_decode_picture(IntraX8Context *const w, Picture *pict,
                 w->dest[2] += 8;
 
                 /* emulate MB info in the relevant tables */
-                s->mbskip_table[mb_xy]                 = 0;
-                s->mbintra_table[mb_xy]                = 1;
                 pict->qscale_table[mb_xy] = w->quant;
                 mb_xy++;
             }
