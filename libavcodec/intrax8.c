@@ -771,7 +771,8 @@ av_cold void ff_intrax8_common_end(IntraX8Context *w)
 
 int ff_intrax8_decode_picture(IntraX8Context *const w, Picture *pict,
                               GetBitContext *gb, int *mb_x, int *mb_y,
-                              int dquant, int quant_offset, int loopfilter)
+                              int dquant, int quant_offset,
+                              int loopfilter, int lowdelay)
 {
     MpegEncContext *const s = w->s;
     int mb_xy;
