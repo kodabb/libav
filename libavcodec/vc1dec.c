@@ -371,7 +371,9 @@ av_cold int ff_vc1_decode_init_alloc_tables(VC1Context *v)
     v->mv_f_next[0]     = v->mv_f_next_base + s->b8_stride + 1;
     v->mv_f_next[1]     = v->mv_f_next[0] + (s->b8_stride * (mb_height * 2 + 1) + s->mb_stride * (mb_height + 1) * 2);
 
-    ret = ff_intrax8_common_init(s->avctx, &v->x8, &s->idsp, s);
+    ret = ff_intrax8_common_init(s->avctx, &v->x8, &s->idsp,
+                                 s->mb_width, s->mb_height,
+                                 s);
     if (ret < 0)
         goto error;
 
