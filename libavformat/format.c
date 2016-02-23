@@ -76,22 +76,34 @@ void av_register_output_format(AVOutputFormat *format)
 
 int av_match_ext(const char *filename, const char *extensions)
 {
-    const char *ext, *p;
+    const char *ext, *extra, *p;
     char ext1[32], *q;
+    int len, is_http;
 
     if (!filename)
         return 0;
 
+    is_http = av_strstart(filename, "http://", NULL) ||
+              av_strstart(filename, "https://", NULL);
+
     ext = strrchr(filename, '.');
     if (ext) {
         ext++;
+
+        len = strlen(ext);
+        if (is_http) {
+            extra = strrchr(ext, '?');
+            if (extra)
+                len -= strlen(extra);
+        }
+
         p = extensions;
         for (;;) {
             q = ext1;
             while (*p != '\0' && *p != ','  && q - ext1 < sizeof(ext1) - 1)
                 *q++ = *p++;
             *q = '\0';
-            if (!av_strcasecmp(ext1, ext))
+            if (!av_strncasecmp(ext1, ext, len))
                 return 1;
             if (*p == '\0')
                 break;
