@@ -84,13 +84,25 @@ static const IdStrMap img_tags[] = {
 
 static enum AVCodecID str2id(const IdStrMap *tags, const char *str)
 {
+    char *extra;
+    int len;
+    int is_http = av_strstart(str, "http://", NULL) ||
+                  av_strstart(str, "https://", NULL);
+
     str = strrchr(str, '.');
     if (!str)
         return AV_CODEC_ID_NONE;
     str++;
+    len = strlen(str);
+
+    if (is_http) {
+        extra = strrchr(str, '?');
+        if (extra)
+            len -= strlen(extra);
+    }
 
     while (tags->id) {
-        if (!av_strcasecmp(str, tags->str))
+        if (!av_strncasecmp(str, tags->str, len))
             return tags->id;
 
         tags++;
