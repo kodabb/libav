@@ -189,6 +189,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
 static int init_input(AVFormatContext *s, const char *filename,
                       AVDictionary **options)
 {
+    AVDictionary *options_tmp = NULL;
     int ret;
     AVProbeData pd = { filename, NULL, 0 };
 
@@ -202,17 +203,30 @@ static int init_input(AVFormatContext *s, const char *filename,
         return 0;
     }
 
-    if ((s->iformat && s->iformat->flags & AVFMT_NOFILE) ||
-        (!s->iformat && (s->iformat = av_probe_input_format(&pd, 0))))
+    if (s->iformat && s->iformat->flags & AVFMT_NOFILE)
         return 0;
 
-    ret = s->io_open(s, &s->pb, filename, AVIO_FLAG_READ, options);
-    if (ret < 0)
-        return ret;
-    if (s->iformat)
-        return 0;
-    return av_probe_input_buffer(s->pb, &s->iformat, filename,
-                                 s, 0, s->probesize);
+    if (options)
+        av_dict_copy(&options_tmp, *options, 0);
+
+    ret = s->io_open(s, &s->pb, filename, AVIO_FLAG_READ, &options_tmp);
+    if (ret < 0) {
+        if (!s->iformat && (s->iformat = av_probe_input_format(&pd, 0)))
+            ret = 0;
+
+        goto finish;
+    } else {
+        av_dict_free(options);
+        *options    = options_tmp;
+        options_tmp = NULL;
+    }
+
+    if (!s->iformat)
+        ret = av_probe_input_buffer(s->pb, &s->iformat, filename,
+                                    s, 0, s->probesize);
+finish:
+    av_dict_free(&options_tmp);
+    return ret;
 }
 
 static int add_to_pktbuf(AVPacketList **packet_buffer, AVPacket *pkt,
