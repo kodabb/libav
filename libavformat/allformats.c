@@ -195,6 +195,7 @@ void av_register_all(void)
     REGISTER_MUXDEMUX(PCM_U16LE,        pcm_u16le);
     REGISTER_MUXDEMUX(PCM_U8,           pcm_u8);
     REGISTER_DEMUXER (PMP,              pmp);
+    REGISTER_DEMUXER (PNG,              png);
     REGISTER_MUXER   (PSP,              psp);
     REGISTER_DEMUXER (PVA,              pva);
     REGISTER_DEMUXER (QCP,              qcp);
