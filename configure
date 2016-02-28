@@ -1198,6 +1198,7 @@ EXAMPLE_LIST="
     avcodec_example
     filter_audio_example
     metadata_example
+    opengl_example
     output_example
     qsvdec_example
     transcode_aac_example
@@ -1631,7 +1632,9 @@ HAVE_LIST="
     libc_msvcrt
     libdc1394_1
     libdc1394_2
+    opengl
     sdl
+    sdl2
     section_data_rel_ro
     threads
     vaapi_x11
@@ -2364,6 +2367,8 @@ scale_filter_deps="swscale"
 avcodec_example_deps="avcodec avutil"
 filter_audio_example_deps="avfilter avutil"
 metadata_example_deps="avformat avutil"
+opengl_example_deps="avcodec avformat avutil sdl2"
+opengl_example_libs='$sdl2_libs'
 output_example_deps="avcodec avformat avutil swscale"
 qsvdec_example_deps="avcodec avutil libmfx h264_qsv_decoder vaapi_x11"
 transcode_aac_example_deps="avcodec avformat avresample"
@@ -4599,6 +4604,10 @@ if check_pkg_config sdl SDL_events.h SDL_PollEvent; then
     enable sdl
 fi
 
+check_pkg_config sdl2 SDL.h SDL_CreateWindow && enable sdl2
+
+check_pkg_config gl gl/gl.h glClear && enable opengl
+
 pod2man --help     > /dev/null 2>&1 && enable pod2man   || disable pod2man
 texi2html -version > /dev/null 2>&1 && enable texi2html || disable texi2html
 
@@ -5140,6 +5149,7 @@ TARGET_EXEC=$target_exec $target_exec_args
 TARGET_PATH=$target_path
 TARGET_SAMPLES=${target_samples:-\$(SAMPLES)}
 CFLAGS-avplay=$sdl_cflags
+CFLAGS-opengl_example=$sdl2_cflags
 ZLIB=$($ldflags_filter -lz)
 LIB_INSTALL_EXTRA_CMD=$LIB_INSTALL_EXTRA_CMD
 EXTRALIBS=$extralibs
@@ -5179,6 +5189,7 @@ print_program_libs(){
     eval echo "LIBS-${1}=${program_libs}" >> config.mak
 }
 
+map 'print_program_libs $v' $EXAMPLE_LIST
 map 'print_program_libs $v' $PROGRAM_LIST
 
 cat > $TMPH <<EOF
