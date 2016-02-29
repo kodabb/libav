@@ -61,6 +61,15 @@ fate-cavs: CMD = framecrc -i $(TARGET_SAMPLES)/cavs/cavs.mpg -an
 FATE_SAMPLES_AVCONV-$(call DEMDEC, CDG, CDGRAPHICS) += fate-cdgraphics
 fate-cdgraphics: CMD = framecrc -i $(TARGET_SAMPLES)/cdgraphics/BrotherJohn.cdg -pix_fmt rgb24 -t 1
 
+FATE_CFHD += fate-cfhd-1
+fate-cfhd-1: CMD = framecrc -i $(TARGET_SAMPLES)/cfhd/trailer.avi -an
+
+FATE_CFHD += fate-cfhd-2
+fate-cfhd-2: CMD = framecrc -i $(TARGET_SAMPLES)/cfhd/timelapse-pt-momsapt.avi -an
+
+FATE_SAMPLES_AVCONV-$(call DEMDEC, AVI, CFHD) += $(FATE_CFHD)
+fate-cfhd: $(FATE_CFHD)
+
 FATE_SAMPLES_AVCONV-$(call DEMDEC, AVI, CLJR) += fate-cljr
 fate-cljr: CMD = framecrc -i $(TARGET_SAMPLES)/cljr/testcljr-partial.avi
 
