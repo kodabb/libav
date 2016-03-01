@@ -148,7 +148,7 @@ static void free_buffers(AVCodecContext *avctx)
     CFHDContext *s = avctx->priv_data;
     int i;
 
-    for (i = 0; i < 4; i++) {
+    for (i = 0; i < FF_ARRAY_ELEMS(s->plane); i++) {
         av_freep(&s->plane[i].idwt_buf);
         av_freep(&s->plane[i].idwt_tmp);
     }
@@ -207,7 +207,7 @@ static int alloc_buffers(AVCodecContext *avctx)
         s->plane[i].subband[9] = s->plane[i].idwt_buf + 3 * w2 * h2;
 
         for (j = 0; j < DWT_LEVELS; j++) {
-            for (k = 0; k < 4; k++) {
+            for (k = 0; k < FF_ARRAY_ELEMS(s->plane[i].band[j]); k++) {
                 s->plane[i].band[j][k].a_width  = w8 << j;
                 s->plane[i].band[j][k].a_height = h8 << j;
             }
