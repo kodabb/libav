@@ -438,6 +438,45 @@ static int parse_tag(AVCodecContext *avctx, CFHDContext *s, GetByteContext gb,
     return 0;
 }
 
+static int set_lowpass_coeffs(AVCodecContext *avctx, CFHDContext *s,
+                              GetByteContext *gb, int16_t *coeff_data)
+{
+    int i, j;
+    int lowpass_height   = s->plane[s->channel_num].band[0][0].height;
+    int lowpass_width    = s->plane[s->channel_num].band[0][0].width;
+    int lowpass_a_height = s->plane[s->channel_num].band[0][0].a_height;
+    int lowpass_a_width  = s->plane[s->channel_num].band[0][0].a_width;
+
+    if (lowpass_height > lowpass_a_height ||
+        lowpass_width  > lowpass_a_width  ||
+        lowpass_a_width * lowpass_a_height * sizeof(int16_t) > bytestream2_get_bytes_left(gb)) {
+        av_log(avctx, AV_LOG_ERROR, "Too many lowpass coefficients\n");
+        return AVERROR_INVALIDDATA;
+    }
+
+    av_log(avctx, AV_LOG_DEBUG,
+           "Start of lowpass coeffs component %"PRIu16" height:%d, width:%d\n",
+           s->channel_num, lowpass_height, lowpass_width);
+    for (i = 0; i < lowpass_height; i++) {
+        for (j = 0; j < lowpass_width; j++)
+            coeff_data[j] = bytestream2_get_be16u(gb);
+
+        coeff_data += lowpass_width;
+    }
+
+    /* Copy last coefficients line if odd height */
+    if (lowpass_height & 1) {
+        memcpy(&coeff_data[lowpass_height * lowpass_width],
+               &coeff_data[(lowpass_height - 1) * lowpass_width],
+               lowpass_width * sizeof(*coeff_data));
+    }
+
+    av_log(avctx, AV_LOG_DEBUG, "Lowpass coefficients %i\n",
+           lowpass_width * lowpass_height);
+
+    return 0;
+}
+
 static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
                        AVPacket *avpkt)
 {
@@ -497,38 +536,8 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
 
         /* Lowpass coefficients */
         if (tag == 4 && data == 0xf0f && s->a_width && s->a_height) {
-            int lowpass_height   = s->plane[s->channel_num].band[0][0].height;
-            int lowpass_width    = s->plane[s->channel_num].band[0][0].width;
-            int lowpass_a_height = s->plane[s->channel_num].band[0][0].a_height;
-            int lowpass_a_width  = s->plane[s->channel_num].band[0][0].a_width;
-
-            if (lowpass_height > lowpass_a_height ||
-                lowpass_width  > lowpass_a_width  ||
-                lowpass_a_width * lowpass_a_height * sizeof(int16_t) > bytestream2_get_bytes_left(&gb)) {
-                av_log(avctx, AV_LOG_ERROR, "Too many lowpass coefficients\n");
-                ret = AVERROR_INVALIDDATA;
+            if ((ret = set_lowpass_coeffs(avctx, s, &gb, coeff_data)) < 0)
                 goto end;
-            }
-
-            av_log(avctx, AV_LOG_DEBUG,
-                   "Start of lowpass coeffs component %"PRIu16" height:%d, width:%d\n",
-                   s->channel_num, lowpass_height, lowpass_width);
-            for (i = 0; i < lowpass_height; i++) {
-                for (j = 0; j < lowpass_width; j++)
-                    coeff_data[j] = bytestream2_get_be16u(&gb);
-
-                coeff_data += lowpass_width;
-            }
-
-            /* Copy last coefficients line if odd height */
-            if (lowpass_height & 1) {
-                memcpy(&coeff_data[lowpass_height * lowpass_width],
-                       &coeff_data[(lowpass_height - 1) * lowpass_width],
-                       lowpass_width * sizeof(*coeff_data));
-            }
-
-            av_log(avctx, AV_LOG_DEBUG, "Lowpass coefficients %i\n",
-                   lowpass_width * lowpass_height);
         }
 
         if (tag == 55 && s->subband_num_actual != 255 &&
