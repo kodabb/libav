@@ -299,7 +299,7 @@ static int parse_tag(AVCodecContext *avctx, CFHDContext *s, GetByteContext gb,
         if (data < 2 ||
             data > s->plane[s->channel_num].band[0][0].a_width) {
             av_log(avctx, AV_LOG_ERROR, "Invalid lowpass width\n");
-            return AVERROR(EINVAL);
+            return AVERROR_INVALIDDATA;
         }
         break;
     case 28:
@@ -307,7 +307,7 @@ static int parse_tag(AVCodecContext *avctx, CFHDContext *s, GetByteContext gb,
         av_log(avctx, AV_LOG_DEBUG, "Lowpass height %"PRIu16"\n", data);
         if (data < 2 || data > s->plane[s->channel_num].band[0][0].height) {
             av_log(avctx, AV_LOG_ERROR, "Invalid lowpass height\n");
-            return AVERROR(EINVAL);
+            return AVERROR_INVALIDDATA;
         }
         break;
     case 35:
@@ -322,7 +322,7 @@ static int parse_tag(AVCodecContext *avctx, CFHDContext *s, GetByteContext gb,
                data, s->channel_num, s->level, s->subband_num);
         if (data < 2) {
             av_log(avctx, AV_LOG_ERROR, "Invalid highpass width\n");
-            return AVERROR(EINVAL);
+            return AVERROR_INVALIDDATA;
         }
         break;
     case 42:
@@ -330,7 +330,7 @@ static int parse_tag(AVCodecContext *avctx, CFHDContext *s, GetByteContext gb,
         av_log(avctx, AV_LOG_DEBUG, "Highpass height %"PRIu16"\n", data);
         if (data < 2) {
             av_log(avctx, AV_LOG_ERROR, "Invalid highpass height\n");
-            return AVERROR(EINVAL);
+            return AVERROR_INVALIDDATA;
         }
         break;
     case 48:
@@ -340,11 +340,11 @@ static int parse_tag(AVCodecContext *avctx, CFHDContext *s, GetByteContext gb,
         s->subband_num = data;
         if (s->level >= DWT_LEVELS) {
             av_log(avctx, AV_LOG_ERROR, "Invalid level\n");
-            return AVERROR(EINVAL);
+            return AVERROR_INVALIDDATA;
         }
         if (s->subband_num > 3) {
             av_log(avctx, AV_LOG_ERROR, "Invalid subband number\n");
-            return AVERROR(EINVAL);
+            return AVERROR_INVALIDDATA;
         }
         break;
     case 49:
@@ -353,7 +353,7 @@ static int parse_tag(AVCodecContext *avctx, CFHDContext *s, GetByteContext gb,
         av_log(avctx, AV_LOG_DEBUG, "Highpass width2 %"PRIu16"\n", data);
         if (data < 2) {
             av_log(avctx, AV_LOG_ERROR, "Invalid highpass width2\n");
-            return AVERROR(EINVAL);
+            return AVERROR_INVALIDDATA;
         }
         break;
     case 50:
@@ -361,7 +361,7 @@ static int parse_tag(AVCodecContext *avctx, CFHDContext *s, GetByteContext gb,
         av_log(avctx, AV_LOG_DEBUG, "Highpass height2 %"PRIu16"\n", data);
         if (data < 2) {
             av_log(avctx, AV_LOG_ERROR, "Invalid highpass height2\n");
-            return AVERROR(EINVAL);
+            return AVERROR_INVALIDDATA;
         }
         break;
     case 51:
@@ -370,7 +370,7 @@ static int parse_tag(AVCodecContext *avctx, CFHDContext *s, GetByteContext gb,
         s->subband_num_actual = data;
         if (s->subband_num_actual >= 10) {
             av_log(avctx, AV_LOG_ERROR, "Invalid subband number actual\n");
-            return AVERROR(EINVAL);
+            return AVERROR_INVALIDDATA;
         }
         break;
     case 53:
@@ -382,7 +382,7 @@ static int parse_tag(AVCodecContext *avctx, CFHDContext *s, GetByteContext gb,
         av_log(avctx, AV_LOG_DEBUG, "Channel number %"PRIu16"\n", data);
         if (s->channel_num >= *planes) {
             av_log(avctx, AV_LOG_ERROR, "Invalid channel number\n");
-            return AVERROR(EINVAL);
+            return AVERROR_INVALIDDATA;
         }
         init_plane_defaults(s);
         break;
@@ -392,7 +392,7 @@ static int parse_tag(AVCodecContext *avctx, CFHDContext *s, GetByteContext gb,
         s->bpc = data;
         if (!(s->bpc == 10 || s->bpc == 12)) {
             av_log(avctx, AV_LOG_ERROR, "Invalid bits per channel\n");
-            return AVERROR(EINVAL);
+            return AVERROR_INVALIDDATA;
         }
         break;
     case 71:
@@ -506,7 +506,7 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
                 lowpass_width  > lowpass_a_width  ||
                 lowpass_a_width * lowpass_a_height * sizeof(int16_t) > bytestream2_get_bytes_left(&gb)) {
                 av_log(avctx, AV_LOG_ERROR, "Too many lowpass coefficients\n");
-                ret = AVERROR(EINVAL);
+                ret = AVERROR_INVALIDDATA;
                 goto end;
             }
 
@@ -547,7 +547,7 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
                 highpass_width  > highpass_a_width  ||
                 a_expected      < expected) {
                 av_log(avctx, AV_LOG_ERROR, "Too many highpass coefficients\n");
-                ret = AVERROR(EINVAL);
+                ret = AVERROR_INVALIDDATA;
                 goto end;
             }
 
@@ -604,14 +604,14 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
             if (count > expected) {
                 av_log(avctx, AV_LOG_ERROR,
                        "Escape codeword not found, probably corrupt data\n");
-                ret = AVERROR(EINVAL);
+                ret = AVERROR_INVALIDDATA;
                 goto end;
             }
 
             bytes = FFALIGN(AV_CEIL_RSHIFT(get_bits_count(&s->gb), 3), 4);
             if (bytes > bytestream2_get_bytes_left(&gb)) {
                 av_log(avctx, AV_LOG_ERROR, "Bitstream overread error\n");
-                ret = AVERROR(EINVAL);
+                ret = AVERROR_INVALIDDATA;
                 goto end;
             } else
                 bytestream2_seek(&gb, bytes, SEEK_CUR);
@@ -632,13 +632,13 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
     if (!s->a_width    || !s->a_height    || s->a_format     == AV_PIX_FMT_NONE ||
         s->coded_width || s->coded_height || s->coded_format != AV_PIX_FMT_NONE) {
         av_log(avctx, AV_LOG_ERROR, "Invalid dimensions\n");
-        ret = AVERROR(EINVAL);
+        ret = AVERROR_INVALIDDATA;
         goto end;
     }
 
     if (!got_buffer) {
         av_log(avctx, AV_LOG_ERROR, "No end of header tag found\n");
-        ret = AVERROR(EINVAL);
+        ret = AVERROR_INVALIDDATA;
         goto end;
     }
 
@@ -656,7 +656,7 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
             s->plane[plane].band[0][1].width > s->plane[plane].band[0][1].a_width  ||
             !highpass_stride) {
             av_log(avctx, AV_LOG_ERROR, "Invalid plane dimensions\n");
-            ret = AVERROR(EINVAL);
+            ret = AVERROR_INVALIDDATA;
             goto end;
         }
 
@@ -715,7 +715,7 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
             s->plane[plane].band[1][1].width > s->plane[plane].band[1][1].a_width  ||
             !highpass_stride) {
             av_log(avctx, AV_LOG_ERROR, "Invalid plane dimensions\n");
-            ret = AVERROR(EINVAL);
+            ret = AVERROR_INVALIDDATA;
             goto end;
         }
 
@@ -772,7 +772,7 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
             s->plane[plane].band[2][1].width > s->plane[plane].band[2][1].a_width  ||
             !highpass_stride) {
             av_log(avctx, AV_LOG_ERROR, "Invalid plane dimensions\n");
-            ret = AVERROR(EINVAL);
+            ret = AVERROR_INVALIDDATA;
             goto end;
         }
 
