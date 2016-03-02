@@ -477,6 +477,104 @@ static int set_lowpass_coeffs(AVCodecContext *avctx, CFHDContext *s,
     return 0;
 }
 
+static int set_highpass_coeffs(AVCodecContext *avctx, CFHDContext *s,
+                               GetByteContext *gb, int16_t *coeff_data)
+{
+    int i;
+    int highpass_height       = s->plane[s->channel_num].band[s->level][s->subband_num].height;
+    int highpass_width        = s->plane[s->channel_num].band[s->level][s->subband_num].width;
+    int highpass_a_width      = s->plane[s->channel_num].band[s->level][s->subband_num].a_width;
+    int highpass_a_height     = s->plane[s->channel_num].band[s->level][s->subband_num].a_height;
+    ptrdiff_t highpass_stride = s->plane[s->channel_num].band[s->level][s->subband_num].stride;
+    int expected   = highpass_height   * highpass_stride;
+    int a_expected = highpass_a_height * highpass_a_width;
+    int level, run, coeff;
+    int count = 0, bytes;
+
+    if (highpass_height > highpass_a_height ||
+        highpass_width  > highpass_a_width  ||
+        a_expected      < expected) {
+        av_log(avctx, AV_LOG_ERROR, "Too many highpass coefficients\n");
+        return AVERROR_INVALIDDATA;
+    }
+
+    av_log(avctx, AV_LOG_DEBUG,
+           "Start subband coeffs plane %i level %i codebook %i expected %i\n",
+           s->channel_num, s->level, s->codebook, expected);
+
+    init_get_bits(&s->gb, gb->buffer,
+                  bytestream2_get_bytes_left(gb) * 8);
+    {
+        OPEN_READER(re, &s->gb);
+        if (!s->codebook) {
+            while (1) {
+                UPDATE_CACHE(re, &s->gb);
+                GET_RL_VLC(level, run, re, &s->gb, s->table_9_rl_vlc,
+                           VLC_BITS, 3, 1);
+
+                /* escape */
+                if (level == 64)
+                    break;
+
+                count += run;
+
+                if (count > expected)
+                    break;
+
+                coeff = dequant_and_decompand(level, s->quantisation);
+                for (i = 0; i < run; i++)
+                    *coeff_data++ = coeff;
+            }
+        } else {
+            while (1) {
+                UPDATE_CACHE(re, &s->gb);
+                GET_RL_VLC(level, run, re, &s->gb, s->table_18_rl_vlc,
+                           VLC_BITS, 3, 1);
+
+                /* escape */
+                if (level == 255 && run == 2)
+                    break;
+
+                count += run;
+
+                if (count > expected)
+                    break;
+
+                coeff = dequant_and_decompand(level, s->quantisation);
+                for (i = 0; i < run; i++)
+                    *coeff_data++ = coeff;
+            }
+        }
+        CLOSE_READER(re, &s->gb);
+    }
+
+    if (count > expected) {
+        av_log(avctx, AV_LOG_ERROR,
+               "Escape codeword not found, probably corrupt data\n");
+        return AVERROR_INVALIDDATA;
+    }
+
+    bytes = FFALIGN(AV_CEIL_RSHIFT(get_bits_count(&s->gb), 3), 4);
+    if (bytes > bytestream2_get_bytes_left(gb)) {
+        av_log(avctx, AV_LOG_ERROR, "Bitstream overread error\n");
+        return AVERROR_INVALIDDATA;
+    } else
+        bytestream2_seek(gb, bytes, SEEK_CUR);
+
+    av_log(avctx, AV_LOG_DEBUG, "End subband coeffs %i extra %i\n",
+           count, count - expected);
+    s->codebook = 0;
+
+    /* Copy last line of coefficients if odd height */
+    if (highpass_height & 1) {
+        memcpy(&coeff_data[ highpass_height      * highpass_stride],
+               &coeff_data[(highpass_height - 1) * highpass_stride],
+               highpass_stride * sizeof(*coeff_data));
+    }
+
+    return 0;
+}
+
 static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
                        AVPacket *avpkt)
 {
@@ -542,99 +640,8 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
 
         if (tag == 55 && s->subband_num_actual != 255 &&
             s->a_width && s->a_height) {
-            int highpass_height       = s->plane[s->channel_num].band[s->level][s->subband_num].height;
-            int highpass_width        = s->plane[s->channel_num].band[s->level][s->subband_num].width;
-            int highpass_a_width      = s->plane[s->channel_num].band[s->level][s->subband_num].a_width;
-            int highpass_a_height     = s->plane[s->channel_num].band[s->level][s->subband_num].a_height;
-            ptrdiff_t highpass_stride = s->plane[s->channel_num].band[s->level][s->subband_num].stride;
-            int expected   = highpass_height   * highpass_stride;
-            int a_expected = highpass_a_height * highpass_a_width;
-            int level, run, coeff;
-            int count = 0, bytes;
-
-            if (highpass_height > highpass_a_height ||
-                highpass_width  > highpass_a_width  ||
-                a_expected      < expected) {
-                av_log(avctx, AV_LOG_ERROR, "Too many highpass coefficients\n");
-                ret = AVERROR_INVALIDDATA;
+            if ((ret = set_highpass_coeffs(avctx, s, &gb, coeff_data)) < 0)
                 goto end;
-            }
-
-            av_log(avctx, AV_LOG_DEBUG,
-                   "Start subband coeffs plane %i level %i codebook %i expected %i\n",
-                   s->channel_num, s->level, s->codebook, expected);
-
-            init_get_bits(&s->gb, gb.buffer,
-                          bytestream2_get_bytes_left(&gb) * 8);
-            {
-                OPEN_READER(re, &s->gb);
-                if (!s->codebook) {
-                    while (1) {
-                        UPDATE_CACHE(re, &s->gb);
-                        GET_RL_VLC(level, run, re, &s->gb, s->table_9_rl_vlc,
-                                   VLC_BITS, 3, 1);
-
-                        /* escape */
-                        if (level == 64)
-                            break;
-
-                        count += run;
-
-                        if (count > expected)
-                            break;
-
-                        coeff = dequant_and_decompand(level, s->quantisation);
-                        for (i = 0; i < run; i++)
-                            *coeff_data++ = coeff;
-                    }
-                } else {
-                    while (1) {
-                        UPDATE_CACHE(re, &s->gb);
-                        GET_RL_VLC(level, run, re, &s->gb, s->table_18_rl_vlc,
-                                   VLC_BITS, 3, 1);
-
-                        /* escape */
-                        if (level == 255 && run == 2)
-                            break;
-
-                        count += run;
-
-                        if (count > expected)
-                            break;
-
-                        coeff = dequant_and_decompand(level, s->quantisation);
-                        for (i = 0; i < run; i++)
-                            *coeff_data++ = coeff;
-                    }
-                }
-                CLOSE_READER(re, &s->gb);
-            }
-
-            if (count > expected) {
-                av_log(avctx, AV_LOG_ERROR,
-                       "Escape codeword not found, probably corrupt data\n");
-                ret = AVERROR_INVALIDDATA;
-                goto end;
-            }
-
-            bytes = FFALIGN(AV_CEIL_RSHIFT(get_bits_count(&s->gb), 3), 4);
-            if (bytes > bytestream2_get_bytes_left(&gb)) {
-                av_log(avctx, AV_LOG_ERROR, "Bitstream overread error\n");
-                ret = AVERROR_INVALIDDATA;
-                goto end;
-            } else
-                bytestream2_seek(&gb, bytes, SEEK_CUR);
-
-            av_log(avctx, AV_LOG_DEBUG, "End subband coeffs %i extra %i\n",
-                   count, count - expected);
-            s->codebook = 0;
-
-            /* Copy last line of coefficients if odd height */
-            if (highpass_height & 1) {
-                memcpy(&coeff_data[ highpass_height      * highpass_stride],
-                       &coeff_data[(highpass_height - 1) * highpass_stride],
-                       highpass_stride * sizeof(*coeff_data));
-            }
         }
     }
 
