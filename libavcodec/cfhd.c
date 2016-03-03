@@ -575,14 +575,91 @@ static int set_highpass_coeffs(AVCodecContext *avctx, CFHDContext *s,
     return 0;
 }
 
+static int filter_level(AVCodecContext *avctx, CFHDContext *s, void *data,
+                        int plane, int level)
+{
+    int i, j, idx = level - 1, idx2 = level > 1 ? 1 : 0;
+    int16_t *low, *high, *output, *dst;
+    int lowpass_height        = s->plane[plane].band[idx][idx2].height;
+    int lowpass_width         = s->plane[plane].band[idx][idx2].width;
+    ptrdiff_t highpass_stride = s->plane[plane].band[idx][1].stride;
+
+    if (lowpass_height                     > s->plane[plane].band[idx][idx2].a_height ||
+        lowpass_width                      > s->plane[plane].band[idx][idx2].a_width  ||
+        s->plane[plane].band[idx][1].width > s->plane[plane].band[idx][1].a_width     ||
+        !highpass_stride) {
+        av_log(avctx, AV_LOG_ERROR, "Invalid plane dimensions\n");
+        return AVERROR_INVALIDDATA;
+    }
+
+    av_log(avctx, AV_LOG_DEBUG, "Level %d plane %i %i %i %ti\n", level,
+           plane, lowpass_height, lowpass_width, highpass_stride);
+
+    low    = s->plane[plane].subband[0];
+    high   = s->plane[plane].subband[2 + 3 * idx];
+    output = s->plane[plane].l_h[3 * idx];
+    for (i = 0; i < lowpass_width; i++) {
+        vert_filter(output, lowpass_width, low, lowpass_width, high,
+                    highpass_stride, lowpass_height);
+        low++;
+        high++;
+        output++;
+    }
+
+    low    = s->plane[plane].subband[1 + 3 * idx];
+    high   = s->plane[plane].subband[3 + 3 * idx];
+    output = s->plane[plane].l_h[1 + 3 * idx];
+    for (i = 0; i < lowpass_width; i++) {
+        // note the stride of "low" is highpass_stride
+        vert_filter(output, lowpass_width, low, highpass_stride, high,
+                    highpass_stride, lowpass_height);
+        low++;
+        high++;
+        output++;
+    }
+
+    low    = s->plane[plane].l_h[0 + 3 * idx];
+    high   = s->plane[plane].l_h[1 + 3 * idx];
+
+    if (level != 3) {
+        output = s->plane[plane].subband[0];
+        for (i = 0; i < lowpass_height * 2; i++) {
+            horiz_filter(output, low, high, lowpass_width);
+            low    += lowpass_width;
+            high   += lowpass_width;
+            output += lowpass_width * 2;
+        }
+        if (s->bpc == 12 || level == 2) {
+            output = s->plane[plane].subband[0];
+            for (i = 0; i < lowpass_height * 2; i++) {
+                for (j = 0; j < lowpass_width * 2; j++)
+                    output[j] <<= 2;
+
+                output += lowpass_width * 2;
+            }
+        }
+    } else {
+        int act_plane = plane == 1 ? 2 : plane == 2 ? 1 : plane;
+        AVFrame *pic = data;
+        dst = (int16_t *)pic->data[act_plane];
+        for (i = 0; i < lowpass_height * 2; i++) {
+            horiz_filter_clip(dst, low, high, lowpass_width, s->bpc);
+            low  += lowpass_width;
+            high += lowpass_width;
+            dst  += pic->linesize[act_plane] / 2;
+        }
+    }
+
+    return 0;
+}
+
 static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
                        AVPacket *avpkt)
 {
     CFHDContext *s = avctx->priv_data;
     GetByteContext gb;
     ThreadFrame frame = { .f = data };
-    AVFrame *pic = data;
-    int ret = 0, i, j, planes, plane, got_buffer = 0;
+    int ret = 0, planes, plane, got_buffer = 0;
     int16_t *coeff_data;
 
     s->coded_format = AV_PIX_FMT_YUV422P10;
@@ -658,170 +735,17 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
 
     planes = av_pix_fmt_count_planes(avctx->pix_fmt);
     for (plane = 0; plane < planes; plane++) {
-        int act_plane = plane == 1 ? 2 : plane == 2 ? 1 : plane;
-        int16_t *low, *high, *output, *dst;
-
         /* level 1 */
-        int lowpass_height        = s->plane[plane].band[0][0].height;
-        int lowpass_width         = s->plane[plane].band[0][0].width;
-        ptrdiff_t highpass_stride = s->plane[plane].band[0][1].stride;
-
-        if (lowpass_height                   > s->plane[plane].band[0][0].a_height ||
-            lowpass_width                    > s->plane[plane].band[0][0].a_width  ||
-            s->plane[plane].band[0][1].width > s->plane[plane].band[0][1].a_width  ||
-            !highpass_stride) {
-            av_log(avctx, AV_LOG_ERROR, "Invalid plane dimensions\n");
-            return AVERROR_INVALIDDATA;
-        }
-
-        av_log(avctx, AV_LOG_DEBUG, "Level 1 plane %i %i %i %ti\n", plane,
-               lowpass_height, lowpass_width, highpass_stride);
-
-        low    = s->plane[plane].subband[0];
-        high   = s->plane[plane].subband[2];
-        output = s->plane[plane].l_h[0];
-        for (i = 0; i < lowpass_width; i++) {
-            vert_filter(output, lowpass_width, low, lowpass_width, high,
-                        highpass_stride, lowpass_height);
-            low++;
-            high++;
-            output++;
-        }
-
-        low    = s->plane[plane].subband[1];
-        high   = s->plane[plane].subband[3];
-        output = s->plane[plane].l_h[1];
-        for (i = 0; i < lowpass_width; i++) {
-            // note the stride of "low" is highpass_stride
-            vert_filter(output, lowpass_width, low, highpass_stride, high,
-                        highpass_stride, lowpass_height);
-            low++;
-            high++;
-            output++;
-        }
-
-        low    = s->plane[plane].l_h[0];
-        high   = s->plane[plane].l_h[1];
-        output = s->plane[plane].subband[0];
-        for (i = 0; i < lowpass_height * 2; i++) {
-            horiz_filter(output, low, high, lowpass_width);
-            low    += lowpass_width;
-            high   += lowpass_width;
-            output += lowpass_width * 2;
-        }
-        if (s->bpc == 12) {
-            output = s->plane[plane].subband[0];
-            for (i = 0; i < lowpass_height * 2; i++) {
-                for (j = 0; j < lowpass_width * 2; j++)
-                    output[j] <<= 2;
-
-                output += lowpass_width * 2;
-            }
-        }
+        if ((ret = filter_level(avctx, s, data, plane, 1)) < 0)
+            return ret;
 
         /* level 2 */
-        lowpass_height  = s->plane[plane].band[1][1].height;
-        lowpass_width   = s->plane[plane].band[1][1].width;
-        highpass_stride = s->plane[plane].band[1][1].stride;
-
-        if (lowpass_height                   > s->plane[plane].band[1][1].a_height ||
-            lowpass_width                    > s->plane[plane].band[1][1].a_width  ||
-            s->plane[plane].band[1][1].width > s->plane[plane].band[1][1].a_width  ||
-            !highpass_stride) {
-            av_log(avctx, AV_LOG_ERROR, "Invalid plane dimensions\n");
-            return AVERROR_INVALIDDATA;
-        }
-
-        av_log(avctx, AV_LOG_DEBUG, "Level 2 plane %i %i %i %ti\n", plane,
-               lowpass_height, lowpass_width, highpass_stride);
-
-        low    = s->plane[plane].subband[0];
-        high   = s->plane[plane].subband[5];
-        output = s->plane[plane].l_h[3];
-        for (i = 0; i < lowpass_width; i++) {
-            vert_filter(output, lowpass_width, low, lowpass_width, high,
-                        highpass_stride, lowpass_height);
-            low++;
-            high++;
-            output++;
-        }
-
-        low    = s->plane[plane].subband[4];
-        high   = s->plane[plane].subband[6];
-        output = s->plane[plane].l_h[4];
-        for (i = 0; i < lowpass_width; i++) {
-            vert_filter(output, lowpass_width, low, highpass_stride, high,
-                        highpass_stride, lowpass_height);
-            low++;
-            high++;
-            output++;
-        }
-
-        low    = s->plane[plane].l_h[3];
-        high   = s->plane[plane].l_h[4];
-        output = s->plane[plane].subband[0];
-        for (i = 0; i < lowpass_height * 2; i++) {
-            horiz_filter(output, low, high, lowpass_width);
-            low    += lowpass_width;
-            high   += lowpass_width;
-            output += lowpass_width * 2;
-        }
-
-        output = s->plane[plane].subband[0];
-        for (i = 0; i < lowpass_height * 2; i++) {
-            for (j = 0; j < lowpass_width * 2; j++)
-                output[j] <<= 2;
-
-            output += lowpass_width * 2;
-        }
+        if ((ret = filter_level(avctx, s, data, plane, 2)) < 0)
+            return ret;
 
         /* level 3 */
-        lowpass_height  = s->plane[plane].band[2][1].height;
-        lowpass_width   = s->plane[plane].band[2][1].width;
-        highpass_stride = s->plane[plane].band[2][1].stride;
-
-        if (lowpass_height                   > s->plane[plane].band[2][1].a_height ||
-            lowpass_width                    > s->plane[plane].band[2][1].a_width  ||
-            s->plane[plane].band[2][1].width > s->plane[plane].band[2][1].a_width  ||
-            !highpass_stride) {
-            av_log(avctx, AV_LOG_ERROR, "Invalid plane dimensions\n");
-            return AVERROR_INVALIDDATA;
-        }
-
-        av_log(avctx, AV_LOG_DEBUG, "Level 3 plane %i %i %i %ti\n",
-               plane, lowpass_height, lowpass_width, highpass_stride);
-
-        low    = s->plane[plane].subband[0];
-        high   = s->plane[plane].subband[8];
-        output = s->plane[plane].l_h[6];
-        for (i = 0; i < lowpass_width; i++) {
-            vert_filter(output, lowpass_width, low, lowpass_width, high,
-                        highpass_stride, lowpass_height);
-            low++;
-            high++;
-            output++;
-        }
-
-        low    = s->plane[plane].subband[7];
-        high   = s->plane[plane].subband[9];
-        output = s->plane[plane].l_h[7];
-        for (i = 0; i < lowpass_width; i++) {
-            vert_filter(output, lowpass_width, low, highpass_stride, high,
-                        highpass_stride, lowpass_height);
-            low++;
-            high++;
-            output++;
-        }
-
-        dst = (int16_t *)pic->data[act_plane];
-        low  = s->plane[plane].l_h[6];
-        high = s->plane[plane].l_h[7];
-        for (i = 0; i < lowpass_height * 2; i++) {
-            horiz_filter_clip(dst, low, high, lowpass_width, s->bpc);
-            low  += lowpass_width;
-            high += lowpass_width;
-            dst  += pic->linesize[act_plane] / 2;
-        }
+        if ((ret = filter_level(avctx, s, data, plane, 3)) < 0)
+            return ret;
     }
 
     *got_frame = 1;
