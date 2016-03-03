@@ -635,27 +635,25 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
         /* Lowpass coefficients */
         if (tag == 4 && data == 0xf0f && s->a_width && s->a_height) {
             if ((ret = set_lowpass_coeffs(avctx, s, &gb, coeff_data)) < 0)
-                goto end;
+                return ret;
         }
 
         if (tag == 55 && s->subband_num_actual != 255 &&
             s->a_width && s->a_height) {
             if ((ret = set_highpass_coeffs(avctx, s, &gb, coeff_data)) < 0)
-                goto end;
+                return ret;
         }
     }
 
     if (!s->a_width    || !s->a_height    || s->a_format     == AV_PIX_FMT_NONE ||
         s->coded_width || s->coded_height || s->coded_format != AV_PIX_FMT_NONE) {
         av_log(avctx, AV_LOG_ERROR, "Invalid dimensions\n");
-        ret = AVERROR_INVALIDDATA;
-        goto end;
+        return AVERROR_INVALIDDATA;
     }
 
     if (!got_buffer) {
         av_log(avctx, AV_LOG_ERROR, "No end of header tag found\n");
-        ret = AVERROR_INVALIDDATA;
-        goto end;
+        return AVERROR_INVALIDDATA;
     }
 
     planes = av_pix_fmt_count_planes(avctx->pix_fmt);
@@ -672,8 +670,7 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
             s->plane[plane].band[0][1].width > s->plane[plane].band[0][1].a_width  ||
             !highpass_stride) {
             av_log(avctx, AV_LOG_ERROR, "Invalid plane dimensions\n");
-            ret = AVERROR_INVALIDDATA;
-            goto end;
+            return AVERROR_INVALIDDATA;
         }
 
         av_log(avctx, AV_LOG_DEBUG, "Decoding level 1 plane %i %i %i %ti\n",
@@ -731,8 +728,7 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
             s->plane[plane].band[1][1].width > s->plane[plane].band[1][1].a_width  ||
             !highpass_stride) {
             av_log(avctx, AV_LOG_ERROR, "Invalid plane dimensions\n");
-            ret = AVERROR_INVALIDDATA;
-            goto end;
+            return AVERROR_INVALIDDATA;
         }
 
         av_log(avctx, AV_LOG_DEBUG, "Level 2 plane %i %i %i %ti\n", plane,
@@ -788,8 +784,7 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
             s->plane[plane].band[2][1].width > s->plane[plane].band[2][1].a_width  ||
             !highpass_stride) {
             av_log(avctx, AV_LOG_ERROR, "Invalid plane dimensions\n");
-            ret = AVERROR_INVALIDDATA;
-            goto end;
+            return AVERROR_INVALIDDATA;
         }
 
         av_log(avctx, AV_LOG_DEBUG, "Level 3 plane %i %i %i %ti\n",
@@ -827,10 +822,6 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
             dst  += pic->linesize[act_plane] / 2;
         }
     }
-
-end:
-    if (ret < 0)
-        return ret;
 
     *got_frame = 1;
     return avpkt->size;
