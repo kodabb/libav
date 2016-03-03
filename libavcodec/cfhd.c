@@ -658,12 +658,13 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
 
     planes = av_pix_fmt_count_planes(avctx->pix_fmt);
     for (plane = 0; plane < planes; plane++) {
+        int act_plane = plane == 1 ? 2 : plane == 2 ? 1 : plane;
+        int16_t *low, *high, *output, *dst;
+
         /* level 1 */
         int lowpass_height        = s->plane[plane].band[0][0].height;
         int lowpass_width         = s->plane[plane].band[0][0].width;
         ptrdiff_t highpass_stride = s->plane[plane].band[0][1].stride;
-        int act_plane = plane == 1 ? 2 : plane == 2 ? 1 : plane;
-        int16_t *low, *high, *output, *dst;
 
         if (lowpass_height                   > s->plane[plane].band[0][0].a_height ||
             lowpass_width                    > s->plane[plane].band[0][0].a_width  ||
@@ -673,8 +674,8 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
             return AVERROR_INVALIDDATA;
         }
 
-        av_log(avctx, AV_LOG_DEBUG, "Decoding level 1 plane %i %i %i %ti\n",
-               plane, lowpass_height, lowpass_width, highpass_stride);
+        av_log(avctx, AV_LOG_DEBUG, "Level 1 plane %i %i %i %ti\n", plane,
+               lowpass_height, lowpass_width, highpass_stride);
 
         low    = s->plane[plane].subband[0];
         high   = s->plane[plane].subband[2];
