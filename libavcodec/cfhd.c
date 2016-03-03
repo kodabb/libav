@@ -657,7 +657,7 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
     }
 
     planes = av_pix_fmt_count_planes(avctx->pix_fmt);
-    for (plane = 0; plane < planes && !ret; plane++) {
+    for (plane = 0; plane < planes; plane++) {
         /* level 1 */
         int lowpass_height        = s->plane[plane].band[0][0].height;
         int lowpass_width         = s->plane[plane].band[0][0].width;
