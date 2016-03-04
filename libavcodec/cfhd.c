@@ -146,7 +146,7 @@ static void vert_filter(int16_t *output, ptrdiff_t out_stride,
 static void free_buffers(AVCodecContext *avctx)
 {
     CFHDContext *s = avctx->priv_data;
-    int i;
+    unsigned i;
 
     for (i = 0; i < FF_ARRAY_ELEMS(s->plane); i++) {
         av_freep(&s->plane[i].idwt_buf);
@@ -159,7 +159,8 @@ static void free_buffers(AVCodecContext *avctx)
 static int alloc_buffers(AVCodecContext *avctx)
 {
     CFHDContext *s = avctx->priv_data;
-    int i, j, k, ret, planes;
+    int i, j, ret, planes;
+    unsigned k;
 
     if ((ret = ff_set_dimensions(avctx, s->coded_width, s->coded_height)) < 0)
         return ret;
@@ -489,7 +490,8 @@ static int set_highpass_coeffs(AVCodecContext *avctx, CFHDContext *s,
     int expected   = highpass_height   * highpass_stride;
     int a_expected = highpass_a_height * highpass_a_width;
     int level, run, coeff;
-    int count = 0, bytes;
+    int count = 0;
+    unsigned bytes;
 
     if (highpass_height > highpass_a_height ||
         highpass_width  > highpass_a_width  ||
