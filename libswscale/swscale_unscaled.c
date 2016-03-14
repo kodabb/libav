@@ -737,7 +737,11 @@ static int yvu9ToYv12Wrapper(SwsContext *c, const uint8_t *src[],
     planar2x(src[2], dst[2] + dstStride[2] * (srcSliceY >> 1), c->chrSrcW,
              srcSliceH >> 2, srcStride[2], dstStride[2]);
     if (dst[3])
-        fillPlane(dst[3], dstStride[3], c->srcW, srcSliceH, srcSliceY, 255);
+        if (src[3])
+            copyPlane(src[3], srcStride[3], srcSliceY, srcSliceH, c->srcW,
+                      dst[3], dstStride[3]);
+        else
+            fillPlane(dst[3], dstStride[3], c->srcW, srcSliceH, srcSliceY, 255);
     return srcSliceH;
 }
 
@@ -1054,7 +1058,7 @@ void ff_get_unscaled_swscale(SwsContext *c)
         c->swscale = ff_yuv2rgb_get_func_ptr(c);
     }
 
-    if (srcFormat == AV_PIX_FMT_YUV410P &&
+    if ((srcFormat == AV_PIX_FMT_YUV410P || srcFormat == AV_PIX_FMT_YUVA410P) &&
         (dstFormat == AV_PIX_FMT_YUV420P || dstFormat == AV_PIX_FMT_YUVA420P) &&
         !(flags & SWS_BITEXACT)) {
         c->swscale = yvu9ToYv12Wrapper;

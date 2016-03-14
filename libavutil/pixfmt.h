@@ -227,6 +227,8 @@ enum AVPixelFormat {
      */
     AV_PIX_FMT_CUDA,
 
+    AV_PIX_FMT_YUVA410P,   ///< planar YUV 4:1:0,  9bpp, (1 Cr & Cb sample per 4x4 Y & A samples)
+
     AV_PIX_FMT_NB,        ///< number of pixel formats, DO NOT USE THIS if you want to link with shared libav* because the number of formats might differ between versions
 };
 
