@@ -284,7 +284,7 @@ static av_cold void ivi_free_buffers(IVIPlaneDesc *planes)
 {
     int p, b, t;
 
-    for (p = 0; p < 3; p++) {
+    for (p = 0; p < 4; p++) {
         for (b = 0; b < planes[p].num_bands; b++) {
             av_freep(&planes[p].bands[b].bufs[0]);
             av_freep(&planes[p].bands[b].bufs[1]);
@@ -317,16 +317,16 @@ av_cold int ff_ivi_init_planes(IVIPlaneDesc *planes, const IVIPicConfig *cfg,
         return AVERROR_INVALIDDATA;
 
     /* fill in the descriptor of the luminance plane */
-    planes[0].width     = cfg->pic_width;
-    planes[0].height    = cfg->pic_height;
-    planes[0].num_bands = cfg->luma_bands;
+    planes[0].width     = planes[3].width     = cfg->pic_width;
+    planes[0].height    = planes[3].height    = cfg->pic_height;
+    planes[0].num_bands = planes[3].num_bands = cfg->luma_bands;
 
     /* fill in the descriptors of the chrominance planes */
     planes[1].width     = planes[2].width     = (cfg->pic_width  + 3) >> 2;
     planes[1].height    = planes[2].height    = (cfg->pic_height + 3) >> 2;
     planes[1].num_bands = planes[2].num_bands = cfg->chroma_bands;
 
-    for (p = 0; p < 3; p++) {
+    for (p = 0; p < 4; p++) {
         planes[p].bands = av_mallocz(planes[p].num_bands * sizeof(IVIBandDesc));
         if (!planes[p].bands)
             return AVERROR(ENOMEM);
@@ -898,6 +898,25 @@ static void ivi_output_plane(IVIPlaneDesc *plane, uint8_t *dst, int dst_pitch)
     }
 }
 
+static void ivi_output_alpha(IVIPlaneDesc *plane, uint8_t *dst, int dst_pitch)
+{
+    int             x, y, z;
+    const int8_t   *src  = plane->bands[0].data_ptr;
+    uint32_t        pitch = plane->bands[0].pitch;
+    GetBitContext   gb;
+
+    if (!src)
+        return;
+
+    init_get_bits(&gb, src, pitch * plane->height * 8000);
+
+    for (y = 0; y < plane->height; y++) {
+        for (x = 0; x < plane->width; x ++)
+            dst[x] = get_bits1(&gb) ? 255 : 0;
+        dst += dst_pitch;
+    }
+}
+
 /**
  *  Decode an Indeo 4 or 5 band.
  *
@@ -1070,7 +1089,9 @@ int ff_ivi_decode_frame(AVCodecContext *avctx, void *data, int *got_frame,
     if (ctx->is_nonnull_frame(ctx)) {
         for (p = 0; p < 3; p++) {
             for (b = 0; b < ctx->planes[p].num_bands; b++) {
+
                 result = decode_band(ctx, &ctx->planes[p].bands[b], avctx);
+                 av_log(NULL, AV_LOG_WARNING, "offset plane %d: %d left %d\n", p, get_bits_count(&ctx->gb) >> 3, get_bits_left(&ctx->gb) / 8);
                 if (result < 0) {
                     av_log(avctx, AV_LOG_ERROR,
                            "Error while decoding band: %d, plane: %d\n", b, p);
@@ -1110,6 +1131,7 @@ int ff_ivi_decode_frame(AVCodecContext *avctx, void *data, int *got_frame,
 
     ivi_output_plane(&ctx->planes[2], frame->data[1], frame->linesize[1]);
     ivi_output_plane(&ctx->planes[1], frame->data[2], frame->linesize[2]);
+        av_log(NULL, AV_LOG_WARNING, "offset: %d\n", get_bits_count(&ctx->gb) >> 3);
 
     *got_frame = 1;
 
@@ -1132,6 +1154,12 @@ int ff_ivi_decode_frame(AVCodecContext *avctx, void *data, int *got_frame,
             ff_ivi_decode_frame(avctx, ctx->p_frame, &ctx->got_p_frame, &pkt);
         }
     }
+    if (ctx->has_transp) {
+        av_log(NULL, AV_LOG_WARNING, "offset: %d\n", get_bits_count(&ctx->gb) >> 3);
+        ctx->planes[3].bands[0].data_ptr = ctx->frame_data + (get_bits_count(&ctx->gb) >> 3);
+        ivi_output_alpha(&ctx->planes[3], frame->data[3], frame->linesize[3]);
+    }
+
 
     if (ctx->show_indeo4_info) {
         if (ctx->is_scalable)

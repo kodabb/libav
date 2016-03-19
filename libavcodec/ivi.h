@@ -226,7 +226,7 @@ typedef struct IVI45DecContext {
     uint16_t        checksum;        ///< frame checksum
 
     IVIPicConfig    pic_conf;
-    IVIPlaneDesc    planes[3];       ///< color planes
+    IVIPlaneDesc    planes[4];       ///< color planes
 
     int             buf_switch;      ///< used to switch between three buffers
     int             dst_buf;         ///< buffer index for the currently decoded frame

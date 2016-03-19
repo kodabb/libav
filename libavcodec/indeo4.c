@@ -123,6 +123,10 @@ static int decode_pic_hdr(IVI45DecContext *ctx, AVCodecContext *avctx)
         ctx->has_b_frames = 1;
 
     ctx->has_transp = get_bits1(&ctx->gb);
+    if (ctx->has_transp)
+        avctx->pix_fmt = AV_PIX_FMT_YUVA410P;
+    else
+        avctx->pix_fmt = AV_PIX_FMT_YUV410P;
 
     /* unknown bit: Mac decoder ignores this bit, XANIM returns error */
     if (get_bits1(&ctx->gb)) {
@@ -617,8 +621,6 @@ static av_cold int decode_init(AVCodecContext *avctx)
     /* during picture header decoding.          */
     ctx->pic_conf.pic_width  = 0;
     ctx->pic_conf.pic_height = 0;
-
-    avctx->pix_fmt = AV_PIX_FMT_YUV410P;
 
     ctx->decode_pic_hdr   = decode_pic_hdr;
     ctx->decode_band_hdr  = decode_band_hdr;
