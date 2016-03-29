@@ -44,8 +44,6 @@ static av_cold int cfhd_init(AVCodecContext *avctx)
 
     s->avctx                   = avctx;
     avctx->bits_per_raw_sample = 10;
-    avctx->width               = 0;
-    avctx->height              = 0;
 
     return ff_cfhd_init_vlcs(s);
 }
