@@ -1601,6 +1601,9 @@ int attribute_align_arg avcodec_decode_video2(AVCodecContext *avctx, AVFrame *pi
         emms_c(); //needed to avoid an emms_c() call before every return;
 
         if (*got_picture_ptr) {
+            if (!picture->formaton)
+                picture->formaton = av_pixformaton_from_pixfmt(picture->format);
+
             if (!avctx->refcounted_frames) {
                 int err = unrefcount_frame(avci, picture);
                 if (err < 0)
