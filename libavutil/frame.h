@@ -33,9 +33,9 @@
 #include "rational.h"
 #include "samplefmt.h"
 #include "pixfmt.h"
+#include "pixformaton.h"
 #include "version.h"
 
-#include "pixformaton.h"
 
 /**
  * @defgroup lavu_frame AVFrame
