@@ -230,7 +230,7 @@ static int alloc_buffers(AVCodecContext *avctx)
     return 0;
 }
 
-static int parse_tag(AVCodecContext *avctx, CFHDContext *s, GetByteContext gb,
+static int parse_tag(AVCodecContext *avctx, CFHDContext *s, GetByteContext *gb,
                      int16_t tag, uint16_t data, int *planes)
 {
     switch (tag) {
@@ -242,14 +242,14 @@ static int parse_tag(AVCodecContext *avctx, CFHDContext *s, GetByteContext gb,
         int i;
         av_log(avctx, AV_LOG_DEBUG,
                "tag=2 header - skipping %"PRIu16" tag/value pairs\n", data);
-        if (data > bytestream2_get_bytes_left(&gb) / 4) {
+        if (data > bytestream2_get_bytes_left(gb) / 4) {
             av_log(avctx, AV_LOG_ERROR,
                    "Too many tag/value pairs (%"PRIu16")\n", data);
             return AVERROR_INVALIDDATA;
         }
         for (i = 0; i < data; i++) {
-            uint16_t tag2 = bytestream2_get_be16(&gb);
-            uint16_t val2 = bytestream2_get_be16(&gb);
+            uint16_t tag2 = bytestream2_get_be16(gb);
+            uint16_t val2 = bytestream2_get_be16(gb);
             av_log(avctx, AV_LOG_DEBUG,
                    "Tag/Value = %"PRIx16" %"PRIx16"\n", tag2, val2);
         }
@@ -699,7 +699,7 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
             av_log(avctx, AV_LOG_DEBUG, "Small chunk length %"PRIu16" %s\n",
                    data * 4, tag < 0 ? "optional" : "required");
             bytestream2_skipu(&gb, data * 4);
-        } else if ((ret = parse_tag(avctx, s, gb, tag, data, &planes)) < 0)
+        } else if ((ret = parse_tag(avctx, s, &gb, tag, data, &planes)) < 0)
             break;
 
         /* Some kind of end of header tag */
