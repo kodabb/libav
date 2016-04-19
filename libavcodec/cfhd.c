@@ -295,8 +295,7 @@ static int parse_tag(AVCodecContext *avctx, CFHDContext *s, GetByteContext gb,
         return AVERROR_PATCHWELCOME;
     case 27:
         av_log(avctx, AV_LOG_DEBUG, "Lowpass width %"PRIu16"\n", data);
-        if (data < 2 ||
-            data > s->plane[s->channel_num].band[0][0].a_width) {
+        if (data < 2 || data > s->plane[s->channel_num].band[0][0].a_width) {
             av_log(avctx, AV_LOG_ERROR, "Invalid lowpass width\n");
             return AVERROR_INVALIDDATA;
         }
