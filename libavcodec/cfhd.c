@@ -306,7 +306,7 @@ static int parse_tag(AVCodecContext *avctx, CFHDContext *s, GetByteContext gb,
         break;
     case 28:
         av_log(avctx, AV_LOG_DEBUG, "Lowpass height %"PRIu16"\n", data);
-        if (data < 2 || data > s->plane[s->channel_num].band[0][0].height) {
+        if (data < 2 || data > s->plane[s->channel_num].band[0][0].a_height) {
             av_log(avctx, AV_LOG_ERROR, "Invalid lowpass height\n");
             return AVERROR_INVALIDDATA;
         }
