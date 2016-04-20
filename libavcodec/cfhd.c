@@ -82,7 +82,7 @@ static inline int dequant_and_decompand(int level, int quantisation)
 static inline void filter(int16_t *output, ptrdiff_t out_stride,
                           int16_t *low, ptrdiff_t low_stride,
                           int16_t *high, ptrdiff_t high_stride,
-                          int len, uint8_t clip)
+                          int len, int clip)
 {
     int16_t tmp;
     int i;
@@ -129,7 +129,7 @@ static void horiz_filter(int16_t *output, int16_t *low, int16_t *high,
 }
 
 static void horiz_filter_clip(int16_t *output, int16_t *low, int16_t *high,
-                              int width, uint8_t clip)
+                              int width, int clip)
 {
     filter(output, 1, low, 1, high, 1, width, clip);
 }
