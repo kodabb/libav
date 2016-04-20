@@ -67,6 +67,32 @@ fate-cfhd-1: CMD = framecrc -i $(TARGET_SAMPLES)/cfhd/trailer.avi -an
 FATE_CFHD += fate-cfhd-2
 fate-cfhd-2: CMD = framecrc -i $(TARGET_SAMPLES)/cfhd/timelapse-pt-momsapt.avi -an
 
+FATE_CFHD += fate-cfhd-3
+fate-cfhd-3: CMD = framecrc -i /home/diego/samples/CFHD/kieran/vagas_422_low.avi -an
+
+FATE_CFHD += fate-cfhd-4
+fate-cfhd-4: CMD = framecrc -i /home/diego/samples/CFHD/kieran/vagas_444_low.avi -an
+
+FATE_CFHD += fate-cfhd-5
+fate-cfhd-5: CMD = framecrc -i /home/diego/samples/CFHD/kieran/vagas_444_filmscan1.avi -an
+
+FATE_CFHD += fate-cfhd-6
+fate-cfhd-6: CMD = framecrc -i /home/diego/samples/CFHD/kieran/vagas_444_keying.avi -an
+
+FATE_CFHD += fate-cfhd-7
+fate-cfhd-7: CMD = framecrc -i /home/diego/samples/CFHD/kieran/ami/premier/1.avi
+
+# alpha
+FATE_CFHD += fate-cfhd-8
+fate-cfhd-8: CMD = framecrc -i /home/diego/samples/CFHD/kieran/ami/premier/2.avi
+
+FATE_CFHD += fate-cfhd-9
+fate-cfhd-9: CMD = framecrc -i /home/diego/samples/CFHD/kieran/ami/premier/3.avi
+
+# alpha
+FATE_CFHD += fate-cfhd-10
+fate-cfhd-10: CMD = framecrc -i /home/diego/samples/CFHD/kieran/ami/premier/4.avi
+
 FATE_SAMPLES_AVCONV-$(call DEMDEC, AVI, CFHD) += $(FATE_CFHD)
 fate-cfhd: $(FATE_CFHD)
 
