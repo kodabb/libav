@@ -86,7 +86,7 @@ typedef struct CFHDContext {
     int a_height;
     int a_format;
 
-    int bpc;
+    int bpc; // bits per channel/component
     int channel_cnt;
     int subband_cnt;
     int channel_num;
