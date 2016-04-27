@@ -633,8 +633,8 @@ static int filter_level(AVCodecContext *avctx, CFHDContext *s, void *data,
         output++;
     }
 
-    low    = s->plane[plane].l_h[0 + 3 * idx];
-    high   = s->plane[plane].l_h[1 + 3 * idx];
+    low  = s->plane[plane].l_h[0 + 3 * idx];
+    high = s->plane[plane].l_h[1 + 3 * idx];
 
     if (level != 3) {
         output = s->plane[plane].subband[0];
