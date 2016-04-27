@@ -686,8 +686,8 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
     while (bytestream2_get_bytes_left(&gb) > 4) {
         /* Bit weird but implement the tag parsing as the spec says */
         uint16_t tagu   = bytestream2_get_be16(&gb);
-        int16_t tag     = (int16_t)tagu;
-        int8_t tag8     = (int8_t)(tagu >> 8);
+        int16_t tag     = tagu;
+        int8_t tag8     = tagu >> 8;
         uint16_t abstag = abs(tag);
         int8_t abs_tag8 = abs(tag8);
         uint16_t data   = bytestream2_get_be16(&gb);
