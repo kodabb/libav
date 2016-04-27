@@ -480,8 +480,8 @@ static int set_lowpass_coeffs(AVCodecContext *avctx, CFHDContext *s,
 
     /* Copy last coefficients line if height is odd. */
     if (lowpass_height & 1) {
-        memcpy(&coeff_data[lowpass_height * lowpass_width],
-               &coeff_data[(lowpass_height - 1) * lowpass_width],
+        int16_t *last_line = &coeff_data[lowpass_height * lowpass_width];
+        memcpy(last_line, &last_line[-lowpass_width],
                lowpass_width * sizeof(*coeff_data));
     }
 
@@ -582,8 +582,8 @@ static int set_highpass_coeffs(AVCodecContext *avctx, CFHDContext *s,
 
     /* Copy last line of coefficients if height is odd. */
     if (highpass_height & 1) {
-        memcpy(&coeff_data[ highpass_height      * highpass_stride],
-               &coeff_data[(highpass_height - 1) * highpass_stride],
+        int16_t *last_line = &coeff_data[expected];
+        memcpy(last_line, &last_line[-highpass_stride],
                highpass_stride * sizeof(*coeff_data));
     }
 
