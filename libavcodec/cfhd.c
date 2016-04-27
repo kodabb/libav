@@ -460,7 +460,7 @@ static int set_lowpass_coeffs(AVCodecContext *avctx, CFHDContext *s,
 
     if (lowpass_height > lowpass_a_height ||
         lowpass_width  > lowpass_a_width  ||
-        lowpass_a_width * lowpass_a_height * sizeof(int16_t) > bytestream2_get_bytes_left(gb)) {
+        lowpass_a_width * lowpass_a_height * sizeof(*coeff_data) > bytestream2_get_bytes_left(gb)) {
         av_log(avctx, AV_LOG_ERROR, "Too many lowpass coefficients\n");
         return AVERROR_INVALIDDATA;
     }
