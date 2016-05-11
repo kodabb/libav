@@ -147,8 +147,15 @@ static void free_buffers(AVCodecContext *avctx)
     unsigned i;
 
     for (i = 0; i < FF_ARRAY_ELEMS(s->plane); i++) {
+        unsigned j;
         av_freep(&s->plane[i].idwt_buf);
         av_freep(&s->plane[i].idwt_tmp);
+
+        for (j = 0; j < FF_ARRAY_ELEMS(s->plane[i].subband); j++)
+            s->plane[i].subband[j] = NULL;
+
+        for (j = 0; j < FF_ARRAY_ELEMS(s->plane[i].l_h); j++)
+            s->plane[i].l_h[j] = NULL;
     }
     s->a_height = 0;
     s->a_width  = 0;
