@@ -395,12 +395,12 @@ static int parse_tag(AVCodecContext *avctx, CFHDContext *s, GetByteContext *gb,
         av_log(avctx, AV_LOG_DEBUG, "Quantisation: %"PRIu16"\n", data);
         break;
     case 62:
-        s->channel_num = data;
         av_log(avctx, AV_LOG_DEBUG, "Channel number %"PRIu16"\n", data);
         if (s->channel_num >= *planes) {
             av_log(avctx, AV_LOG_ERROR, "Invalid channel number\n");
             return AVERROR_INVALIDDATA;
         }
+        s->channel_num = data;
         init_plane_defaults(s);
         break;
     case 70:
