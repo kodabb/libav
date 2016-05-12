@@ -747,15 +747,14 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
         if ((ret = parse_subband_tag(avctx, s, tag, data)) < 0)
             break;
 
-        if (tag == 4 && data == 0xf0f && s->a_width && s->a_height) {
-            if ((ret = read_lowpass_coeffs(avctx, s, &gb, coeff_data)) < 0)
-                return ret;
-        }
-
-        if (tag == 55 && s->subband_num_actual != 255 &&
-            s->a_width && s->a_height) {
-            if ((ret = read_highpass_coeffs(avctx, s, &gb, coeff_data)) < 0)
-                return ret;
+        if (s->a_width && s->a_height) {
+            if (tag == 4 && data == 0xf0f) {
+                if ((ret = read_lowpass_coeffs(avctx, s, &gb, coeff_data)) < 0)
+                    return ret;
+            } else if (tag == 55 && s->subband_num_actual != 255) {
+                if ((ret = read_highpass_coeffs(avctx, s, &gb, coeff_data)) < 0)
+                    return ret;
+            }
         }
     }
 
