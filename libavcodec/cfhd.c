@@ -610,8 +610,8 @@ static int read_highpass_coeffs(AVCodecContext *avctx, CFHDContext *s,
     return 0;
 }
 
-static int filter_level(AVCodecContext *avctx, CFHDContext *s, void *data,
-                        int plane, int level)
+static int reconstruct_level(AVCodecContext *avctx, CFHDContext *s, void *data,
+                             int plane, int level)
 {
     int i, j, idx = level - 1, idx2 = level > 1 ? 1 : 0;
     int16_t *low, *high, *output, *dst;
@@ -772,15 +772,15 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
     planes = av_pix_fmt_count_planes(avctx->pix_fmt);
     for (plane = 0; plane < planes; plane++) {
         /* level 1 */
-        if ((ret = filter_level(avctx, s, data, plane, 1)) < 0)
+        if ((ret = reconstruct_level(avctx, s, data, plane, 1)) < 0)
             return ret;
 
         /* level 2 */
-        if ((ret = filter_level(avctx, s, data, plane, 2)) < 0)
+        if ((ret = reconstruct_level(avctx, s, data, plane, 2)) < 0)
             return ret;
 
         /* level 3 */
-        if ((ret = filter_level(avctx, s, data, plane, 3)) < 0)
+        if ((ret = reconstruct_level(avctx, s, data, plane, 3)) < 0)
             return ret;
     }
 
