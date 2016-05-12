@@ -469,8 +469,8 @@ static int parse_subband_tag(AVCodecContext *avctx, CFHDContext *s, int16_t tag,
     return 0;
 }
 
-static int set_lowpass_coeffs(AVCodecContext *avctx, CFHDContext *s,
-                              GetByteContext *gb, int16_t *coeff_data)
+static int read_lowpass_coeffs(AVCodecContext *avctx, CFHDContext *s,
+                               GetByteContext *gb, int16_t *coeff_data)
 {
     int i, j;
     int lowpass_height   = s->plane[s->channel_num].band[0][0].height;
@@ -511,8 +511,8 @@ static int set_lowpass_coeffs(AVCodecContext *avctx, CFHDContext *s,
     return 0;
 }
 
-static int set_highpass_coeffs(AVCodecContext *avctx, CFHDContext *s,
-                               GetByteContext *gb, int16_t *coeff_data)
+static int read_highpass_coeffs(AVCodecContext *avctx, CFHDContext *s,
+                                GetByteContext *gb, int16_t *coeff_data)
 {
     int i;
     int highpass_height       = s->plane[s->channel_num].band[s->level][s->subband_num].height;
@@ -748,13 +748,13 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
             break;
 
         if (tag == 4 && data == 0xf0f && s->a_width && s->a_height) {
-            if ((ret = set_lowpass_coeffs(avctx, s, &gb, coeff_data)) < 0)
+            if ((ret = read_lowpass_coeffs(avctx, s, &gb, coeff_data)) < 0)
                 return ret;
         }
 
         if (tag == 55 && s->subband_num_actual != 255 &&
             s->a_width && s->a_height) {
-            if ((ret = set_highpass_coeffs(avctx, s, &gb, coeff_data)) < 0)
+            if ((ret = read_highpass_coeffs(avctx, s, &gb, coeff_data)) < 0)
                 return ret;
         }
     }
