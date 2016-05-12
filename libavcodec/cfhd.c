@@ -237,8 +237,9 @@ static int alloc_buffers(AVCodecContext *avctx)
     return 0;
 }
 
-static int parse_tag(AVCodecContext *avctx, CFHDContext *s, GetByteContext *gb,
-                     int16_t tag, uint16_t data, int *planes)
+static int parse_header_tag(AVCodecContext *avctx, CFHDContext *s,
+                            GetByteContext *gb, int16_t tag, uint16_t data,
+                            int *planes)
 {
     switch (tag) {
     case 1:
@@ -300,49 +301,9 @@ static int parse_tag(AVCodecContext *avctx, CFHDContext *s, GetByteContext *gb,
     case 23:
         avpriv_report_missing_feature(avctx, "Skip frame");
         return AVERROR_PATCHWELCOME;
-    case 27:
-        av_log(avctx, AV_LOG_DEBUG, "Lowpass width %"PRIu16"\n", data);
-        if (data < 2 || data > s->plane[s->channel_num].band[0][0].a_width) {
-            av_log(avctx, AV_LOG_ERROR, "Invalid lowpass width\n");
-            return AVERROR_INVALIDDATA;
-        }
-
-        s->plane[s->channel_num].band[0][0].width  = data;
-        s->plane[s->channel_num].band[0][0].stride = data;
-        break;
-    case 28:
-        av_log(avctx, AV_LOG_DEBUG, "Lowpass height %"PRIu16"\n", data);
-        if (data < 2 || data > s->plane[s->channel_num].band[0][0].a_height) {
-            av_log(avctx, AV_LOG_ERROR, "Invalid lowpass height\n");
-            return AVERROR_INVALIDDATA;
-        }
-
-        s->plane[s->channel_num].band[0][0].height = data;
-        break;
     case 35:
         av_log(avctx, AV_LOG_DEBUG, "Lowpass precision bits: %"PRIu16"\n",
                data);
-        break;
-    case 41:
-        av_log(avctx, AV_LOG_DEBUG,
-               "Highpass width %"PRIu16" channel %i level %i subband %i\n",
-               data, s->channel_num, s->level, s->subband_num);
-        if (data < 2) {
-            av_log(avctx, AV_LOG_ERROR, "Invalid highpass width\n");
-            return AVERROR_INVALIDDATA;
-        }
-
-        s->plane[s->channel_num].band[s->level][s->subband_num].width  = data;
-        s->plane[s->channel_num].band[s->level][s->subband_num].stride = FFALIGN(data, 8);
-        break;
-    case 42:
-        av_log(avctx, AV_LOG_DEBUG, "Highpass height %"PRIu16"\n", data);
-        if (data < 2) {
-            av_log(avctx, AV_LOG_ERROR, "Invalid highpass height\n");
-            return AVERROR_INVALIDDATA;
-        }
-
-        s->plane[s->channel_num].band[s->level][s->subband_num].height = data;
         break;
     case 48:
         av_log(avctx, AV_LOG_DEBUG, "Subband number %"PRIu16"\n", data);
@@ -360,25 +321,6 @@ static int parse_tag(AVCodecContext *avctx, CFHDContext *s, GetByteContext *gb,
             s->level++;
         }
         s->subband_num = data;
-        break;
-    case 49:
-        av_log(avctx, AV_LOG_DEBUG, "Highpass width2 %"PRIu16"\n", data);
-        if (data < 2) {
-            av_log(avctx, AV_LOG_ERROR, "Invalid highpass width2\n");
-            return AVERROR_INVALIDDATA;
-        }
-
-        s->plane[s->channel_num].band[s->level][s->subband_num].width  = data;
-        s->plane[s->channel_num].band[s->level][s->subband_num].stride = FFALIGN(data, 8);
-        break;
-    case 50:
-        av_log(avctx, AV_LOG_DEBUG, "Highpass height2 %"PRIu16"\n", data);
-        if (data < 2) {
-            av_log(avctx, AV_LOG_ERROR, "Invalid highpass height2\n");
-            return AVERROR_INVALIDDATA;
-        }
-
-        s->plane[s->channel_num].band[s->level][s->subband_num].height = data;
         break;
     case 51:
         av_log(avctx, AV_LOG_DEBUG, "Subband number actual %"PRIu16"\n",
@@ -447,6 +389,77 @@ static int parse_tag(AVCodecContext *avctx, CFHDContext *s, GetByteContext *gb,
         s->prescale_shift[2] = (data >> 6) & 0x7;
         av_log(avctx, AV_LOG_DEBUG, "Prescale shift (VC-5): %"PRIx16"\n",
                data);
+        break;
+    default:
+        av_log(avctx, AV_LOG_DEBUG,
+               "Unknown tag %"PRIu16" data %"PRIx16"\n", tag, data);
+    }
+
+    return 0;
+}
+
+static int parse_subband_tag(AVCodecContext *avctx, CFHDContext *s, int16_t tag,
+                             uint16_t data)
+{
+    switch (tag) {
+    case 27:
+        av_log(avctx, AV_LOG_DEBUG, "Lowpass width %"PRIu16"\n", data);
+        if (data < 2 || data > s->plane[s->channel_num].band[0][0].a_width) {
+            av_log(avctx, AV_LOG_ERROR, "Invalid lowpass width\n");
+            return AVERROR_INVALIDDATA;
+        }
+
+        s->plane[s->channel_num].band[0][0].width  = data;
+        s->plane[s->channel_num].band[0][0].stride = data;
+        break;
+    case 28:
+        av_log(avctx, AV_LOG_DEBUG, "Lowpass height %"PRIu16"\n", data);
+        if (data < 2 || data > s->plane[s->channel_num].band[0][0].a_height) {
+            av_log(avctx, AV_LOG_ERROR, "Invalid lowpass height\n");
+            return AVERROR_INVALIDDATA;
+        }
+
+        s->plane[s->channel_num].band[0][0].height = data;
+        break;
+    case 41:
+        av_log(avctx, AV_LOG_DEBUG,
+               "Highpass width %"PRIu16" channel %i level %i subband %i\n",
+               data, s->channel_num, s->level, s->subband_num);
+        if (data < 2) {
+            av_log(avctx, AV_LOG_ERROR, "Invalid highpass width\n");
+            return AVERROR_INVALIDDATA;
+        }
+
+        s->plane[s->channel_num].band[s->level][s->subband_num].width  = data;
+        s->plane[s->channel_num].band[s->level][s->subband_num].stride = FFALIGN(data, 8);
+        break;
+    case 42:
+        av_log(avctx, AV_LOG_DEBUG, "Highpass height %"PRIu16"\n", data);
+        if (data < 2) {
+            av_log(avctx, AV_LOG_ERROR, "Invalid highpass height\n");
+            return AVERROR_INVALIDDATA;
+        }
+
+        s->plane[s->channel_num].band[s->level][s->subband_num].height = data;
+        break;
+    case 49:
+        av_log(avctx, AV_LOG_DEBUG, "Highpass width2 %"PRIu16"\n", data);
+        if (data < 2) {
+            av_log(avctx, AV_LOG_ERROR, "Invalid highpass width2\n");
+            return AVERROR_INVALIDDATA;
+        }
+
+        s->plane[s->channel_num].band[s->level][s->subband_num].width  = data;
+        s->plane[s->channel_num].band[s->level][s->subband_num].stride = FFALIGN(data, 8);
+        break;
+    case 50:
+        av_log(avctx, AV_LOG_DEBUG, "Highpass height2 %"PRIu16"\n", data);
+        if (data < 2) {
+            av_log(avctx, AV_LOG_ERROR, "Invalid highpass height2\n");
+            return AVERROR_INVALIDDATA;
+        }
+
+        s->plane[s->channel_num].band[s->level][s->subband_num].height = data;
         break;
     default:
         av_log(avctx, AV_LOG_DEBUG,
@@ -706,7 +719,7 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
             av_log(avctx, AV_LOG_DEBUG, "Small chunk length %"PRIu16" %s\n",
                    data * 4, tag < 0 ? "optional" : "required");
             bytestream2_skipu(&gb, data * 4);
-        } else if ((ret = parse_tag(avctx, s, &gb, tag, data, &planes)) < 0)
+        } else if ((ret = parse_header_tag(avctx, s, &gb, tag, data, &planes)) < 0)
             break;
 
         /* Some kind of end of header tag */
@@ -731,7 +744,9 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
         }
         coeff_data = s->plane[s->channel_num].subband[s->subband_num_actual];
 
-        /* Lowpass coefficients */
+        if ((ret = parse_subband_tag(avctx, s, tag, data)) < 0)
+            break;
+
         if (tag == 4 && data == 0xf0f && s->a_width && s->a_height) {
             if ((ret = set_lowpass_coeffs(avctx, s, &gb, coeff_data)) < 0)
                 return ret;
