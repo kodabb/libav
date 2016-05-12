@@ -712,10 +712,10 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
         int8_t abs_tag8 = abs(tag8);
         uint16_t data   = bytestream2_get_be16(&gb);
 
-        if (abs_tag8 >= 0x60 && abs_tag8 <= 0x6f) {
+        if (abs_tag8 >= 0x60 && abs_tag8 <= 0x6F) {
             av_log(avctx, AV_LOG_DEBUG, "large len %"PRIx16"\n",
-                   ((tagu & 0xff) << 16) | data);
-        } else if (abstag >= 0x4000 && abstag <= 0x40ff) {
+                   ((tagu & 0xFF) << 16) | data);
+        } else if (abstag >= 0x4000 && abstag <= 0x40FF) {
             av_log(avctx, AV_LOG_DEBUG, "Small chunk length %"PRIu16" %s\n",
                    data * 4, tag < 0 ? "optional" : "required");
             bytestream2_skipu(&gb, data * 4);
@@ -723,7 +723,7 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
             break;
 
         /* Some kind of end of header tag */
-        if (tag == 4 && data == 0x1a4a && s->coded_width && s->coded_height &&
+        if (tag == 4 && data == 0x1A4A && s->coded_width && s->coded_height &&
             s->coded_format != AV_PIX_FMT_NONE) {
             if (s->a_width != s->coded_width || s->a_height != s->coded_height ||
                 s->a_format != s->coded_format) {
@@ -748,7 +748,7 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
             break;
 
         if (s->a_width && s->a_height) {
-            if (tag == 4 && data == 0xf0f) {
+            if (tag == 4 && data == 0x0F0F) {
                 if ((ret = read_lowpass_coeffs(avctx, s, &gb, coeff_data)) < 0)
                     return ret;
             } else if (tag == 55 && s->subband_num_actual != 255) {
