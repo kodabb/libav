@@ -137,6 +137,13 @@ typedef struct MOVStreamContext {
     unsigned int rap_group_count;
     MOVSbgp *rap_group;
 
+    int last_stsd_index;
+    int stsd_count;
+
+    /** extradata array (and size) for multiple stsd */
+    uint8_t **extradata;
+    int *extradata_size;
+
     int32_t *display_matrix;
 } MOVStreamContext;
 

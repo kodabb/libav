@@ -1771,8 +1771,7 @@ static int mov_skip_multiple_stsd(MOVContext *c, AVIOContext *pb,
     int video_codec_id = ff_codec_get_id(ff_codec_movvideo_tags, format);
 
     if (codec_tag &&
-        (codec_tag == AV_RL32("avc1") ||
-         codec_tag == AV_RL32("hvc1") ||
+        (codec_tag == AV_RL32("hvc1") ||
          codec_tag == AV_RL32("hev1") ||
          (codec_tag != format &&
           (c->fc->video_codec_id ? video_codec_id != c->fc->video_codec_id
@@ -1857,6 +1856,20 @@ int ff_mov_read_stsd_entries(MOVContext *c, AVIOContext *pb, int entries)
                 return ret;
         } else if (a.size > 0)
             avio_skip(pb, a.size);
+
+        if (sc->stsd_count > 1) {
+            /* Move the current stream extradata to the stream context one.
+             * In this way, the stsd data can be stored away and a new stream
+             * extradata will be allocated by the read functions. */
+            int size = st->codecpar->extradata_size;
+            sc->extradata_size[pseudo_stream_id] = size;
+            sc->extradata[pseudo_stream_id] = av_malloc(size + AV_INPUT_BUFFER_PADDING_SIZE);
+            if (!sc->extradata[pseudo_stream_id])
+                return AVERROR(ENOMEM);
+            memcpy(sc->extradata[pseudo_stream_id], st->codecpar->extradata, size);
+            av_freep(&st->codecpar->extradata);
+            st->codecpar->extradata_size = 0;
+        }
     }
 
     if (pb->eof_reached)
@@ -1867,13 +1880,46 @@ int ff_mov_read_stsd_entries(MOVContext *c, AVIOContext *pb, int entries)
 
 static int mov_read_stsd(MOVContext *c, AVIOContext *pb, MOVAtom atom)
 {
-    int entries;
+    AVStream *st;
+    MOVStreamContext *sc;
+    int ret;
+
+    if (c->fc->nb_streams < 1)
+        return 0;
+    st = c->fc->streams[c->fc->nb_streams - 1];
+    sc = st->priv_data;
 
     avio_r8(pb); /* version */
     avio_rb24(pb); /* flags */
-    entries = avio_rb32(pb);
+    sc->stsd_count = avio_rb32(pb); /* entries */
 
-    return ff_mov_read_stsd_entries(c, pb, entries);
+    /* Prepare space for hosting multiple extradata. */
+    if (sc->stsd_count > 1) {
+        sc->extradata = av_malloc_array(sc->stsd_count, sizeof(*sc->extradata));
+        if (!sc->extradata)
+            return AVERROR(ENOMEM);
+
+        sc->extradata_size = av_malloc_array(sc->stsd_count, sizeof(sc->extradata_size));
+        if (!sc->extradata_size)
+            return AVERROR(ENOMEM);
+    }
+
+    ret = ff_mov_read_stsd_entries(c, pb, sc->stsd_count);
+    if (ret < 0)
+        return ret;
+
+    /* Reset primary extradata. */
+    if (sc->stsd_count > 1) {
+        int size = sc->extradata_size[0];
+
+        av_free(st->codecpar->extradata);
+        st->codecpar->extradata_size = size;
+        st->codecpar->extradata = av_mallocz(size + AV_INPUT_BUFFER_PADDING_SIZE);
+        if (!st->codecpar->extradata)
+            return AVERROR(ENOMEM);
+        memcpy(st->codecpar->extradata, sc->extradata[0], size);
+    }
+    return 0;
 }
 
 static int mov_read_stsc(MOVContext *c, AVIOContext *pb, MOVAtom atom)
@@ -2567,7 +2613,6 @@ static int mov_read_trak(MOVContext *c, AVIOContext *pb, MOVAtom atom)
 
     /* Do not need those anymore. */
     av_freep(&sc->chunk_offsets);
-    av_freep(&sc->stsc_data);
     av_freep(&sc->sample_sizes);
     av_freep(&sc->keyframes);
     av_freep(&sc->stts_data);
@@ -3376,6 +3421,12 @@ static int mov_read_close(AVFormatContext *s)
         av_freep(&sc->stps_data);
         av_freep(&sc->rap_group);
         av_freep(&sc->display_matrix);
+
+        if (sc->stsd_count > 1)
+            for (j = 0; j < sc->stsd_count; j++)
+                av_free(sc->extradata[j]);
+        av_freep(&sc->extradata);
+        av_freep(&sc->extradata_size);
     }
 
     if (mov->dv_demux) {
@@ -3589,6 +3640,46 @@ static int mov_read_packet(AVFormatContext *s, AVPacket *pkt)
     pkt->pos = sample->pos;
     av_log(s, AV_LOG_TRACE, "stream %d, pts %"PRId64", dts %"PRId64", pos 0x%"PRIx64", duration %"PRId64"\n",
             pkt->stream_index, pkt->pts, pkt->dts, pkt->pos, pkt->duration);
+
+    /* Update stream properties in case there are multiple stsd. */
+    if (sc->stsd_count > 1) {
+        int i, sample_count = 0;
+        for (i = 0; i < sc->stsc_count; i++) {
+            int chunk_count;
+
+            /* Compute the number of chunks for each entry. */
+            if (i < sc->stsc_count - 1)
+                chunk_count = sc->stsc_data[i + 1].first - sc->stsc_data[i].first;
+            else
+                chunk_count = sc->chunk_count - (sc->stsc_data[i].first - 1);
+
+            /* Compute the range of samples this entry refers to. */
+            sample_count += chunk_count * sc->stsc_data[i].count;
+
+            if (sc->current_sample <= sample_count) {
+                /* Check if the stsd index is different. */
+                if (sc->stsc_data[i].id - 1 != sc->last_stsd_index) {
+                    uint8_t *side, *extradata;
+                    int extradata_size;
+
+                    /* Save current index. */
+                    sc->last_stsd_index = sc->stsc_data[i].id - 1;
+
+                    /* Notify the decoder that extradata changed. */
+                    extradata_size = sc->extradata_size[sc->last_stsd_index];
+                    extradata = sc->extradata[sc->last_stsd_index];
+                    side = av_packet_new_side_data(pkt,
+                                                   AV_PKT_DATA_NEW_EXTRADATA,
+                                                   extradata_size);
+                    if (!side)
+                        return AVERROR(ENOMEM);
+                    memcpy(side, extradata, extradata_size);
+                }
+                break;
+            }
+        }
+    }
+
     return 0;
 }
 
