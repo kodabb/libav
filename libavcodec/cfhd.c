@@ -531,7 +531,7 @@ static int read_lowpass_coeffs(AVCodecContext *avctx, CFHDContext *s,
 static int read_highpass_coeffs(AVCodecContext *avctx, CFHDContext *s,
                                 GetByteContext *gb, int16_t *coeff_data)
 {
-    int i;
+    int i, ret;
     int highpass_height       = s->plane[s->channel_num].band[s->level][s->subband_num].height;
     int highpass_width        = s->plane[s->channel_num].band[s->level][s->subband_num].width;
     int highpass_a_width      = s->plane[s->channel_num].band[s->level][s->subband_num].a_width;
@@ -554,8 +554,9 @@ static int read_highpass_coeffs(AVCodecContext *avctx, CFHDContext *s,
            "Start subband coeffs plane %i level %i codebook %i expected %i\n",
            s->channel_num, s->level, s->codebook, expected);
 
-    init_get_bits(&s->gb, gb->buffer,
-                  bytestream2_get_bytes_left(gb) * 8);
+    if ((ret = init_get_bits(&s->gb, gb->buffer,
+                             bytestream2_get_bytes_left(gb) * 8)) < 0)
+        return ret;
     {
         OPEN_READER(re, &s->gb);
         if (!s->codebook) {
