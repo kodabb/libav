@@ -528,6 +528,25 @@ static int read_lowpass_coeffs(AVCodecContext *avctx, CFHDContext *s,
     return 0;
 }
 
+#define DECODE_SUBBAND_COEFFS(TABLE, COND)                              \
+    while (1) {                                                         \
+        UPDATE_CACHE(re, &s->gb);                                       \
+        GET_RL_VLC(level, run, re, &s->gb, s->TABLE, VLC_BITS, 3, 1);   \
+                                                                        \
+        /* escape */                                                    \
+        if (COND)                                                       \
+            break;                                                      \
+                                                                        \
+        count += run;                                                   \
+                                                                        \
+        if (count > expected)                                           \
+            break;                                                      \
+                                                                        \
+        coeff = dequant_and_decompand(level, s->quantisation);          \
+        for (i = 0; i < run; i++)                                       \
+            *coeff_data++ = coeff;                                      \
+    }                                                                   \
+
 static int read_highpass_coeffs(AVCodecContext *avctx, CFHDContext *s,
                                 GetByteContext *gb, int16_t *coeff_data)
 {
@@ -560,43 +579,9 @@ static int read_highpass_coeffs(AVCodecContext *avctx, CFHDContext *s,
     {
         OPEN_READER(re, &s->gb);
         if (!s->codebook) {
-            while (1) {
-                UPDATE_CACHE(re, &s->gb);
-                GET_RL_VLC(level, run, re, &s->gb, s->table_9_rl_vlc,
-                           VLC_BITS, 3, 1);
-
-                /* escape */
-                if (level == 64)
-                    break;
-
-                count += run;
-
-                if (count > expected)
-                    break;
-
-                coeff = dequant_and_decompand(level, s->quantisation);
-                for (i = 0; i < run; i++)
-                    *coeff_data++ = coeff;
-            }
+            DECODE_SUBBAND_COEFFS(table_9_rl_vlc, level == 64)
         } else {
-            while (1) {
-                UPDATE_CACHE(re, &s->gb);
-                GET_RL_VLC(level, run, re, &s->gb, s->table_18_rl_vlc,
-                           VLC_BITS, 3, 1);
-
-                /* escape */
-                if (level == 255 && run == 2)
-                    break;
-
-                count += run;
-
-                if (count > expected)
-                    break;
-
-                coeff = dequant_and_decompand(level, s->quantisation);
-                for (i = 0; i < run; i++)
-                    *coeff_data++ = coeff;
-            }
+            DECODE_SUBBAND_COEFFS(table_18_rl_vlc, level == 255 && run == 2)
         }
         CLOSE_READER(re, &s->gb);
     }
