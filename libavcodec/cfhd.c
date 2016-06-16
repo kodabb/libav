@@ -63,8 +63,12 @@ static void init_frame_defaults(CFHDContext *s)
     s->channel_cnt       = 4;
     s->subband_cnt       = 10;
     s->channel_num       = 0;
+    s->subband_num       = 0;
     s->lowpass_precision = 16;
     s->quantisation      = 1;
+    s->prescale_shift[0] = 0;
+    s->prescale_shift[1] = 0;
+    s->prescale_shift[2] = 0;
     s->wavelet_depth     = 3;
     s->pshift            = 1;
     s->codebook          = 0;
