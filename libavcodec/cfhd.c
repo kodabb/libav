@@ -59,7 +59,7 @@ static void init_frame_defaults(CFHDContext *s)
 {
     s->coded_width       = 0;
     s->coded_height      = 0;
-    s->bpc               = 10;
+    s->bpc               = 12;
     s->channel_cnt       = 4;
     s->subband_cnt       = 10;
     s->channel_num       = 0;
