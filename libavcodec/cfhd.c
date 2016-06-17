@@ -682,7 +682,6 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
     GetByteContext gb;
     ThreadFrame frame = { .f = data };
     int ret = 0, planes, plane, got_buffer = 0;
-    int16_t *coeff_data;
 
     s->coded_format = AV_PIX_FMT_YUV422P10;
     init_frame_defaults(s);
@@ -729,12 +728,12 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
             s->coded_format = AV_PIX_FMT_NONE;
             got_buffer = 1;
         }
-        coeff_data = s->plane[s->channel_num].subband[s->subband_num_actual];
 
         if ((ret = parse_subband_tag(avctx, s, tag, data)) < 0)
             break;
 
         if (s->a_width && s->a_height) {
+            int16_t *coeff_data = s->plane[s->channel_num].subband[s->subband_num_actual];
             if (tag == 4 && data == 0x0F0F) {
                 if ((ret = read_lowpass_coeffs(avctx, s, &gb, coeff_data)) < 0)
                     return ret;
