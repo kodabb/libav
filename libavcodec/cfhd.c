@@ -276,7 +276,7 @@ static int parse_header_tag(AVCodecContext *avctx, CFHDContext *s,
             uint16_t tag2 = bytestream2_get_be16(gb);
             uint16_t val2 = bytestream2_get_be16(gb);
             av_log(avctx, AV_LOG_DEBUG,
-                   "Tag/Value = %"PRIx16" %"PRIx16"\n", tag2, val2);
+                   "Tag/Value = %"PRIX16" %"PRIX16"\n", tag2, val2);
         }
         break;
     }
@@ -404,12 +404,12 @@ static int parse_header_tag(AVCodecContext *avctx, CFHDContext *s,
         s->prescale_shift[0] = (data >> 0) & 0x7;
         s->prescale_shift[1] = (data >> 3) & 0x7;
         s->prescale_shift[2] = (data >> 6) & 0x7;
-        av_log(avctx, AV_LOG_DEBUG, "Prescale shift (VC-5): %"PRIx16"\n",
+        av_log(avctx, AV_LOG_DEBUG, "Prescale shift (VC-5): %"PRIX16"\n",
                data);
         break;
     default:
         av_log(avctx, AV_LOG_DEBUG,
-               "Unknown header tag %"PRId16" data %"PRIx16"\n", tag, data);
+               "Unknown header tag %"PRId16" data %"PRIX16"\n", tag, data);
     }
 
     return 0;
@@ -464,7 +464,7 @@ static int parse_subband_tag(AVCodecContext *avctx, CFHDContext *s, int16_t tag,
         break;
     default:
         av_log(avctx, AV_LOG_DEBUG,
-               "Unknown subband tag %"PRId16" data %"PRIx16"\n", tag, data);
+               "Unknown subband tag %"PRId16" data %"PRIX16"\n", tag, data);
     }
 
     return 0;
@@ -700,7 +700,7 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
         uint16_t data   = bytestream2_get_be16(&gb);
 
         if (abs_tag8 >= 0x60 && abs_tag8 <= 0x6F) {
-            av_log(avctx, AV_LOG_DEBUG, "large len %"PRIx16"\n",
+            av_log(avctx, AV_LOG_DEBUG, "large len %"PRIX16"\n",
                    ((tagu & 0xFF) << 16) | data);
         } else if (abstag >= 0x4000 && abstag <= 0x40FF) {
             av_log(avctx, AV_LOG_DEBUG, "Small chunk length %"PRIu16" %s\n",
