@@ -409,7 +409,7 @@ static int parse_header_tag(AVCodecContext *avctx, CFHDContext *s,
         break;
     default:
         av_log(avctx, AV_LOG_DEBUG,
-               "Unknown header tag %"PRIu16" data %"PRIx16"\n", tag, data);
+               "Unknown header tag %"PRId16" data %"PRIx16"\n", tag, data);
     }
 
     return 0;
@@ -464,7 +464,7 @@ static int parse_subband_tag(AVCodecContext *avctx, CFHDContext *s, int16_t tag,
         break;
     default:
         av_log(avctx, AV_LOG_DEBUG,
-               "Unknown subband tag %"PRIu16" data %"PRIx16"\n", tag, data);
+               "Unknown subband tag %"PRId16" data %"PRIx16"\n", tag, data);
     }
 
     return 0;
