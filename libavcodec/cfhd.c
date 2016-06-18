@@ -523,8 +523,11 @@ static int read_lowpass_coeffs(AVCodecContext *avctx, CFHDContext *s,
                                                                         \
         count += run;                                                   \
                                                                         \
-        if (count > expected)                                           \
-            break;                                                      \
+        if (count > expected) {                                         \
+            av_log(avctx, AV_LOG_ERROR, "Escape codeword not found, "   \
+                   "probably corrupt data\n");                          \
+            return AVERROR_INVALIDDATA;                                 \
+        }                                                               \
                                                                         \
         coeff = dequant_and_decompand(level, s->quantisation);          \
         for (i = 0; i < run; i++)                                       \
@@ -568,12 +571,6 @@ static int read_highpass_coeffs(AVCodecContext *avctx, CFHDContext *s,
             DECODE_SUBBAND_COEFFS(table_18_rl_vlc, level == 255 && run == 2)
         }
         CLOSE_READER(re, &s->gb);
-    }
-
-    if (count > expected) {
-        av_log(avctx, AV_LOG_ERROR,
-               "Escape codeword not found, probably corrupt data\n");
-        return AVERROR_INVALIDDATA;
     }
 
     bytes = FFALIGN(AV_CEIL_RSHIFT(get_bits_count(&s->gb), 3), 4);
