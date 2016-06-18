@@ -254,10 +254,30 @@ static int alloc_buffers(AVCodecContext *avctx)
 #define PARAM_ChannelHeight     105
 #define PARAM_PrescaleShift     109
 
-static int parse_header_tag(AVCodecContext *avctx, CFHDContext *s,
-                            GetByteContext *gb, int16_t tag, uint16_t data,
-                            int *planes)
+static int parse_tag(AVCodecContext *avctx, CFHDContext *s, GetByteContext *gb,
+                     int16_t *tag_, uint16_t *value, int *planes)
 {
+    /* Bit weird but implement the tag parsing as the spec says */
+    uint16_t tagu   = bytestream2_get_be16(gb);
+    int16_t tag     = tagu;
+    int8_t tag8     = tagu >> 8;
+    uint16_t abstag = abs(tag);
+    int8_t abs_tag8 = abs(tag8);
+    uint16_t data   = bytestream2_get_be16(gb);
+    *tag_ = tag;
+    *value = data;
+
+    if (abs_tag8 >= 0x60 && abs_tag8 <= 0x6F) {
+        av_log(avctx, AV_LOG_DEBUG, "large len %"PRIX16"\n",
+               ((tagu & 0xFF) << 16) | data);
+        return 0;
+    } else if (abstag >= 0x4000 && abstag <= 0x40FF) {
+        av_log(avctx, AV_LOG_DEBUG, "Small chunk length %"PRIu16" %s\n",
+               data * 4, tag < 0 ? "optional" : "required");
+        bytestream2_skipu(gb, data * 4);
+        return 0;
+    }
+
     switch (tag) {
     case 1:
         av_log(avctx, AV_LOG_DEBUG, "Sample type? %"PRIu16"\n", data);
@@ -407,18 +427,6 @@ static int parse_header_tag(AVCodecContext *avctx, CFHDContext *s,
         av_log(avctx, AV_LOG_DEBUG, "Prescale shift (VC-5): %"PRIX16"\n",
                data);
         break;
-    default:
-        av_log(avctx, AV_LOG_DEBUG,
-               "Unknown header tag %"PRId16" data %"PRIX16"\n", tag, data);
-    }
-
-    return 0;
-}
-
-static int parse_subband_tag(AVCodecContext *avctx, CFHDContext *s, int16_t tag,
-                             uint16_t data)
-{
-    switch (tag) {
     case 27:
         av_log(avctx, AV_LOG_DEBUG, "Lowpass width %"PRIu16"\n", data);
         if (data < 2 || data > s->plane[s->channel_num].band[0][0].a_width) {
@@ -464,7 +472,7 @@ static int parse_subband_tag(AVCodecContext *avctx, CFHDContext *s, int16_t tag,
         break;
     default:
         av_log(avctx, AV_LOG_DEBUG,
-               "Unknown subband tag %"PRId16" data %"PRIX16"\n", tag, data);
+               "Unknown tag %"PRId16" data %"PRIX16"\n", tag, data);
     }
 
     return 0;
@@ -679,6 +687,8 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
     GetByteContext gb;
     ThreadFrame frame = { .f = data };
     int ret = 0, planes, plane, got_buffer = 0;
+    int16_t tag;
+    uint16_t value;
 
     s->coded_format = AV_PIX_FMT_YUV422P10;
     init_frame_defaults(s);
@@ -687,51 +697,40 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
     bytestream2_init(&gb, avpkt->data, avpkt->size);
 
     while (bytestream2_get_bytes_left(&gb) > 4) {
-        /* Bit weird but implement the tag parsing as the spec says */
-        uint16_t tagu   = bytestream2_get_be16(&gb);
-        int16_t tag     = tagu;
-        int8_t tag8     = tagu >> 8;
-        uint16_t abstag = abs(tag);
-        int8_t abs_tag8 = abs(tag8);
-        uint16_t data   = bytestream2_get_be16(&gb);
-
-        if (abs_tag8 >= 0x60 && abs_tag8 <= 0x6F) {
-            av_log(avctx, AV_LOG_DEBUG, "large len %"PRIX16"\n",
-                   ((tagu & 0xFF) << 16) | data);
-        } else if (abstag >= 0x4000 && abstag <= 0x40FF) {
-            av_log(avctx, AV_LOG_DEBUG, "Small chunk length %"PRIu16" %s\n",
-                   data * 4, tag < 0 ? "optional" : "required");
-            bytestream2_skipu(&gb, data * 4);
-        } else if ((ret = parse_header_tag(avctx, s, &gb, tag, data, &planes)) < 0)
+        if ((ret = parse_tag(avctx, s, &gb, &tag, &value, &planes)) < 0)
             break;
 
         /* Some kind of end of header tag */
-        if (tag == 4 && data == 0x1A4A && s->coded_width && s->coded_height &&
-            s->coded_format != AV_PIX_FMT_NONE) {
-            if (s->a_width != s->coded_width || s->a_height != s->coded_height ||
-                s->a_format != s->coded_format) {
+        if (tag == 4 && value == 0x1A4A)
+            break;
+    }
+
+    if (s->coded_width && s->coded_height && s->coded_format != AV_PIX_FMT_NONE) {
+        if (s->a_width != s->coded_width || s->a_height != s->coded_height ||
+            s->a_format != s->coded_format) {
+            free_buffers(avctx);
+            if ((ret = alloc_buffers(avctx)) < 0) {
                 free_buffers(avctx);
-                if ((ret = alloc_buffers(avctx)) < 0) {
-                    free_buffers(avctx);
-                    return ret;
-                }
-            }
-
-            if ((ret = ff_thread_get_buffer(avctx, &frame, 0)) < 0)
                 return ret;
-
-            s->coded_width  = 0;
-            s->coded_height = 0;
-            s->coded_format = AV_PIX_FMT_NONE;
-            got_buffer = 1;
+            }
         }
 
-        if ((ret = parse_subband_tag(avctx, s, tag, data)) < 0)
+        if ((ret = ff_thread_get_buffer(avctx, &frame, 0)) < 0)
+            return ret;
+
+        s->coded_width  = 0;
+        s->coded_height = 0;
+        s->coded_format = AV_PIX_FMT_NONE;
+        got_buffer = 1;
+    }
+
+    while (bytestream2_get_bytes_left(&gb) > 4) {
+        if ((ret = parse_tag(avctx, s, &gb, &tag, &value, &planes)) < 0)
             break;
 
         if (s->a_width && s->a_height) {
             int16_t *coeff_data = s->plane[s->channel_num].subband[s->subband_num_actual];
-            if (tag == 4 && data == 0x0F0F) {
+            if (tag == 4 && value == 0x0F0F) {
                 if ((ret = read_lowpass_coeffs(avctx, s, &gb, coeff_data)) < 0)
                     return ret;
             } else if (tag == 55 && s->subband_num_actual != 255) {
