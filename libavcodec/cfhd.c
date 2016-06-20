@@ -38,16 +38,6 @@
 
 #define SUBBAND_COUNT 10
 
-static av_cold int cfhd_init(AVCodecContext *avctx)
-{
-    CFHDContext *s = avctx->priv_data;
-
-    s->avctx                   = avctx;
-    avctx->bits_per_raw_sample = 10;
-
-    return ff_cfhd_init_vlcs(s);
-}
-
 static void init_plane_defaults(CFHDContext *s)
 {
     s->subband_num        = 0;
@@ -768,6 +758,16 @@ static int cfhd_decode(AVCodecContext *avctx, void *data, int *got_frame,
 
     *got_frame = 1;
     return avpkt->size;
+}
+
+static av_cold int cfhd_init(AVCodecContext *avctx)
+{
+    CFHDContext *s = avctx->priv_data;
+
+    s->avctx                   = avctx;
+    avctx->bits_per_raw_sample = 10;
+
+    return ff_cfhd_init_vlcs(s);
 }
 
 static av_cold int cfhd_close(AVCodecContext *avctx)
