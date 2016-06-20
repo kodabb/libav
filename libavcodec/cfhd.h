@@ -80,6 +80,7 @@ typedef struct CFHDContext {
 
     int coded_width;
     int coded_height;
+    int cropped_height;
     enum AVPixelFormat coded_format;
 
     int a_width;

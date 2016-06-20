@@ -49,6 +49,7 @@ static void init_frame_defaults(CFHDContext *s)
 {
     s->coded_width       = 0;
     s->coded_height      = 0;
+    s->cropped_height    = 0;
     s->bpc               = 12;
     s->channel_cnt       = 4;
     s->subband_cnt       = 10;
@@ -163,6 +164,9 @@ static int alloc_buffers(AVCodecContext *avctx)
 
     if ((ret = ff_set_dimensions(avctx, s->coded_width, s->coded_height)) < 0)
         return ret;
+    if (s->cropped_height)
+        avctx->height = s->cropped_height;
+
     avctx->pix_fmt = s->coded_format;
 
     if ((ret = av_pix_fmt_get_chroma_sub_sample(avctx->pix_fmt,
@@ -173,8 +177,8 @@ static int alloc_buffers(AVCodecContext *avctx)
 
     for (i = 0; i < planes; i++) {
         int w8, h8, w4, h4, w2, h2;
-        int width  = i ? avctx->width  >> s->chroma_x_shift : avctx->width;
-        int height = i ? avctx->height >> s->chroma_y_shift : avctx->height;
+        int width  = i ? s->coded_width  >> s->chroma_x_shift : s->coded_width;
+        int height = i ? s->coded_height >> s->chroma_y_shift : s->coded_height;
         ptrdiff_t stride = FFALIGN(width  / 8, 8) * 8;
         height           = FFALIGN(height / 8, 2) * 8;
         s->plane[i].width  = width;
@@ -404,6 +408,10 @@ static int parse_tag(AVCodecContext *avctx, CFHDContext *s, GetByteContext *gb,
             return AVERROR_PATCHWELCOME;
         }
         *planes = av_pix_fmt_count_planes(s->coded_format);
+        break;
+    case -85:
+        av_log(avctx, AV_LOG_DEBUG, "Cropped height %"PRIu16"\n", data);
+        s->cropped_height = data;
         break;
     case 101:
         av_log(avctx, AV_LOG_DEBUG, "Bits per component: %"PRIu16"\n",
