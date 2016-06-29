@@ -36,14 +36,12 @@
 #define E AV_OPT_FLAG_ENCODING_PARAM
 #define D AV_OPT_FLAG_DECODING_PARAM
 
-#define AV_CODEC_DEFAULT_BITRATE 200*1000
-
 static const AVOption avcodec_options[] = {
-{"b", "set bitrate (in bits/s)", OFFSET(bit_rate), AV_OPT_TYPE_INT, {.i64 = AV_CODEC_DEFAULT_BITRATE }, INT_MIN, INT_MAX, V|A|E},
+{"b", "set bitrate (in bits/s)", OFFSET(bit_rate), AV_OPT_TYPE_INT, {.i64 = FF_DEFAULT_BITRATE }, INT_MIN, INT_MAX, V|A|E},
 {"bt", "Set video bitrate tolerance (in bits/s). In 1-pass mode, bitrate tolerance specifies how far "
        "ratecontrol is willing to deviate from the target average bitrate value. This is not related "
        "to minimum/maximum bitrate. Lowering tolerance too much has an adverse effect on quality.",
-       OFFSET(bit_rate_tolerance), AV_OPT_TYPE_INT, {.i64 = AV_CODEC_DEFAULT_BITRATE*20 }, 1, INT_MAX, V|E},
+       OFFSET(bit_rate_tolerance), AV_OPT_TYPE_INT, {.i64 = FF_DEFAULT_BITRATE * 20 }, 1, INT_MAX, V|E},
 {"flags", NULL, OFFSET(flags), AV_OPT_TYPE_FLAGS, {.i64 = DEFAULT }, 0, UINT_MAX, V|A|E|D, "flags"},
 {"unaligned", "allow decoders to produce unaligned output", 0, AV_OPT_TYPE_CONST, { .i64 = AV_CODEC_FLAG_UNALIGNED }, INT_MIN, INT_MAX, V | D, "flags" },
 {"mv4", "use four motion vectors per macroblock (MPEG-4)", 0, AV_OPT_TYPE_CONST, {.i64 = AV_CODEC_FLAG_4MV }, INT_MIN, INT_MAX, V|E, "flags"},
