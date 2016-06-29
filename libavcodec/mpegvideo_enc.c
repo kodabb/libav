@@ -1430,7 +1430,7 @@ static int select_input_picture(MpegEncContext *s)
                     av_frame_unref(s->input_picture[0]->f);
 
                     emms_c();
-                    ff_vbv_update(s, 0);
+                    ff_vbv_update(s->avctx, &s->rc_context, 0);
 
                     goto no_output_pic;
                 }
@@ -1877,7 +1877,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
         flush_put_bits(&s->pb);
         s->frame_bits  = put_bits_count(&s->pb);
 
-        stuffing_count = ff_vbv_update(s, s->frame_bits);
+        stuffing_count = ff_vbv_update(s->avctx, &s->rc_context, s->frame_bits);
         if (stuffing_count) {
             if (s->pb.buf_end - s->pb.buf - (put_bits_count(&s->pb) >> 3) <
                     stuffing_count + 50) {

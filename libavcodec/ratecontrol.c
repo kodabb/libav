@@ -453,7 +453,7 @@ static int init_pass2(MpegEncContext *s)
             rce->new_qscale = modify_qscale(s, rce, blurred_qscale[i], i);
 
             bits  = qp2bits(rce, rce->new_qscale) + rce->mv_bits + rce->misc_bits;
-            bits += 8 * ff_vbv_update(s, bits);
+            bits += 8 * ff_vbv_update(s->avctx, &s->rc_context, bits);
 
             rce->expected_bits = expected_bits;
             expected_bits     += bits;
@@ -706,15 +706,15 @@ av_cold void ff_rate_control_uninit(RateControlContext *rcc)
     av_freep(&rcc->rc_override);
 }
 
-int ff_vbv_update(MpegEncContext *s, int frame_size)
+int ff_vbv_update(AVCodecContext *avctx, RateControlContext *rcc,
+                  int frame_size)
 {
-    RateControlContext *rcc = &s->rc_context;
-    const double fps        = 1 / av_q2d(s->avctx->time_base);
-    const int buffer_size   = s->avctx->rc_buffer_size;
-    const double min_rate   = s->avctx->rc_min_rate / fps;
-    const double max_rate   = s->avctx->rc_max_rate / fps;
+    const double fps      = 1 / av_q2d(avctx->time_base);
+    const int buffer_size = avctx->rc_buffer_size;
+    const double min_rate = avctx->rc_min_rate / fps;
+    const double max_rate = avctx->rc_max_rate / fps;
 
-    ff_dlog(s, "%d %f %d %f %f\n",
+    ff_dlog(avctx, "%d %f %d %f %f\n",
             buffer_size, rcc->buffer_index, frame_size, min_rate, max_rate);
 
     if (buffer_size) {
@@ -722,7 +722,7 @@ int ff_vbv_update(MpegEncContext *s, int frame_size)
 
         rcc->buffer_index -= frame_size;
         if (rcc->buffer_index < 0) {
-            av_log(s->avctx, AV_LOG_ERROR, "rc buffer underflow\n");
+            av_log(avctx, AV_LOG_ERROR, "rc buffer underflow\n");
             rcc->buffer_index = 0;
         }
 
@@ -732,12 +732,12 @@ int ff_vbv_update(MpegEncContext *s, int frame_size)
         if (rcc->buffer_index > buffer_size) {
             int stuffing = ceil((rcc->buffer_index - buffer_size) / 8);
 
-            if (stuffing < 4 && s->codec_id == AV_CODEC_ID_MPEG4)
+            if (stuffing < 4 && avctx->codec_id == AV_CODEC_ID_MPEG4)
                 stuffing = 4;
             rcc->buffer_index -= 8 * stuffing;
 
-            if (s->avctx->debug & FF_DEBUG_RC)
-                av_log(s->avctx, AV_LOG_DEBUG, "stuffing %d bytes\n", stuffing);
+            if (avctx->debug & FF_DEBUG_RC)
+                av_log(avctx, AV_LOG_DEBUG, "stuffing %d bytes\n", stuffing);
 
             return stuffing;
         }
