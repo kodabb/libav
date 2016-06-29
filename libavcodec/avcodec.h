@@ -1477,13 +1477,15 @@ typedef struct AVCodecContext {
      */
     int bit_rate;
 
+#if FF_API_PRIVATE_OPT_RC
     /**
      * number of bits the bitstream is allowed to diverge from the reference.
      *           the reference can be CBR (for CBR pass1) or VBR (for pass2)
-     * - encoding: Set by user; unused for constant quantizer encoding.
-     * - decoding: unused
+     * @deprecated use encoder private options instead
      */
+    attribute_deprecated
     int bit_rate_tolerance;
+#endif
 
     /**
      * Global quality for codecs which cannot change it per frame.

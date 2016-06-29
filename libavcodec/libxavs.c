@@ -63,6 +63,7 @@ typedef struct XavsContext {
 
     int64_t *pts_buffer;
     int out_frame_count;
+    int bit_rate_tolerance;
 } XavsContext;
 
 static void XAVS_log(void *p, int level, const char *fmt, va_list args)
@@ -382,9 +383,16 @@ FF_ENABLE_DEPRECATION_WARNINGS
     if (avctx->level > 0)
         x4->params.i_level_idc = avctx->level;
 
+#if FF_API_PRIVATE_OPT_RC
+FF_DISABLE_DEPRECATION_WARNINGS
+    if (avctx->bit_rate_tolerance != FF_DEFAULT_BITRATE * 20)
+        x4->bit_rate_tolerance = avctx->bit_rate_tolerance;
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
+
     if (avctx->bit_rate > 0)
         x4->params.rc.f_rate_tolerance =
-            (float)avctx->bit_rate_tolerance / avctx->bit_rate;
+            (float)x4->bit_rate_tolerance / avctx->bit_rate;
 
     if ((avctx->rc_buffer_size) &&
         (avctx->rc_initial_buffer_occupancy <= avctx->rc_buffer_size)) {
@@ -477,6 +485,7 @@ static const AVOption options[] = {
     { "chromaoffset", "QP difference between chroma and luma",           OFFSET(chroma_offset), AV_OPT_TYPE_INT, {.i64 = 0 }, INT_MIN, INT_MAX, VE},
     { "sc_threshold", "Scene change threshold",                           OFFSET(scenechange_threshold), AV_OPT_TYPE_INT, {.i64 = 0 }, 0, INT_MAX, VE},
     { "noise_reduction", "Noise reduction",                               OFFSET(noise_reduction), AV_OPT_TYPE_INT, {.i64 = 0 }, 0, INT_MAX, VE},
+    { "bt",           "Set video bitrate tolerance (in bits/s)",          OFFSET(bit_rate_tolerance), AV_OPT_TYPE_INT, {.i64 = FF_DEFAULT_BITRATE * 20 }, 1, INT_MAX, V|E},
 
     { NULL },
 };

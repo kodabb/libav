@@ -399,9 +399,15 @@ FF_ENABLE_DEPRECATION_WARNINGS
         return -1;
     }
 
+#if FF_API_PRIVATE_OPT_RC
+FF_DISABLE_DEPRECATION_WARNINGS
+    if (avctx->bit_rate_tolerance != FF_DEFAULT_BITRATE * 20)
+        s->rc_context.bit_rate_tolerance = avctx->bit_rate_tolerance;
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
+
     if (!s->fixed_qscale &&
-        avctx->bit_rate * av_q2d(avctx->time_base) >
-            avctx->bit_rate_tolerance) {
+        avctx->bit_rate * av_q2d(avctx->time_base) > s->rc_context.bit_rate_tolerance) {
         av_log(avctx, AV_LOG_ERROR,
                "bitrate tolerance too small for bitrate\n");
         return -1;

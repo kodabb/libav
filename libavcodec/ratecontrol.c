@@ -884,7 +884,7 @@ float ff_rate_estimate_qscale(MpegEncContext *s, int dry_run)
     }
 
     diff = s->total_bits - wanted_bits;
-    br_compensation = (a->bit_rate_tolerance - diff) / a->bit_rate_tolerance;
+    br_compensation = (s->bit_rate_tolerance - diff) / s->bit_rate_tolerance;
     if (br_compensation <= 0.0)
         br_compensation = 0.001;
 
