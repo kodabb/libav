@@ -992,7 +992,7 @@ av_cold int ff_mpv_encode_end(AVCodecContext *avctx)
     MpegEncContext *s = avctx->priv_data;
     int i;
 
-    ff_rate_control_uninit(s);
+    ff_rate_control_uninit(&s->rc_context);
 #if CONFIG_LIBXVID
     if ((avctx->flags & AV_CODEC_FLAG_PASS2) && s->rc_strategy == 1)
         ff_xvid_rate_control_uninit(s);
