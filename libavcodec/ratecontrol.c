@@ -879,13 +879,13 @@ static void adaptive_quantization(MpegEncContext *s, double q)
     }
 }
 
-void ff_get_2pass_fcode(MpegEncContext *s)
+void ff_get_2pass_fcode(RateControlContext *rcc, int entry,
+                        int *f_code, int *b_code)
 {
-    RateControlContext *rcc = &s->rc_context;
-    RateControlEntry *rce   = &rcc->entry[s->picture_number];
+    RateControlEntry *rce   = &rcc->entry[entry];
 
-    s->f_code = rce->f_code;
-    s->b_code = rce->b_code;
+    *f_code = rce->f_code;
+    *b_code = rce->b_code;
 }
 
 // FIXME rd or at least approx for dquant

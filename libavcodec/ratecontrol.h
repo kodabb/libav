@@ -109,6 +109,7 @@ float ff_rate_estimate_qscale(struct MpegEncContext *s, int dry_run);
 void ff_rate_control_uninit(RateControlContext *rcc);
 int ff_vbv_update(AVCodecContext *avctx, RateControlContext *rcc,
                   int frame_size);
-void ff_get_2pass_fcode(struct MpegEncContext *s);
+void ff_get_2pass_fcode(RateControlContext *rcc, int entry,
+                        int *f_code, int *b_code);
 
 #endif /* AVCODEC_RATECONTROL_H */

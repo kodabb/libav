@@ -3529,7 +3529,8 @@ static int encode_picture(MpegEncContext *s, int picture_number)
     if (s->avctx->flags & AV_CODEC_FLAG_PASS2) {
         if (estimate_qp(s,1) < 0)
             return -1;
-        ff_get_2pass_fcode(s);
+        ff_get_2pass_fcode(&s->rc_context, s->picture_number,
+                           &s->f_code, &s->b_code);
     } else if (!(s->avctx->flags & AV_CODEC_FLAG_QSCALE)) {
         if(s->pict_type==AV_PICTURE_TYPE_B)
             s->lambda= s->last_lambda_for[s->pict_type];
