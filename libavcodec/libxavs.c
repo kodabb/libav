@@ -60,6 +60,7 @@ typedef struct XavsContext {
     int chroma_offset;
     int scenechange_threshold;
     int noise_reduction;
+    float qcompress;
 
     int64_t *pts_buffer;
     int out_frame_count;
@@ -348,7 +349,14 @@ FF_ENABLE_DEPRECATION_WARNINGS
     x4->params.rc.i_qp_max                 = avctx->qmax;
     x4->params.rc.i_qp_step                = avctx->max_qdiff;
 
-    x4->params.rc.f_qcompress       = avctx->qcompress; /* 0.0 => cbr, 1.0 => constant qp */
+#if FF_API_PRIVATE_OPT_RC
+FF_DISABLE_DEPRECATION_WARNINGS
+    if (avctx->qcompress != 0.5)
+        x4->qcompress = avctx->qcompress;
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
+
+    x4->params.rc.f_qcompress       = x4->qcompress; /* 0.0 => cbr, 1.0 => constant qp */
     x4->params.rc.f_qblur           = avctx->qblur;     /* temporally blur quants */
 
     x4->params.i_frame_reference    = avctx->refs;
@@ -486,6 +494,7 @@ static const AVOption options[] = {
     { "sc_threshold", "Scene change threshold",                           OFFSET(scenechange_threshold), AV_OPT_TYPE_INT, {.i64 = 0 }, 0, INT_MAX, VE},
     { "noise_reduction", "Noise reduction",                               OFFSET(noise_reduction), AV_OPT_TYPE_INT, {.i64 = 0 }, 0, INT_MAX, VE},
     { "bt",           "Set video bitrate tolerance (in bits/s)",          OFFSET(bit_rate_tolerance), AV_OPT_TYPE_INT, {.i64 = FF_DEFAULT_BITRATE * 20 }, 1, INT_MAX, V|E},
+    { "qcomp",        "Video quantizer scale compression ratecontrol",    OFFSET(qcompress), AV_OPT_TYPE_FLOAT, { .dbl = 0.5 }, 0, 1, VE },
 
     { NULL },
 };

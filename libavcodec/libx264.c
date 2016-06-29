@@ -83,6 +83,7 @@ typedef struct X264Context {
     int chroma_offset;
     int scenechange_threshold;
     int noise_reduction;
+    float qcompress;
 
     char *x264_params;
 } X264Context;
@@ -459,8 +460,15 @@ FF_ENABLE_DEPRECATION_WARNINGS
         x4->params.rc.i_qp_step         = avctx->max_qdiff;
     if (avctx->qblur >= 0)
         x4->params.rc.f_qblur           = avctx->qblur;     /* temporally blur quants */
-    if (avctx->qcompress >= 0)
-        x4->params.rc.f_qcompress       = avctx->qcompress; /* 0.0 => cbr, 1.0 => constant qp */
+
+#if FF_API_PRIVATE_OPT_RC
+FF_DISABLE_DEPRECATION_WARNINGS
+    if (avctx->qcompress != 0.5)
+        x4->qcompress = avctx->qcompress;
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
+    if (x4->qcompress >= 0)
+        x4->params.rc.f_qcompress       = x4->qcompress; /* 0.0 => cbr, 1.0 => constant qp */
     if (avctx->refs >= 0)
         x4->params.i_frame_reference    = avctx->refs;
     if (avctx->trellis >= 0)
@@ -779,6 +787,7 @@ static const AVOption options[] = {
     { "chromaoffset", "QP difference between chroma and luma",            OFFSET(chroma_offset), AV_OPT_TYPE_INT, { .i64 = -1 }, INT_MIN, INT_MAX, VE },
     { "sc_threshold", "Scene change threshold",                           OFFSET(scenechange_threshold), AV_OPT_TYPE_INT, { .i64 = -1 }, INT_MIN, INT_MAX, VE },
     { "noise_reduction", "Noise reduction",                               OFFSET(noise_reduction), AV_OPT_TYPE_INT, { .i64 = -1 }, INT_MIN, INT_MAX, VE },
+    { "qcomp",        "Video quantizer scale compression ratecontrol",    OFFSET(qcompress), AV_OPT_TYPE_FLOAT, { .dbl = -1 }, -1, 1, VE },
 
     { "x264-params",  "Override the x264 configuration using a :-separated list of key=value parameters", OFFSET(x264_params), AV_OPT_TYPE_STRING, { 0 }, 0, 0, VE },
     { NULL },
@@ -793,7 +802,9 @@ static const AVCodecDefault x264_defaults[] = {
     { "qmax",             "-1" },
     { "qdiff",            "-1" },
     { "qblur",            "-1" },
+#if FF_API_PRIVATE_OPT_RC
     { "qcomp",            "-1" },
+#endif
     { "refs",             "-1" },
 #if FF_API_PRIVATE_OPT
     { "sc_threshold",     "-1" },

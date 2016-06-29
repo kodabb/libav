@@ -69,6 +69,7 @@ typedef struct VP8EncoderContext {
     int static_thresh;
     int drop_threshold;
     int noise_sensitivity;
+    float qcompress;
 } VP8Context;
 
 /** String mappings for enum vp8e_enc_control_id */
@@ -268,8 +269,14 @@ FF_ENABLE_DEPRECATION_WARNINGS
 #endif
     enccfg.rc_dropframe_thresh = ctx->drop_threshold;
 
+#if FF_API_PRIVATE_OPT_RC
+FF_DISABLE_DEPRECATION_WARNINGS
+    if (avctx->qcompress != 0.5)
+        ctx->qcompress = avctx->qcompress;
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
     //0-100 (0 => CBR, 100 => VBR)
-    enccfg.rc_2pass_vbr_bias_pct           = round(avctx->qcompress * 100);
+    enccfg.rc_2pass_vbr_bias_pct           = round(ctx->qcompress * 100);
     enccfg.rc_2pass_vbr_minsection_pct     =
         avctx->rc_min_rate * 100LL / avctx->bit_rate;
     if (avctx->rc_max_rate)
@@ -621,6 +628,7 @@ static const AVOption options[] = {
     { "static-thresh",    "A change threshold on blocks below which they will be skipped by the encoder", OFFSET(static_thresh), AV_OPT_TYPE_INT, { .i64 = 0 }, 0, INT_MAX, VE },
     { "drop-threshold",   "Frame drop threshold", offsetof(VP8Context, drop_threshold), AV_OPT_TYPE_INT, {.i64 = 0 }, INT_MIN, INT_MAX, VE },
     { "noise-sensitivity", "Noise sensitivity", OFFSET(noise_sensitivity), AV_OPT_TYPE_INT, {.i64 = 0 }, 0, 4, VE},
+    { "qcomp",            "Video quantizer scale compression ratecontrol", OFFSET(qcompress), AV_OPT_TYPE_FLOAT, {.dbl = 0.5 }, 0, 1, V|E},
     { NULL }
 };
 

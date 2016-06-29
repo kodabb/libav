@@ -86,7 +86,7 @@ typedef struct RateControlContext{
     AVExpr * rc_eq_eval;
 
     int bit_rate_tolerance;
-
+    float qcompress;
 }RateControlContext;
 
 struct MpegEncContext;

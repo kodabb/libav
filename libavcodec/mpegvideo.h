@@ -622,6 +622,7 @@ FF_MPV_OPT_CMP_FUNC, \
 {"mepc", "Motion estimation bitrate penalty compensation (1.0 = 256)", FF_MPV_OFFSET(me_penalty_compensation), AV_OPT_TYPE_INT, {.i64 = 256 }, INT_MIN, INT_MAX, FF_MPV_OPT_FLAGS }, \
 {"mepre", "pre motion estimation", FF_MPV_OFFSET(me_pre), AV_OPT_TYPE_INT, {.i64 = 0 }, INT_MIN, INT_MAX, FF_MPV_OPT_FLAGS }, \
 {"bt", "Set video bitrate tolerance (in bits/s)", FF_RC_OFFSET(bit_rate_tolerance), AV_OPT_TYPE_INT, {.i64 = FF_DEFAULT_BITRATE * 20 }, 1, INT_MAX, FF_MPV_OPT_FLAGS }, \
+{"qcomp", "Video quantizer scale compression ratecontrol", FF_RC_OFFSET(qcompress), AV_OPT_TYPE_FLOAT, {.dbl = 0.5 }, 0, 1, FF_MPV_OPT_FLAGS }, \
 
 extern const AVOption ff_mpv_generic_options[];
 

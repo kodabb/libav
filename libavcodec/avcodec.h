@@ -2326,7 +2326,13 @@ typedef struct AVCodecContext {
     int refcounted_frames;
 
     /* - encoding parameters */
-    float qcompress;  ///< amount of qscale change between easy & hard scenes (0.0-1.0)
+#if FF_API_PRIVATE_OPT_RC
+    /**
+     * amount of qscale change between easy & hard scenes (0.0-1.0)
+     * @deprecated use encoder private options instead
+     */
+    attribute_deprecated float qcompress;
+#endif
     float qblur;      ///< amount of qscale smoothing over time (0.0-1.0)
 
     /**

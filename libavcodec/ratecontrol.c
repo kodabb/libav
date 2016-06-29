@@ -220,7 +220,6 @@ static double get_qscale(MpegEncContext *s, RateControlEntry *rce,
                          double rate_factor, int frame_num)
 {
     RateControlContext *rcc = &s->rc_context;
-    AVCodecContext *a       = s->avctx;
     const int pict_type     = rce->new_pict_type;
     const double mb_num     = s->mb_num;
     double q, bits;
@@ -241,7 +240,7 @@ static double get_qscale(MpegEncContext *s, RateControlEntry *rce,
         rce->pict_type == AV_PICTURE_TYPE_P,
         rce->pict_type == AV_PICTURE_TYPE_B,
         rcc->qscale_sum[pict_type] / (double)rcc->frame_count[pict_type],
-        a->qcompress,
+        rcc->qcompress,
         rcc->i_cplx_sum[AV_PICTURE_TYPE_I] / (double)rcc->frame_count[AV_PICTURE_TYPE_I],
         rcc->i_cplx_sum[AV_PICTURE_TYPE_P] / (double)rcc->frame_count[AV_PICTURE_TYPE_P],
         rcc->p_cplx_sum[AV_PICTURE_TYPE_P] / (double)rcc->frame_count[AV_PICTURE_TYPE_P],
