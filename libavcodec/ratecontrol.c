@@ -763,9 +763,11 @@ static void update_predictor(Predictor *p, double q, double var, double size)
     p->coeff += new_coeff;
 }
 
-static void adaptive_quantization(MpegEncContext *s, double q)
+static void adaptive_quantization(RateControlContext *rcc, Picture *pic,
+                                  double q)
 {
-    RateControlContext *rcc = &s->rc_context;
+    AVCodecContext *avctx = rcc->avctx;
+    MpegEncContext *s = avctx->priv_data;
     int i;
     const float lumi_masking         = s->avctx->lumi_masking / (128.0 * 128.0);
     const float dark_masking         = s->avctx->dark_masking / (128.0 * 128.0);
@@ -779,7 +781,6 @@ static void adaptive_quantization(MpegEncContext *s, double q)
     float *bits_tab                  = s->bits_tab;
     const int qmin                   = s->avctx->mb_lmin;
     const int qmax                   = s->avctx->mb_lmax;
-    Picture *const pic               = &s->current_picture;
     const int mb_width               = s->mb_width;
     const int mb_height              = s->mb_height;
 
@@ -892,8 +893,9 @@ void ff_get_2pass_fcode(RateControlContext *rcc, int entry,
 
 // FIXME rd or at least approx for dquant
 
-float ff_rate_estimate_qscale(RateControlContext *rcc, int picture_number,
-                              int dry_run)
+float ff_rate_estimate_qscale(RateControlContext *rcc, Picture *pic,
+                              Picture *dts_pic, int picture_number,
+                              enum AVPictureType last_pict_type, int dry_run)
 {
     AVCodecContext *avctx = rcc->avctx;
     MpegEncContext *s = avctx->priv_data;
@@ -904,65 +906,54 @@ float ff_rate_estimate_qscale(RateControlContext *rcc, int picture_number,
     double short_term_q;
     double fps;
     int64_t wanted_bits;
-    AVCodecContext *a       = s->avctx;
     RateControlEntry local_rce, *rce;
     double bits;
     double rate_factor;
     int var;
     const int pict_type = s->pict_type;
-    Picture * const pic = &s->current_picture;
     emms_c();
 
     get_qminmax(rcc, pict_type, &qmin, &qmax);
 
-    fps = 1 / av_q2d(s->avctx->time_base);
+    fps = 1 / av_q2d(avctx->time_base);
     /* update predictors */
     if (picture_number > 2 && !dry_run) {
-        const int last_var = s->last_pict_type == AV_PICTURE_TYPE_I ? rcc->last_mb_var_sum
-                                                                    : rcc->last_mc_mb_var_sum;
-        update_predictor(&rcc->pred[s->last_pict_type],
+        const int last_var = last_pict_type == AV_PICTURE_TYPE_I ? rcc->last_mb_var_sum
+                                                                 : rcc->last_mc_mb_var_sum;
+        update_predictor(&rcc->pred[last_pict_type],
                          rcc->last_qscale,
                          sqrt(last_var), s->frame_bits);
     }
 
-    if (s->avctx->flags & AV_CODEC_FLAG_PASS2) {
+    if (avctx->flags & AV_CODEC_FLAG_PASS2) {
         assert(picture_number >= 0);
         assert(picture_number < rcc->num_entries);
         rce         = &rcc->entry[picture_number];
         wanted_bits = rce->expected_bits;
     } else {
-        Picture *dts_pic;
         rce = &local_rce;
 
-        /* FIXME add a dts field to AVFrame and ensure it is set and use it
-         * here instead of reordering but the reordering is simpler for now
-         * until H.264 B-pyramid must be handled. */
-        if (s->pict_type == AV_PICTURE_TYPE_B || s->low_delay)
-            dts_pic = s->current_picture_ptr;
-        else
-            dts_pic = s->last_picture_ptr;
-
         if (!dts_pic || dts_pic->f->pts == AV_NOPTS_VALUE)
-            wanted_bits = (uint64_t)(s->bit_rate * (double)picture_number / fps);
+            wanted_bits = (uint64_t)(avctx->bit_rate * (double)picture_number / fps);
         else
-            wanted_bits = (uint64_t)(s->bit_rate * (double)dts_pic->f->pts / fps);
+            wanted_bits = (uint64_t)(avctx->bit_rate * (double)dts_pic->f->pts / fps);
     }
 
     diff = s->total_bits - wanted_bits;
-    br_compensation = (s->bit_rate_tolerance - diff) / s->bit_rate_tolerance;
+    br_compensation = (rcc->bit_rate_tolerance - diff) / rcc->bit_rate_tolerance;
     if (br_compensation <= 0.0)
         br_compensation = 0.001;
 
     var = pict_type == AV_PICTURE_TYPE_I ? pic->mb_var_sum : pic->mc_mb_var_sum;
 
     short_term_q = 0; /* avoid warning */
-    if (s->avctx->flags & AV_CODEC_FLAG_PASS2) {
+    if (avctx->flags & AV_CODEC_FLAG_PASS2) {
         if (pict_type != AV_PICTURE_TYPE_I)
             assert(pict_type == rce->new_pict_type);
 
         q = rce->new_qscale / br_compensation;
-        ff_dlog(s, "%f %f %f last:%d var:%d type:%d//\n", q, rce->new_qscale,
-                br_compensation, s->frame_bits, var, pict_type);
+        ff_dlog(avctx, "%f %f %f last:%d var:%d type:%d//\n", q,
+                rce->new_qscale, br_compensation, s->frame_bits, var, pict_type);
     } else {
         rce->pict_type     =
         rce->new_pict_type = pict_type;
@@ -994,7 +985,7 @@ float ff_rate_estimate_qscale(RateControlContext *rcc, int picture_number,
         rate_factor = rcc->pass1_wanted_bits /
                       rcc->pass1_rc_eq_output_sum * br_compensation;
 
-        q = get_qscale(&s->rc_context, rce, rate_factor, picture_number);
+        q = get_qscale(rcc, rce, rate_factor, picture_number);
         if (q < 0)
             return -1;
 
@@ -1004,8 +995,8 @@ float ff_rate_estimate_qscale(RateControlContext *rcc, int picture_number,
 
         // FIXME type dependent blur like in 2-pass
         if (pict_type == AV_PICTURE_TYPE_P || s->intra_only) {
-            rcc->short_term_qsum   *= a->qblur;
-            rcc->short_term_qcount *= a->qblur;
+            rcc->short_term_qsum   *= avctx->qblur;
+            rcc->short_term_qcount *= avctx->qblur;
 
             rcc->short_term_qsum += q;
             rcc->short_term_qcount++;
@@ -1015,13 +1006,13 @@ float ff_rate_estimate_qscale(RateControlContext *rcc, int picture_number,
 
         q = modify_qscale(rcc, rce, q, picture_number);
 
-        rcc->pass1_wanted_bits += s->bit_rate / fps;
+        rcc->pass1_wanted_bits += avctx->bit_rate / fps;
 
         assert(q > 0.0);
     }
 
-    if (s->avctx->debug & FF_DEBUG_RC) {
-        av_log(s->avctx, AV_LOG_DEBUG,
+    if (avctx->debug & FF_DEBUG_RC) {
+        av_log(avctx, AV_LOG_DEBUG,
                "%c qp:%d<%2.1f<%d %d want:%d total:%d comp:%f st_q:%2.2f "
                "size:%d var:%d/%d br:%d fps:%d\n",
                av_get_picture_type_char(pict_type),
@@ -1029,7 +1020,7 @@ float ff_rate_estimate_qscale(RateControlContext *rcc, int picture_number,
                (int)wanted_bits / 1000, (int)s->total_bits / 1000,
                br_compensation, short_term_q, s->frame_bits,
                pic->mb_var_sum, pic->mc_mb_var_sum,
-               s->bit_rate / 1000, (int)fps);
+               avctx->bit_rate / 1000, (int)fps);
     }
 
     if (q < qmin)
@@ -1038,7 +1029,7 @@ float ff_rate_estimate_qscale(RateControlContext *rcc, int picture_number,
         q = qmax;
 
     if (s->adaptive_quant)
-        adaptive_quantization(s, q);
+        adaptive_quantization(rcc, pic, q);
     else
         q = (int)(q + 0.5);
 

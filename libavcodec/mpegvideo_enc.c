@@ -3456,12 +3456,24 @@ static int estimate_qp(MpegEncContext *s, int dry_run){
         if(!dry_run) s->next_lambda= 0;
     } else if (!s->fixed_qscale) {
         int quality;
+        Picture *dts_pic;
+
+        /* FIXME add a dts field to AVFrame and ensure it is set and use it
+         * here instead of reordering but the reordering is simpler for now
+         * until H.264 B-pyramid must be handled. */
+        if (s->pict_type == AV_PICTURE_TYPE_B || s->low_delay)
+            dts_pic = s->current_picture_ptr;
+        else
+            dts_pic = s->last_picture_ptr;
+
 #if CONFIG_LIBXVID
         if ((s->avctx->flags & AV_CODEC_FLAG_PASS2) && s->rc_strategy == 1)
             quality = ff_xvid_rate_estimate_qscale(s, dry_run);
         else
 #endif
-        quality = ff_rate_estimate_qscale(&s->rc_context, s->picture_number,
+        quality = ff_rate_estimate_qscale(&s->rc_context, &s->current_picture,
+                                          dts_pic,
+                                          s->picture_number, s->last_pict_type,
                                           dry_run);
         s->current_picture_ptr->f->quality =
         s->current_picture.f->quality = quality;
