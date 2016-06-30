@@ -100,6 +100,7 @@ typedef struct RateControlContext{
     RcOverride *rc_override;
     int rc_override_count;
     int mb_num;
+    enum AVPictureType pict_type;
 
     int bit_rate_tolerance;
     float qcompress;
@@ -110,12 +111,14 @@ typedef struct RateControlContext{
     int lmin, lmax;
     float rc_buffer_aggressivity;
     float rc_qsquish;
+    float rc_initial_cplx;
+    int rc_strategy;
 }RateControlContext;
 
 struct MpegEncContext;
 
 /* rate control */
-int ff_rate_control_init(AVCodecContext *avctx);
+int ff_rate_control_init(AVCodecContext *avctx, RateControlContext *rcc);
 float ff_rate_estimate_qscale(struct MpegEncContext *s, int dry_run);
 void ff_rate_control_uninit(RateControlContext *rcc);
 int ff_vbv_update(RateControlContext *rcc, int frame_size);

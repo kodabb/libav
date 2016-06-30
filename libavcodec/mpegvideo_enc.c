@@ -886,6 +886,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
 #endif
 
     s->rc_context.mb_num = s->mb_num;
+    s->rc_context.pict_type = s->pict_type;
 
     s->rc_context.rc_eq = s->rc_eq;
     s->rc_context.rc_qmod_freq = s->rc_qmod_freq;
@@ -894,7 +895,9 @@ FF_ENABLE_DEPRECATION_WARNINGS
     s->rc_context.lmax = s->lmax;
     s->rc_context.rc_buffer_aggressivity = s->rc_buffer_aggressivity;
     s->rc_context.rc_qsquish = s->rc_qsquish;
-    if (ff_rate_control_init(s->avctx) < 0)
+    s->rc_context.rc_initial_cplx = s->rc_initial_cplx;
+    ret = ff_rate_control_init(s->avctx, &s->rc_context);
+    if (ret < 0)
         return -1;
 
     if ((s->avctx->flags & AV_CODEC_FLAG_PASS2) && s->rc_strategy == 1) {

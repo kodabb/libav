@@ -506,10 +506,8 @@ static int init_pass2(RateControlContext *rcc)
     return 0;
 }
 
-av_cold int ff_rate_control_init(AVCodecContext *avctx)
+av_cold int ff_rate_control_init(AVCodecContext *avctx, RateControlContext *rcc)
 {
-    MpegEncContext *s = avctx->priv_data;
-    RateControlContext *rcc = &s->rc_context;
     int i, res;
     static const char * const const_names[] = {
         "PI",
@@ -551,7 +549,7 @@ av_cold int ff_rate_control_init(AVCodecContext *avctx)
     res = av_expr_parse(&rcc->rc_eq_eval,
                         rcc->rc_eq ? rcc->rc_eq : "tex^qComp",
                         const_names, func1_names, func1,
-                        NULL, NULL, 0, s->avctx);
+                        NULL, NULL, 0, avctx);
     if (res < 0) {
         av_log(avctx, AV_LOG_ERROR, "Error parsing rc_eq \"%s\"\n", rcc->rc_eq);
         return res;
@@ -570,17 +568,17 @@ av_cold int ff_rate_control_init(AVCodecContext *avctx)
 
         rcc->last_qscale_for[i] = FF_QP2LAMBDA * 5;
     }
-    rcc->buffer_index = s->avctx->rc_initial_buffer_occupancy;
+    rcc->buffer_index = avctx->rc_initial_buffer_occupancy;
 
-    if (s->avctx->flags & AV_CODEC_FLAG_PASS2) {
+    if (avctx->flags & AV_CODEC_FLAG_PASS2) {
         int i;
         char *p;
 
         /* find number of pics */
-        p = s->avctx->stats_in;
+        p = avctx->stats_in;
         for (i = -1; p; i++)
             p = strchr(p + 1, ';');
-        i += s->max_b_frames;
+        i += avctx->max_b_frames;
         if (i <= 0 || i >= INT_MAX / sizeof(RateControlEntry))
             return -1;
         rcc->entry       = av_mallocz(i * sizeof(RateControlEntry));
@@ -600,8 +598,8 @@ av_cold int ff_rate_control_init(AVCodecContext *avctx)
         }
 
         /* read stats */
-        p = s->avctx->stats_in;
-        for (i = 0; i < rcc->num_entries - s->max_b_frames; i++) {
+        p = avctx->stats_in;
+        for (i = 0; i < rcc->num_entries - avctx->max_b_frames; i++) {
             RateControlEntry *rce;
             int picture_number;
             int e;
@@ -625,7 +623,7 @@ av_cold int ff_rate_control_init(AVCodecContext *avctx)
                         &rce->mc_mb_var_sum, &rce->mb_var_sum,
                         &rce->i_count, &rce->skip_count, &rce->header_bits);
             if (e != 14) {
-                av_log(s->avctx, AV_LOG_ERROR,
+                av_log(avctx, AV_LOG_ERROR,
                        "statistics are damaged at line %d, parser out=%d\n",
                        i, e);
                 return -1;
@@ -640,26 +638,26 @@ av_cold int ff_rate_control_init(AVCodecContext *avctx)
         }
     }
 
-    if (!(s->avctx->flags & AV_CODEC_FLAG_PASS2)) {
+    if (!(avctx->flags & AV_CODEC_FLAG_PASS2)) {
         rcc->short_term_qsum   = 0.001;
         rcc->short_term_qcount = 0.001;
 
         rcc->pass1_rc_eq_output_sum = 0.001;
         rcc->pass1_wanted_bits      = 0.001;
 
-        if (s->avctx->qblur > 1.0) {
-            av_log(s->avctx, AV_LOG_ERROR, "qblur too large\n");
+        if (avctx->qblur > 1.0) {
+            av_log(avctx, AV_LOG_ERROR, "qblur too large\n");
             return -1;
         }
         /* init stuff with the user specified complexity */
-        if (s->rc_initial_cplx) {
+        if (rcc->rc_initial_cplx) {
             for (i = 0; i < 60 * 30; i++) {
-                double bits = s->rc_initial_cplx * (i / 10000.0 + 1.0) * rcc->mb_num;
+                double bits = rcc->rc_initial_cplx * (i / 10000.0 + 1.0) * rcc->mb_num;
                 RateControlEntry rce;
 
-                if (i % ((s->gop_size + 3) / 4) == 0)
+                if (i % ((avctx->gop_size + 3) / 4) == 0)
                     rce.pict_type = AV_PICTURE_TYPE_I;
-                else if (i % (s->max_b_frames + 1))
+                else if (i % (avctx->max_b_frames + 1))
                     rce.pict_type = AV_PICTURE_TYPE_B;
                 else
                     rce.pict_type = AV_PICTURE_TYPE_P;
@@ -673,7 +671,7 @@ av_cold int ff_rate_control_init(AVCodecContext *avctx)
                 rce.b_code    = 1;
                 rce.misc_bits = 1;
 
-                if (s->pict_type == AV_PICTURE_TYPE_I) {
+                if (rcc->pict_type == AV_PICTURE_TYPE_I) {
                     rce.i_count    = rcc->mb_num;
                     rce.i_tex_bits = bits;
                     rce.p_tex_bits = 0;
@@ -689,10 +687,10 @@ av_cold int ff_rate_control_init(AVCodecContext *avctx)
                 rcc->mv_bits_sum[rce.pict_type] += rce.mv_bits;
                 rcc->frame_count[rce.pict_type]++;
 
-                get_qscale(&s->rc_context, &rce, rcc->pass1_wanted_bits / rcc->pass1_rc_eq_output_sum, i);
+                get_qscale(rcc, &rce, rcc->pass1_wanted_bits / rcc->pass1_rc_eq_output_sum, i);
 
                 // FIXME misbehaves a little for variable fps
-                rcc->pass1_wanted_bits += s->bit_rate / (1 / av_q2d(s->avctx->time_base));
+                rcc->pass1_wanted_bits += avctx->bit_rate / (1 / av_q2d(avctx->time_base));
             }
         }
     }
