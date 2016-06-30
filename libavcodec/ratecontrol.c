@@ -126,10 +126,9 @@ static void get_qminmax(RateControlContext *rcc, int pict_type,
     *qmax_ret = qmax;
 }
 
-static double modify_qscale(MpegEncContext *s, RateControlEntry *rce,
+static double modify_qscale(RateControlContext *rcc, RateControlEntry *rce,
                             double q, int frame_num)
 {
-    RateControlContext *rcc  = &s->rc_context;
     AVCodecContext *avctx    = rcc->avctx;
     const double buffer_size = avctx->rc_buffer_size;
     const double fps         = 1 / av_q2d(avctx->time_base);
@@ -141,10 +140,10 @@ static double modify_qscale(MpegEncContext *s, RateControlEntry *rce,
     get_qminmax(rcc, pict_type, &qmin, &qmax);
 
     /* modulation */
-    if (s->rc_qmod_freq &&
-        frame_num % s->rc_qmod_freq == 0 &&
+    if (rcc->rc_qmod_freq &&
+        frame_num % rcc->rc_qmod_freq == 0 &&
         pict_type == AV_PICTURE_TYPE_P)
-        q *= s->rc_qmod_amp;
+        q *= rcc->rc_qmod_amp;
 
     /* buffer overflow/underflow protection */
     if (buffer_size) {
@@ -157,15 +156,15 @@ static double modify_qscale(MpegEncContext *s, RateControlEntry *rce,
                 d = 1.0;
             else if (d < 0.0001)
                 d = 0.0001;
-            q *= pow(d, 1.0 / s->rc_buffer_aggressivity);
+            q *= pow(d, 1.0 / rcc->rc_buffer_aggressivity);
 
             q_limit = bits2qp(rce,
                               FFMAX((min_rate - buffer_size + rcc->buffer_index) *
-                                    s->avctx->rc_min_vbv_overflow_use, 1));
+                                    avctx->rc_min_vbv_overflow_use, 1));
 
             if (q > q_limit) {
-                if (s->avctx->debug & FF_DEBUG_RC)
-                    av_log(s->avctx, AV_LOG_DEBUG,
+                if (avctx->debug & FF_DEBUG_RC)
+                    av_log(avctx, AV_LOG_DEBUG,
                            "limiting QP %f -> %f\n", q, q_limit);
                 q = q_limit;
             }
@@ -177,24 +176,23 @@ static double modify_qscale(MpegEncContext *s, RateControlEntry *rce,
                 d = 1.0;
             else if (d < 0.0001)
                 d = 0.0001;
-            q /= pow(d, 1.0 / s->rc_buffer_aggressivity);
+            q /= pow(d, 1.0 / rcc->rc_buffer_aggressivity);
 
             q_limit = bits2qp(rce,
                               FFMAX(rcc->buffer_index *
-                                    s->avctx->rc_max_available_vbv_use,
-                                    1));
+                                    avctx->rc_max_available_vbv_use, 1));
             if (q < q_limit) {
-                if (s->avctx->debug & FF_DEBUG_RC)
-                    av_log(s->avctx, AV_LOG_DEBUG,
+                if (avctx->debug & FF_DEBUG_RC)
+                    av_log(avctx, AV_LOG_DEBUG,
                            "limiting QP %f -> %f\n", q, q_limit);
                 q = q_limit;
             }
         }
     }
-    ff_dlog(s, "q:%f max:%f min:%f size:%f index:%f agr:%f\n",
+    ff_dlog(avctx, "q:%f max:%f min:%f size:%f index:%f agr:%f\n",
             q, max_rate, min_rate, buffer_size, rcc->buffer_index,
-            s->rc_buffer_aggressivity);
-    if (s->rc_qsquish == 0.0 || qmin == qmax) {
+            rcc->rc_buffer_aggressivity);
+    if (rcc->rc_qsquish == 0.0 || qmin == qmax) {
         if (q < qmin)
             q = qmin;
         else if (q > qmax)
@@ -354,10 +352,9 @@ FF_ENABLE_DEPRECATION_WARNINGS
     return q;
 }
 
-static int init_pass2(MpegEncContext *s)
+static int init_pass2(RateControlContext *rcc)
 {
-    RateControlContext *rcc = &s->rc_context;
-    AVCodecContext *avctx   = rcc->avctx;
+    AVCodecContext *avctx  = rcc->avctx;
     int i, toobig;
     double fps             = 1 / av_q2d(avctx->time_base);
     double complexity[5]   = { 0 }; // approximate bits at quant=1
@@ -453,7 +450,7 @@ static int init_pass2(MpegEncContext *s)
             RateControlEntry *rce = &rcc->entry[i];
             double bits;
 
-            rce->new_qscale = modify_qscale(s, rce, blurred_qscale[i], i);
+            rce->new_qscale = modify_qscale(rcc, rce, blurred_qscale[i], i);
 
             bits  = qp2bits(rce, rce->new_qscale) + rce->mv_bits + rce->misc_bits;
             bits += 8 * ff_vbv_update(rcc, bits);
@@ -476,32 +473,32 @@ static int init_pass2(MpegEncContext *s)
     /* check bitrate calculations and print info */
     qscale_sum = 0.0;
     for (i = 0; i < rcc->num_entries; i++) {
-        ff_dlog(s, "[lavc rc] entry[%d].new_qscale = %.3f  qp = %.3f\n",
+        ff_dlog(avctx, "[lavc rc] entry[%d].new_qscale = %.3f  qp = %.3f\n",
                 i,
                 rcc->entry[i].new_qscale,
                 rcc->entry[i].new_qscale / FF_QP2LAMBDA);
         qscale_sum += av_clip(rcc->entry[i].new_qscale / FF_QP2LAMBDA,
-                              s->avctx->qmin, s->avctx->qmax);
+                              avctx->qmin, avctx->qmax);
     }
     assert(toobig <= 40);
-    av_log(s->avctx, AV_LOG_DEBUG,
+    av_log(avctx, AV_LOG_DEBUG,
            "[lavc rc] requested bitrate: %d bps  expected bitrate: %d bps\n",
-           s->bit_rate,
-           (int)(expected_bits / ((double)all_available_bits / s->bit_rate)));
-    av_log(s->avctx, AV_LOG_DEBUG,
+           avctx->bit_rate,
+           (int)(expected_bits / ((double)all_available_bits / avctx->bit_rate)));
+    av_log(avctx, AV_LOG_DEBUG,
            "[lavc rc] estimated target average qp: %.3f\n",
            (float)qscale_sum / rcc->num_entries);
     if (toobig == 0) {
-        av_log(s->avctx, AV_LOG_INFO,
+        av_log(avctx, AV_LOG_INFO,
                "[lavc rc] Using all of requested bitrate is not "
                "necessary for this video with these parameters.\n");
     } else if (toobig == 40) {
-        av_log(s->avctx, AV_LOG_ERROR,
+        av_log(avctx, AV_LOG_ERROR,
                "[lavc rc] Error: bitrate too low for this video "
                "with these parameters.\n");
         return -1;
     } else if (fabs(expected_bits / all_available_bits - 1.0) > 0.01) {
-        av_log(s->avctx, AV_LOG_ERROR,
+        av_log(avctx, AV_LOG_ERROR,
                "[lavc rc] Error: 2pass curve failed to converge\n");
         return -1;
     }
@@ -637,7 +634,7 @@ av_cold int ff_rate_control_init(AVCodecContext *avctx)
             p = next;
         }
 
-        if (init_pass2(s) < 0) {
+        if (init_pass2(rcc) < 0) {
             ff_rate_control_uninit(rcc);
             return -1;
         }
@@ -889,7 +886,7 @@ static void adaptive_quantization(MpegEncContext *s, double q)
 void ff_get_2pass_fcode(RateControlContext *rcc, int entry,
                         int *f_code, int *b_code)
 {
-    RateControlEntry *rce   = &rcc->entry[entry];
+    RateControlEntry *rce = &rcc->entry[entry];
 
     *f_code = rce->f_code;
     *b_code = rce->b_code;
@@ -1017,7 +1014,7 @@ float ff_rate_estimate_qscale(MpegEncContext *s, int dry_run)
         }
         assert(q > 0.0);
 
-        q = modify_qscale(s, rce, q, picture_number);
+        q = modify_qscale(rcc, rce, q, picture_number);
 
         rcc->pass1_wanted_bits += s->bit_rate / fps;
 

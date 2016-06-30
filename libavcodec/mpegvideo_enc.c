@@ -889,8 +889,11 @@ FF_ENABLE_DEPRECATION_WARNINGS
 
     s->rc_context.rc_eq = s->rc_eq;
     s->rc_context.rc_qmod_freq = s->rc_qmod_freq;
+    s->rc_context.rc_qmod_amp = s->rc_qmod_amp;
     s->rc_context.lmin = s->lmin;
     s->rc_context.lmax = s->lmax;
+    s->rc_context.rc_buffer_aggressivity = s->rc_buffer_aggressivity;
+    s->rc_context.rc_qsquish = s->rc_qsquish;
     if (ff_rate_control_init(s->avctx) < 0)
         return -1;
 
