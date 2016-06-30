@@ -97,7 +97,7 @@ static double get_diff_limited_q(MpegEncContext *s, RateControlEntry *rce, doubl
 /**
  * Get the qmin & qmax for pict_type.
  */
-static void get_qminmax(int *qmin_ret, int *qmax_ret, MpegEncContext *s, int pict_type)
+static void get_qminmax(MpegEncContext *s, int pict_type, int *qmin_ret, int *qmax_ret)
 {
     int qmin = s->lmin;
     int qmax = s->lmax;
@@ -136,7 +136,7 @@ static double modify_qscale(MpegEncContext *s, RateControlEntry *rce,
     const int pict_type      = rce->new_pict_type;
     int qmin, qmax;
 
-    get_qminmax(&qmin, &qmax, s, pict_type);
+    get_qminmax(s, pict_type, &qmin, &qmax);
 
     /* modulation */
     if (s->rc_qmod_freq &&
@@ -913,7 +913,7 @@ float ff_rate_estimate_qscale(MpegEncContext *s, int dry_run)
     Picture * const pic = &s->current_picture;
     emms_c();
 
-    get_qminmax(&qmin, &qmax, s, pict_type);
+    get_qminmax(s, pict_type, &qmin, &qmax);
 
     fps = 1 / av_q2d(s->avctx->time_base);
     /* update predictors */
