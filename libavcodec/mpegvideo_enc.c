@@ -888,6 +888,9 @@ FF_ENABLE_DEPRECATION_WARNINGS
     s->rc_context.mb_num = s->mb_num;
 
     s->rc_context.rc_eq = s->rc_eq;
+    s->rc_context.rc_qmod_freq = s->rc_qmod_freq;
+    s->rc_context.lmin = s->lmin;
+    s->rc_context.lmax = s->lmax;
     if (ff_rate_control_init(s->avctx) < 0)
         return -1;
 

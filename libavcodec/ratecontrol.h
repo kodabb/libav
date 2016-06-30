@@ -105,6 +105,8 @@ typedef struct RateControlContext{
     float qcompress;
     char *rc_overrides;
     char *rc_eq;
+    int rc_qmod_freq;
+    int lmin, lmax;
 }RateControlContext;
 
 struct MpegEncContext;
