@@ -892,17 +892,18 @@ void ff_get_2pass_fcode(RateControlContext *rcc, int entry,
 
 // FIXME rd or at least approx for dquant
 
-float ff_rate_estimate_qscale(MpegEncContext *s, int dry_run)
+float ff_rate_estimate_qscale(RateControlContext *rcc, int picture_number,
+                              int dry_run)
 {
+    AVCodecContext *avctx = rcc->avctx;
+    MpegEncContext *s = avctx->priv_data;
     float q;
     int qmin, qmax;
     float br_compensation;
     double diff;
     double short_term_q;
     double fps;
-    int picture_number = s->picture_number;
     int64_t wanted_bits;
-    RateControlContext *rcc = &s->rc_context;
     AVCodecContext *a       = s->avctx;
     RateControlEntry local_rce, *rce;
     double bits;

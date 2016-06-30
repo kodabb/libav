@@ -115,12 +115,12 @@ typedef struct RateControlContext{
     int rc_strategy;
 }RateControlContext;
 
-struct MpegEncContext;
-
 /* rate control */
 int ff_rate_control_init(AVCodecContext *avctx, RateControlContext *rcc);
-float ff_rate_estimate_qscale(struct MpegEncContext *s, int dry_run);
 void ff_rate_control_uninit(RateControlContext *rcc);
+
+float ff_rate_estimate_qscale(RateControlContext *rcc, int picture_number,
+                              int dry_run);
 int ff_vbv_update(RateControlContext *rcc, int frame_size);
 void ff_get_2pass_fcode(RateControlContext *rcc, int entry,
                         int *f_code, int *b_code);

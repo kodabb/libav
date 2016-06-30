@@ -3461,7 +3461,8 @@ static int estimate_qp(MpegEncContext *s, int dry_run){
             quality = ff_xvid_rate_estimate_qscale(s, dry_run);
         else
 #endif
-        quality = ff_rate_estimate_qscale(s, dry_run);
+        quality = ff_rate_estimate_qscale(&s->rc_context, s->picture_number,
+                                          dry_run);
         s->current_picture_ptr->f->quality =
         s->current_picture.f->quality = quality;
         if (s->current_picture.f->quality < 0)
