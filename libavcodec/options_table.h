@@ -178,7 +178,9 @@ static const AVOption avcodec_options[] = {
 {"rc_qmod_amp",  "deprecated, use encoder private options instead", OFFSET(rc_qmod_amp), AV_OPT_TYPE_FLOAT, {.dbl = DEFAULT }, -FLT_MAX, FLT_MAX, V|E},
 {"rc_qmod_freq", "deprecated, use encoder private options instead", OFFSET(rc_qmod_freq), AV_OPT_TYPE_INT, {.i64 = DEFAULT }, INT_MIN, INT_MAX, V|E},
 #endif
+#if FF_API_PRIVATE_OPT_RC
 {"rc_override_count", NULL, OFFSET(rc_override_count), AV_OPT_TYPE_INT, {.i64 = DEFAULT }, INT_MIN, INT_MAX},
+#endif
 #if FF_API_MPV_OPT
 {"rc_eq", "deprecated, use encoder private options instead", OFFSET(rc_eq), AV_OPT_TYPE_STRING, {.str = NULL}, CHAR_MIN, CHAR_MAX, V|E},
 #endif

@@ -189,7 +189,11 @@ int avcodec_copy_context(AVCodecContext *dest, const AVCodecContext *src)
     dest->extradata       = NULL;
     dest->intra_matrix    = NULL;
     dest->inter_matrix    = NULL;
+#if FF_API_PRIVATE_OPT_RC
+FF_DISABLE_DEPRECATION_WARNINGS
     dest->rc_override     = NULL;
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
     dest->subtitle_header = NULL;
     dest->hw_frames_ctx   = NULL;
 #if FF_API_MPV_OPT
@@ -216,7 +220,11 @@ int avcodec_copy_context(AVCodecContext *dest, const AVCodecContext *src)
                            AV_INPUT_BUFFER_PADDING_SIZE);
     alloc_and_copy_or_fail(intra_matrix, 64 * sizeof(int16_t), 0);
     alloc_and_copy_or_fail(inter_matrix, 64 * sizeof(int16_t), 0);
+#if FF_API_PRIVATE_OPT_RC
+FF_DISABLE_DEPRECATION_WARNINGS
     alloc_and_copy_or_fail(rc_override,  src->rc_override_count * sizeof(*src->rc_override), 0);
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
     alloc_and_copy_or_fail(subtitle_header, src->subtitle_header_size, 0);
     dest->subtitle_header_size = src->subtitle_header_size;
 #undef alloc_and_copy_or_fail
@@ -231,7 +239,11 @@ int avcodec_copy_context(AVCodecContext *dest, const AVCodecContext *src)
 
 fail:
     av_freep(&dest->subtitle_header);
+#if FF_API_PRIVATE_OPT_RC
+FF_DISABLE_DEPRECATION_WARNINGS
     av_freep(&dest->rc_override);
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
     av_freep(&dest->intra_matrix);
     av_freep(&dest->inter_matrix);
     av_freep(&dest->extradata);

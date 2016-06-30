@@ -623,6 +623,7 @@ FF_MPV_OPT_CMP_FUNC, \
 {"mepre", "pre motion estimation", FF_MPV_OFFSET(me_pre), AV_OPT_TYPE_INT, {.i64 = 0 }, INT_MIN, INT_MAX, FF_MPV_OPT_FLAGS }, \
 {"bt", "Set video bitrate tolerance (in bits/s)", FF_RC_OFFSET(bit_rate_tolerance), AV_OPT_TYPE_INT, {.i64 = FF_DEFAULT_BITRATE * 20 }, 1, INT_MAX, FF_MPV_OPT_FLAGS }, \
 {"qcomp", "Video quantizer scale compression ratecontrol", FF_RC_OFFSET(qcompress), AV_OPT_TYPE_FLOAT, {.dbl = 0.5 }, 0, 1, FF_MPV_OPT_FLAGS }, \
+{"rc_override", "Rate control override for specific intervals (in the form of start,end,qscale/start,end,qscale...)", FF_RC_OFFSET(rc_overrides), AV_OPT_TYPE_STRING, .flags = FF_MPV_OPT_FLAGS }, \
 
 extern const AVOption ff_mpv_generic_options[];
 

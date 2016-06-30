@@ -168,8 +168,10 @@ typedef struct OptionsContext {
     int        nb_force_fps;
     SpecifierOpt *frame_aspect_ratios;
     int        nb_frame_aspect_ratios;
+#if FF_API_PRIVATE_OPT_RC
     SpecifierOpt *rc_overrides;
     int        nb_rc_overrides;
+#endif
     SpecifierOpt *intra_matrices;
     int        nb_intra_matrices;
     SpecifierOpt *inter_matrices;

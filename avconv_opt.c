@@ -33,6 +33,7 @@
 #include "libavutil/avstring.h"
 #include "libavutil/avutil.h"
 #include "libavutil/channel_layout.h"
+#include "libavutil/internal.h"
 #include "libavutil/intreadwrite.h"
 #include "libavutil/fifo.h"
 #include "libavutil/mathematics.h"
@@ -1241,6 +1242,8 @@ static OutputStream *new_video_stream(OptionsContext *o, AVFormatContext *oc)
             parse_matrix_coeffs(video_enc->inter_matrix, inter_matrix);
         }
 
+#if FF_API_PRIVATE_OPT_RC
+FF_DISABLE_DEPRECATION_WARNINGS
         MATCH_PER_STREAM_OPT(rc_overrides, str, p, oc, st);
         for (i = 0; p; i++) {
             int start, end, q;
@@ -1270,6 +1273,8 @@ static OutputStream *new_video_stream(OptionsContext *o, AVFormatContext *oc)
             if (p) p++;
         }
         video_enc->rc_override_count = i;
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
         video_enc->intra_dc_precision = intra_dc_precision - 8;
 
         /* two pass mode */
@@ -2608,9 +2613,11 @@ const OptionDef options[] = {
         "disable video" },
     { "vdt",          OPT_VIDEO | OPT_INT | HAS_ARG | OPT_EXPERT ,               { &video_discard },
         "discard threshold", "n" },
+#if FF_API_PRIVATE_OPT_RC
     { "rc_override",  OPT_VIDEO | HAS_ARG | OPT_EXPERT  | OPT_STRING | OPT_SPEC |
                       OPT_OUTPUT,                                                { .off = OFFSET(rc_overrides) },
         "rate control override for specific intervals", "override" },
+#endif
     { "vcodec",       OPT_VIDEO | HAS_ARG  | OPT_PERFILE | OPT_INPUT |
                       OPT_OUTPUT,                                                { .func_arg = opt_video_codec },
         "force video codec ('copy' to copy stream)", "codec" },

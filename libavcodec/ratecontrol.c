@@ -213,6 +213,48 @@ static double modify_qscale(MpegEncContext *s, RateControlEntry *rce,
     return q;
 }
 
+static int parse_overrides(AVCodecContext *avctx, RateControlContext *rcc)
+{
+    const char *p = rcc->rc_overrides;
+    int i;
+
+    for (i = 0; p; i++) {
+        int start, end, q;
+        int e = sscanf(p, "%d,%d,%d", &start, &end, &q);
+        if (e != 3) {
+            av_log(avctx, AV_LOG_ERROR, "error parsing rc_override\n");
+            av_freep(&rcc->rc_override);
+            return AVERROR_INVALIDDATA;
+        }
+
+        rcc->rc_override = av_realloc(rcc->rc_override,
+                                      sizeof(RcOverride) * (i + 1));
+        if (!rcc->rc_override) {
+            av_log(avctx, AV_LOG_ERROR,
+                   "Could not (re)allocate memory for rc_override.\n");
+            av_freep(&rcc->rc_override);
+            return AVERROR(ENOMEM);
+        }
+
+        rcc->rc_override[i].start_frame = start;
+        rcc->rc_override[i].end_frame   = end;
+        if (q > 0) {
+            rcc->rc_override[i].qscale         = q;
+            rcc->rc_override[i].quality_factor = 1.0;
+        }
+        else {
+            rcc->rc_override[i].qscale         = 0;
+            rcc->rc_override[i].quality_factor = -q / 100.0;
+        }
+        p = strchr(p, '/');
+        if (p)
+            p++;
+    }
+    rcc->rc_override_count = i;
+
+    return 0;
+}
+
 /**
  * Modify the bitrate curve from pass1 for one frame.
  */
@@ -223,7 +265,7 @@ static double get_qscale(MpegEncContext *s, RateControlEntry *rce,
     const int pict_type     = rce->new_pict_type;
     const double mb_num     = s->mb_num;
     double q, bits;
-    int i;
+    int i, ret;
 
     double const_values[] = {
         M_PI,
@@ -262,6 +304,25 @@ static double get_qscale(MpegEncContext *s, RateControlEntry *rce,
     bits += 1.0; // avoid 1/0 issues
 
     /* user override */
+    ret = parse_overrides(s->avctx, rcc);
+    if (ret < 0)
+        return ret;
+
+    for (i = 0; i < rcc->rc_override_count; i++) {
+        RcOverride *rco = rcc->rc_override;
+        if (rco[i].start_frame > frame_num)
+            continue;
+        if (rco[i].end_frame < frame_num)
+            continue;
+
+        if (rco[i].qscale)
+            bits = qp2bits(rce, rco[i].qscale);  // FIXME move at end to really force it?
+        else
+            bits *= rco[i].quality_factor;
+    }
+
+#if FF_API_PRIVATE_OPT_RC
+FF_DISABLE_DEPRECATION_WARNINGS
     for (i = 0; i < s->avctx->rc_override_count; i++) {
         RcOverride *rco = s->avctx->rc_override;
         if (rco[i].start_frame > frame_num)
@@ -274,6 +335,8 @@ static double get_qscale(MpegEncContext *s, RateControlEntry *rce,
         else
             bits *= rco[i].quality_factor;
     }
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
 
     q = bits2qp(rce, bits);
 
@@ -641,6 +704,7 @@ av_cold void ff_rate_control_uninit(MpegEncContext *s)
 
     av_expr_free(rcc->rc_eq_eval);
     av_freep(&rcc->entry);
+    av_freep(&rcc->rc_override);
 }
 
 int ff_vbv_update(MpegEncContext *s, int frame_size)

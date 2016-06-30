@@ -705,12 +705,14 @@ enum AVAudioServiceType {
 /**
  * @ingroup lavc_encoding
  */
+#if FF_API_PRIVATE_OPT_RC
 typedef struct RcOverride{
     int start_frame;
     int end_frame;
     int qscale; // If this is 0 then quality_factor will be used instead.
     float quality_factor;
 } RcOverride;
+#endif
 
 #if FF_API_MAX_BFRAMES
 /**
@@ -2376,13 +2378,15 @@ typedef struct AVCodecContext {
      */
     int rc_buffer_size;
 
+#if FF_API_PRIVATE_OPT_RC
     /**
-     * ratecontrol override, see RcOverride
-     * - encoding: Allocated/set/freed by user.
-     * - decoding: unused
+     * @deprecated use encoder private options instead
      */
+    attribute_deprecated
     int rc_override_count;
+    attribute_deprecated
     RcOverride *rc_override;
+#endif
 
 #if FF_API_MPV_OPT
     /**

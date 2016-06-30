@@ -57,6 +57,15 @@ typedef struct RateControlEntry{
     int b_code;
 }RateControlEntry;
 
+#if !FF_API_PRIVATE_OPT_RC
+typedef struct RcOverride {
+    int start_frame;
+    int end_frame;
+    int qscale; // If this is 0 then quality_factor will be used instead.
+    float quality_factor;
+} RcOverride;
+#endif
+
 /**
  * rate control context.
  */
@@ -84,9 +93,12 @@ typedef struct RateControlContext{
     float dry_run_qscale;         ///< for xvid rc
     int last_picture_number;      ///< for xvid rc
     AVExpr * rc_eq_eval;
+    RcOverride *rc_override;
+    int rc_override_count;
 
     int bit_rate_tolerance;
     float qcompress;
+    char *rc_overrides;
 }RateControlContext;
 
 struct MpegEncContext;
