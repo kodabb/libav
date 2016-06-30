@@ -32,6 +32,8 @@
 #include <stdint.h>
 #include "libavutil/eval.h"
 
+#include "avcodec.h"
+
 typedef struct Predictor{
     double coeff;
     double count;
@@ -70,6 +72,8 @@ typedef struct RcOverride {
  * rate control context.
  */
 typedef struct RateControlContext{
+    AVCodecContext *avctx;
+
     int num_entries;              ///< number of RateControlEntries
     RateControlEntry *entry;
     double buffer_index;          ///< amount of bits in the video/audio buffer
@@ -104,11 +108,10 @@ typedef struct RateControlContext{
 struct MpegEncContext;
 
 /* rate control */
-int ff_rate_control_init(struct MpegEncContext *s);
+int ff_rate_control_init(AVCodecContext *avctx);
 float ff_rate_estimate_qscale(struct MpegEncContext *s, int dry_run);
 void ff_rate_control_uninit(RateControlContext *rcc);
-int ff_vbv_update(AVCodecContext *avctx, RateControlContext *rcc,
-                  int frame_size);
+int ff_vbv_update(RateControlContext *rcc, int frame_size);
 void ff_get_2pass_fcode(RateControlContext *rcc, int entry,
                         int *f_code, int *b_code);
 

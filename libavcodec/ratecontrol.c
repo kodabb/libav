@@ -453,7 +453,7 @@ static int init_pass2(MpegEncContext *s)
             rce->new_qscale = modify_qscale(s, rce, blurred_qscale[i], i);
 
             bits  = qp2bits(rce, rce->new_qscale) + rce->mv_bits + rce->misc_bits;
-            bits += 8 * ff_vbv_update(s->avctx, &s->rc_context, bits);
+            bits += 8 * ff_vbv_update(&s->rc_context, bits);
 
             rce->expected_bits = expected_bits;
             expected_bits     += bits;
@@ -506,8 +506,9 @@ static int init_pass2(MpegEncContext *s)
     return 0;
 }
 
-av_cold int ff_rate_control_init(MpegEncContext *s)
+av_cold int ff_rate_control_init(AVCodecContext *avctx)
 {
+    MpegEncContext *s = avctx->priv_data;
     RateControlContext *rcc = &s->rc_context;
     int i, res;
     static const char * const const_names[] = {
@@ -544,6 +545,8 @@ av_cold int ff_rate_control_init(MpegEncContext *s)
         NULL
     };
     emms_c();
+
+    rcc->avctx = avctx;
 
     res = av_expr_parse(&rcc->rc_eq_eval,
                         s->rc_eq ? s->rc_eq : "tex^qComp",
@@ -706,9 +709,9 @@ av_cold void ff_rate_control_uninit(RateControlContext *rcc)
     av_freep(&rcc->rc_override);
 }
 
-int ff_vbv_update(AVCodecContext *avctx, RateControlContext *rcc,
-                  int frame_size)
+int ff_vbv_update(RateControlContext *rcc, int frame_size)
 {
+    AVCodecContext *avctx = rcc->avctx;
     const double fps      = 1 / av_q2d(avctx->time_base);
     const int buffer_size = avctx->rc_buffer_size;
     const double min_rate = avctx->rc_min_rate / fps;
