@@ -885,6 +885,9 @@ FF_DISABLE_DEPRECATION_WARNINGS
 FF_ENABLE_DEPRECATION_WARNINGS
 #endif
 
+    s->rc_context.mb_num = s->mb_num;
+
+    s->rc_context.rc_eq = s->rc_eq;
     if (ff_rate_control_init(s->avctx) < 0)
         return -1;
 

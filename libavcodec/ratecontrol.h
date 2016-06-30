@@ -99,10 +99,12 @@ typedef struct RateControlContext{
     AVExpr * rc_eq_eval;
     RcOverride *rc_override;
     int rc_override_count;
+    int mb_num;
 
     int bit_rate_tolerance;
     float qcompress;
     char *rc_overrides;
+    char *rc_eq;
 }RateControlContext;
 
 struct MpegEncContext;
