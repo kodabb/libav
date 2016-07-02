@@ -895,7 +895,8 @@ void ff_get_2pass_fcode(RateControlContext *rcc, int entry,
 
 float ff_rate_estimate_qscale(RateControlContext *rcc, Picture *pic,
                               Picture *dts_pic, int picture_number,
-                              enum AVPictureType last_pict_type, int dry_run)
+                              enum AVPictureType last_pict_type, int intra_only,
+                              int adaptive_quant, int dry_run)
 {
     AVCodecContext *avctx = rcc->avctx;
     MpegEncContext *s = avctx->priv_data;
@@ -994,7 +995,7 @@ float ff_rate_estimate_qscale(RateControlContext *rcc, Picture *pic,
         assert(q > 0.0);
 
         // FIXME type dependent blur like in 2-pass
-        if (pict_type == AV_PICTURE_TYPE_P || s->intra_only) {
+        if (pict_type == AV_PICTURE_TYPE_P || intra_only) {
             rcc->short_term_qsum   *= avctx->qblur;
             rcc->short_term_qcount *= avctx->qblur;
 
@@ -1028,7 +1029,7 @@ float ff_rate_estimate_qscale(RateControlContext *rcc, Picture *pic,
     else if (q > qmax)
         q = qmax;
 
-    if (s->adaptive_quant)
+    if (adaptive_quant)
         adaptive_quantization(rcc, pic, q);
     else
         q = (int)(q + 0.5);

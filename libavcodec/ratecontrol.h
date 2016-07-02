@@ -122,7 +122,8 @@ void ff_rate_control_uninit(RateControlContext *rcc);
 
 float ff_rate_estimate_qscale(RateControlContext *rcc, Picture *pic,
                               Picture *dts_pic, int picture_number,
-                              enum AVPictureType last_pict_type, int dry_run);
+                              enum AVPictureType last_pict_type, int intra_only,
+                              int adaptive_quant, int dry_run);
 int ff_vbv_update(RateControlContext *rcc, int frame_size);
 void ff_get_2pass_fcode(RateControlContext *rcc, int entry,
                         int *f_code, int *b_code);

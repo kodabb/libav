@@ -3474,6 +3474,7 @@ static int estimate_qp(MpegEncContext *s, int dry_run){
         quality = ff_rate_estimate_qscale(&s->rc_context, &s->current_picture,
                                           dts_pic,
                                           s->picture_number, s->last_pict_type,
+                                          s->intra_only, s->adaptive_quant,
                                           dry_run);
         s->current_picture_ptr->f->quality =
         s->current_picture.f->quality = quality;
