@@ -46,6 +46,9 @@ static av_cold int pixlet_init(AVCodecContext *avctx)
 {
     PixletContext *ctx = avctx->priv_data;
 
+    // hopefully
+    avctx->pix_fmt = AV_PIX_FMT_RGB24;
+
     return 0;
 }
 
@@ -54,8 +57,9 @@ static int pixlet_decode_frame(AVCodecContext *avctx, void *data,
 {
     PixletContext *ctx = avctx->priv_data;
     AVFrame *frame = data;
-    int *scaling[2];
-    int pktsize, levels, codedplanesize;
+    float *scaling[2];
+    unsigned int pktsize;
+    int levels, codedplanesize;
     int i, ret;
 
     bytestream2_init(&ctx->gbc, avpkt->data, avpkt->size);
@@ -84,19 +88,30 @@ static int pixlet_decode_frame(AVCodecContext *avctx, void *data,
 
     codedplanesize = bytestream2_get_be32(&ctx->gbc);
 
+    ret = ff_get_buffer(avctx, frame, 0);
+    if (ret < 0)
+        return ret;
+
+    // 1) read coeffs
+    // 2) reconstruct lowpass
+    // 3) read highpass
+    // 4) combine
+    // 5) look at the resulting planes and see if they give sane image in RGB or YUV
+
     scaling[H] = av_malloc(sizeof(int) * levels);
     scaling[V] = av_malloc(sizeof(int) * levels);
     if (!scaling[0] || !scaling[1])
         return AVERROR(ENOMEM);
 
-    ret = ff_get_buffer(avctx, frame, 0);
-    if (ret < 0)
-        return ret;
-
-    for (i = 0; i < levels; i++)
-        scaling[H][i] = bytestream2_get_be32(&ctx->gbc);
-    for (i = 0; i < levels; i++)
-        scaling[V][i] = bytestream2_get_be32(&ctx->gbc);
+    // the main idea is that signal is split into low- and high-pass parts
+    // recursively, i.e. L and H; LL, HL, LH and HH; etc and number of times
+    // it's applied is called level
+    for (i = 0; i < levels; i++) {
+        scaling[H][i] = bytestream2_get_be32(&ctx->gbc) / (float) 1000000;
+    }
+    for (i = 0; i < levels; i++) {
+        scaling[V][i] = bytestream2_get_be32(&ctx->gbc) / (float) 1000000;
+    }
 
     *got_frame = 1;
 
