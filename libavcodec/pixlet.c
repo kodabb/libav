@@ -66,12 +66,12 @@ static int pixlet_decode_frame(AVCodecContext *avctx, void *data,
 
     pktsize = bytestream2_get_be32(&ctx->gbc);
     if (pktsize - 4 > bytestream2_get_bytes_left(&ctx->gbc)) {
-        av_log(avctx, AV_LOG_ERROR, "Invalid packet size %d\n", pktsize);
+        av_log(avctx, AV_LOG_ERROR, "Invalid packet size %u\n", pktsize);
         return AVERROR_INVALIDDATA;
     }
 
     if (bytestream2_get_be32(&ctx->gbc) != 1) {
-        av_log(avctx, AV_LOG_WARNING, "Only version 1 supported\n");
+        avpriv_request_sample(avctx, "Version 1");
     }
 
     bytestream2_skip(&ctx->gbc, 4);
@@ -107,10 +107,10 @@ static int pixlet_decode_frame(AVCodecContext *avctx, void *data,
     // recursively, i.e. L and H; LL, HL, LH and HH; etc and number of times
     // it's applied is called level
     for (i = 0; i < levels; i++) {
-        scaling[H][i] = bytestream2_get_be32(&ctx->gbc) / (float) 1000000;
+        scaling[H][i] = bytestream2_get_be32(&ctx->gbc) / 1000000.;
     }
     for (i = 0; i < levels; i++) {
-        scaling[V][i] = bytestream2_get_be32(&ctx->gbc) / (float) 1000000;
+        scaling[V][i] = bytestream2_get_be32(&ctx->gbc) / 1000000.;
     }
 
     *got_frame = 1;
