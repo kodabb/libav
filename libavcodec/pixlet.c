@@ -26,11 +26,11 @@
 #include "libavutil/opt.h"
 
 #include "avcodec.h"
-#include "bytestream.h"
 #include "bitstream.h"
-#include "unary.h"
+#include "bytestream.h"
 #include "internal.h"
 #include "thread.h"
+#include "unary.h"
 
 #define NB_LEVELS 4
 
@@ -107,8 +107,6 @@ static av_cold int pixlet_close(AVCodecContext *avctx)
 {
     PixletContext *ctx = avctx->priv_data;
     free_buffers(avctx);
-    ctx->w = 0;
-    ctx->h = 0;
     return 0;
 }
 
@@ -119,7 +117,8 @@ static av_cold int pixlet_init(AVCodecContext *avctx)
     return 0;
 }
 
-static int read_low_coeffs(AVCodecContext *avctx, int16_t *dst, int size, int width, ptrdiff_t stride)
+static int read_low_coeffs(AVCodecContext *avctx, int16_t *dst, int size,
+                           int width, ptrdiff_t stride)
 {
     PixletContext *ctx = avctx->priv_data;
     BitstreamContext *bc = &ctx->bc;
@@ -193,8 +192,8 @@ static int read_low_coeffs(AVCodecContext *avctx, int16_t *dst, int size, int wi
     return bitstream_tell(bc) >> 3;
 }
 
-static int read_high_coeffs(AVCodecContext *avctx, uint8_t *src, int16_t *dst, int size,
-                            int c, int a, int d,
+static int read_high_coeffs(AVCodecContext *avctx, uint8_t *src, int16_t *dst,
+                            int size, int c, int a, int d,
                             int width, ptrdiff_t stride)
 {
     PixletContext *ctx = avctx->priv_data;
@@ -203,7 +202,8 @@ static int read_high_coeffs(AVCodecContext *avctx, uint8_t *src, int16_t *dst, i
     int ret, escape, pfx, value, yflag, xflag, flag = 0;
     int64_t state = 3, tmp;
 
-    if ((ret = bitstream_init8(bc, src, bytestream2_get_bytes_left(&ctx->gb))) < 0)
+    ret = bitstream_init8(bc, src, bytestream2_get_bytes_left(&ctx->gb));
+    if (ret < 0)
       return ret;
 
     if ((a >= 0) + (a ^ (a >> 31)) - (a >> 31) != 1) {
@@ -306,7 +306,8 @@ static int read_high_coeffs(AVCodecContext *avctx, uint8_t *src, int16_t *dst, i
     return bitstream_tell(bc) >> 3;
 }
 
-static int read_highpass(AVCodecContext *avctx, uint8_t *ptr, int plane, AVFrame *frame)
+static int read_highpass(AVCodecContext *avctx, uint8_t *ptr,
+                         int plane, AVFrame *frame)
 {
     PixletContext *ctx = avctx->priv_data;
     ptrdiff_t stride = frame->linesize[plane] / 2;
@@ -324,15 +325,19 @@ static int read_highpass(AVCodecContext *avctx, uint8_t *ptr, int plane, AVFrame
 
         magic = bytestream2_get_be32(&ctx->gb);
         if (magic != 0xDEADBEEF) {
-            av_log(avctx, AV_LOG_ERROR, "wrong magic number: 0x%08X for plane %d, band %d\n", magic, plane, i);
+            av_log(avctx, AV_LOG_ERROR,
+                   "wrong magic number: 0x%08X for plane %d, band %d\n",
+                   magic, plane, i);
             return AVERROR_INVALIDDATA;
         }
 
-        ret = read_high_coeffs(avctx, ptr + bytestream2_tell(&ctx->gb), dest, size,
-                               c, (b >= FFABS(a)) ? b : a, d,
+        ret = read_high_coeffs(avctx, ptr + bytestream2_tell(&ctx->gb), dest,
+                               size, c, (b >= FFABS(a)) ? b : a, d,
                                ctx->band[plane][i + 1].width, stride);
         if (ret < 0) {
-            av_log(avctx, AV_LOG_ERROR, "error in highpass coefficients for plane %d, band %d\n", plane, i);
+            av_log(avctx, AV_LOG_ERROR,
+                   "error in highpass coefficients for plane %d, band %d\n",
+                   plane, i);
             return ret;
         }
         bytestream2_skip(&ctx->gb, ret);
@@ -341,7 +346,8 @@ static int read_highpass(AVCodecContext *avctx, uint8_t *ptr, int plane, AVFrame
     return 0;
 }
 
-static void lowpass_prediction(int16_t *dst, int16_t *pred, int width, int height, ptrdiff_t stride)
+static void lowpass_prediction(int16_t *dst, int16_t *pred, int width,
+                               int height, ptrdiff_t stride)
 {
     int16_t val;
     int i, j;
@@ -406,7 +412,8 @@ static void filter(int16_t *dest, int16_t *tmp, unsigned size, float SCALE)
 }
 
 static void reconstruction(AVCodecContext *avctx,
-                           int16_t *dest, unsigned width, unsigned height, ptrdiff_t stride, int nb_levels,
+                           int16_t *dest, unsigned width, unsigned height,
+                           ptrdiff_t stride, int nb_levels,
                            float *scaling_H, float *scaling_V)
 {
     PixletContext *ctx = avctx->priv_data;
@@ -492,7 +499,8 @@ static void postprocess_chroma(AVFrame *frame, int w, int h, int depth)
     }
 }
 
-static int decode_plane(AVCodecContext *avctx, int plane, AVPacket *avpkt, AVFrame *frame)
+static int decode_plane(AVCodecContext *avctx, int plane,
+                        AVPacket *avpkt, AVFrame *frame)
 {
     PixletContext *ctx = avctx->priv_data;
     ptrdiff_t stride = frame->linesize[plane] / 2;
@@ -516,19 +524,25 @@ static int decode_plane(AVCodecContext *avctx, int plane, AVPacket *avpkt, AVFra
     dst = (int16_t *)frame->data[plane];
     dst[0] = sign_extend(bytestream2_get_be16(&ctx->gb), 16);
 
-    if ((ret = bitstream_init8(&ctx->bc, avpkt->data + bytestream2_tell(&ctx->gb),
-                               bytestream2_get_bytes_left(&ctx->gb))) < 0)
+    ret = bitstream_init8(&ctx->bc, avpkt->data + bytestream2_tell(&ctx->gb),
+                               bytestream2_get_bytes_left(&ctx->gb));
+    if (ret < 0)
         return ret;
 
-    ret = read_low_coeffs(avctx, dst + 1, ctx->band[plane][0].width - 1, ctx->band[plane][0].width - 1, 0);
+    ret = read_low_coeffs(avctx, dst + 1, ctx->band[plane][0].width - 1,
+                          ctx->band[plane][0].width - 1, 0);
     if (ret < 0) {
-        av_log(avctx, AV_LOG_ERROR, "error in lowpass coefficients for plane %d, top row\n", plane);
+        av_log(avctx, AV_LOG_ERROR,
+               "error in lowpass coefficients for plane %d, top row\n", plane);
         return ret;
     }
 
-    ret = read_low_coeffs(avctx, dst + stride, ctx->band[plane][0].height - 1, 1, stride);
+    ret = read_low_coeffs(avctx, dst + stride,
+                          ctx->band[plane][0].height - 1, 1, stride);
     if (ret < 0) {
-        av_log(avctx, AV_LOG_ERROR, "error in lowpass coefficients for plane %d, left column\n", plane);
+        av_log(avctx, AV_LOG_ERROR,
+               "error in lowpass coefficients for plane %d, left column\n",
+               plane);
         return ret;
     }
 
@@ -536,7 +550,8 @@ static int decode_plane(AVCodecContext *avctx, int plane, AVPacket *avpkt, AVFra
                           (ctx->band[plane][0].width - 1) * (ctx->band[plane][0].height - 1),
                           ctx->band[plane][0].width - 1, stride);
     if (ret < 0) {
-        av_log(avctx, AV_LOG_ERROR, "error in lowpass coefficients for plane %d, rest\n", plane);
+        av_log(avctx, AV_LOG_ERROR,
+               "error in lowpass coefficients for plane %d, rest\n", plane);
         return ret;
     }
 
@@ -550,11 +565,12 @@ static int decode_plane(AVCodecContext *avctx, int plane, AVPacket *avpkt, AVFra
     if (ret < 0)
         return ret;
 
-    lowpass_prediction(dst, ctx->prediction,
-                       ctx->band[plane][0].width, ctx->band[plane][0].height, stride);
+    lowpass_prediction(dst, ctx->prediction, ctx->band[plane][0].width,
+                       ctx->band[plane][0].height, stride);
 
-    reconstruction(avctx, (int16_t *)frame->data[plane], ctx->w >> shift, ctx->h >> shift,
-                   stride, NB_LEVELS, ctx->scaling[plane][H], ctx->scaling[plane][V]);
+    reconstruction(avctx, (int16_t *)frame->data[plane], ctx->w >> shift,
+                   ctx->h >> shift, stride, NB_LEVELS, ctx->scaling[plane][H],
+                   ctx->scaling[plane][V]);
 
     return 0;
 }
