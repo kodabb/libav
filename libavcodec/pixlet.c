@@ -34,6 +34,8 @@
 
 #define NB_LEVELS 4
 
+#define PIXLET_MAGIC 0xDEADBEEF
+
 #define H 0
 #define V 1
 
@@ -72,19 +74,19 @@ static int init_decoder(AVCodecContext *avctx)
 
     for (plane = 0; plane < 3; plane++) {
         unsigned shift = plane > 0;
-        unsigned w = ctx->w >> shift;
-        unsigned h = ctx->h >> shift;
+        unsigned w     = ctx->w >> shift;
+        unsigned h     = ctx->h >> shift;
 
         ctx->band[plane][0].width  = w >> NB_LEVELS;
         ctx->band[plane][0].height = h >> NB_LEVELS;
-        ctx->band[plane][0].size = (w >> NB_LEVELS) * (h >> NB_LEVELS);
+        ctx->band[plane][0].size   = (w >> NB_LEVELS) * (h >> NB_LEVELS);
 
         for (i = 0; i < NB_LEVELS * 3; i++) {
             unsigned scale = ctx->levels - (i / 3);
 
             ctx->band[plane][i + 1].width  = w >> scale;
             ctx->band[plane][i + 1].height = h >> scale;
-            ctx->band[plane][i + 1].size = (w >> scale) * (h >> scale);
+            ctx->band[plane][i + 1].size   = (w >> scale) * (h >> scale);
 
             ctx->band[plane][i + 1].x = (w >> scale) * (((i + 1) % 3) != 2);
             ctx->band[plane][i + 1].y = (h >> scale) * (((i + 1) % 3) != 1);
@@ -105,14 +107,13 @@ static void free_buffers(AVCodecContext *avctx)
 
 static av_cold int pixlet_close(AVCodecContext *avctx)
 {
-    PixletContext *ctx = avctx->priv_data;
     free_buffers(avctx);
     return 0;
 }
 
 static av_cold int pixlet_init(AVCodecContext *avctx)
 {
-    avctx->pix_fmt = AV_PIX_FMT_YUV420P16;
+    avctx->pix_fmt     = AV_PIX_FMT_YUV420P16;
     avctx->color_range = AVCOL_RANGE_JPEG;
     return 0;
 }
@@ -143,22 +144,22 @@ static int read_low_coeffs(AVCodecContext *avctx, int16_t *dst, int size,
             escape = bitstream_read(bc, 16);
         }
 
-        value = -((escape + flag) & 1) | 1;
+        value    = -((escape + flag) & 1) | 1;
         dst[j++] = value * ((escape + flag + 1) >> 1);
         i++;
         if (j == width) {
-            j = 0;
+            j    = 0;
             dst += stride;
         }
         state = 120 * (escape + flag) + state - (120 * state >> 8);
-        flag = 0;
+        flag  = 0;
 
         if (state * 4 > 0xFF || i >= size)
             continue;
 
-        nbits = ((state + 8) >> 5) + (state ? ff_clz(state) : 32) - 24;
+        nbits  = ((state + 8) >> 5) + (state ? ff_clz(state) : 32) - 24;
         escape = av_mod_uintp2(16383, nbits);
-        cnt1 = get_unary(bc, 0, 8);
+        cnt1   = get_unary(bc, 0, 8);
         if (cnt1 > 7) {
             rlen = bitstream_read(bc, 16);
         } else {
@@ -179,13 +180,13 @@ static int read_low_coeffs(AVCodecContext *avctx, int16_t *dst, int size,
         for (k = 0; k < rlen; k++) {
             dst[j++] = 0;
             if (j == width) {
-                j = 0;
+                j    = 0;
                 dst += stride;
             }
         }
 
         state = 0;
-        flag = rlen < 0xFFFF ? 1 : 0;
+        flag  = rlen < 0xFFFF ? 1 : 0;
     }
 
     bitstream_align(bc);
@@ -204,7 +205,7 @@ static int read_high_coeffs(AVCodecContext *avctx, uint8_t *src, int16_t *dst,
 
     ret = bitstream_init8(bc, src, bytestream2_get_bytes_left(&ctx->gb));
     if (ret < 0)
-      return ret;
+        return ret;
 
     if ((a >= 0) + (a ^ (a >> 31)) - (a >> 31) != 1) {
         nbits = 33 - ff_clz((a >= 0) + (a ^ (a >> 31)) - (a >> 31) - 1);
@@ -228,8 +229,8 @@ static int read_high_coeffs(AVCodecContext *avctx, uint8_t *src, int16_t *dst,
         if (cnt1 >= length) {
             cnt1 = bitstream_read(bc, nbits);
         } else {
-            pfx = 14 + ((((uint64_t)(value - 14)) >> 32) & (value - 14));
-            cnt1 *= (1 << pfx) - 1;
+            pfx    = 14 + ((((uint64_t) (value - 14)) >> 32) & (value - 14));
+            cnt1  *= (1 << pfx) - 1;
             shbits = bitstream_peek(bc, pfx);
             if (shbits <= 1) {
                 bitstream_skip(bc, pfx - 1);
@@ -246,26 +247,26 @@ static int read_high_coeffs(AVCodecContext *avctx, uint8_t *src, int16_t *dst,
             value = 0;
         } else {
             xflag &= 1u;
-            tmp = (int64_t)c * ((yflag + 1) >> 1) + (c >> 1);
-            value = xflag + (tmp ^ -xflag);
+            tmp    = (int64_t) c * ((yflag + 1) >> 1) + (c >> 1);
+            value  = xflag + (tmp ^ -xflag);
         }
 
         i++;
         dst[j++] = value;
         if (j == width) {
-            j = 0;
+            j    = 0;
             dst += stride;
         }
-        state += (int64_t)d * yflag - (d * state >> 8);
+        state += (int64_t) d * yflag - (d * state >> 8);
 
         flag = 0;
 
         if (state * 4 > 0xFF || i >= size)
             continue;
 
-        pfx = ((state + 8) >> 5) + (state ? ff_clz(state): 32) - 24;
+        pfx    = ((state + 8) >> 5) + (state ? ff_clz(state) : 32) - 24;
         escape = av_mod_uintp2(16383, pfx);
-        cnt1 = get_unary(bc, 0, 8);
+        cnt1   = get_unary(bc, 0, 8);
         if (cnt1 < 8) {
             if (pfx < 1 || pfx > 25)
                 return AVERROR_INVALIDDATA;
@@ -293,13 +294,13 @@ static int read_high_coeffs(AVCodecContext *avctx, uint8_t *src, int16_t *dst,
         for (k = 0; k < rlen; k++) {
             dst[j++] = 0;
             if (j == width) {
-                j = 0;
+                j    = 0;
                 dst += stride;
             }
         }
 
         state = 0;
-        flag = rlen < 0xFFFF ? 1 : 0;
+        flag  = rlen < 0xFFFF ? 1 : 0;
     }
 
     bitstream_align(bc);
@@ -314,17 +315,17 @@ static int read_highpass(AVCodecContext *avctx, uint8_t *ptr,
     int i, ret;
 
     for (i = 0; i < ctx->levels * 3; i++) {
-        int32_t a = bytestream2_get_be32(&ctx->gb);
-        int32_t b = bytestream2_get_be32(&ctx->gb);
-        int32_t c = bytestream2_get_be32(&ctx->gb);
-        int32_t d = bytestream2_get_be32(&ctx->gb);
-        int16_t *dest = (int16_t *)frame->data[plane] + ctx->band[plane][i + 1].x +
-                                               stride * ctx->band[plane][i + 1].y;
+        int32_t a     = bytestream2_get_be32(&ctx->gb);
+        int32_t b     = bytestream2_get_be32(&ctx->gb);
+        int32_t c     = bytestream2_get_be32(&ctx->gb);
+        int32_t d     = bytestream2_get_be32(&ctx->gb);
+        int16_t *dest = (int16_t *) frame->data[plane] + ctx->band[plane][i + 1].x +
+                        stride * ctx->band[plane][i + 1].y;
         unsigned size = ctx->band[plane][i + 1].size;
         uint32_t magic;
 
         magic = bytestream2_get_be32(&ctx->gb);
-        if (magic != 0xDEADBEEF) {
+        if (magic != PIXLET_MAGIC) {
             av_log(avctx, AV_LOG_ERROR,
                    "wrong magic number: 0x%08X for plane %d, band %d\n",
                    magic, plane, i);
@@ -360,7 +361,7 @@ static void lowpass_prediction(int16_t *dst, int16_t *pred, int width,
         for (j = 1; j < width; j++) {
             val     = pred[j] + dst[j];
             dst[j]  = pred[j] = val;
-            dst[j] += dst[j-1];
+            dst[j] += dst[j - 1];
         }
         dst += stride;
     }
@@ -373,8 +374,8 @@ static void filter(int16_t *dest, int16_t *tmp, unsigned size, float SCALE)
     float value;
 
     hsize = size >> 1;
-    low = tmp + 4;
-    high = &low[hsize + 8];
+    low   = tmp + 4;
+    high  = &low[hsize + 8];
 
     memcpy(low, dest, size);
     memcpy(high, dest + hsize, size);
@@ -391,22 +392,22 @@ static void filter(int16_t *dest, int16_t *tmp, unsigned size, float SCALE)
     }
 
     for (i = 0; i < hsize; i++) {
-        value = low [i+1] * -0.07576144003329376f +
-                low [i  ] *  0.8586296626673486f  +
-                low [i-1] * -0.07576144003329376f +
-                high[i  ] *  0.3535533905932737f  +
-                high[i-1] *  0.3535533905932737f;
+        value = low [i + 1] * -0.07576144003329376f +
+                low [i + 0] *  0.8586296626673486f  +
+                low [i - 1] * -0.07576144003329376f +
+                high[i + 0] *  0.3535533905932737f  +
+                high[i - 1] *  0.3535533905932737f;
         dest[i * 2] = av_clipf(value * SCALE, INT16_MIN, INT16_MAX);
     }
 
     for (i = 0; i < hsize; i++) {
-        value = low [i+2] * -0.01515228715813062f +
-                low [i+1] *  0.3687056777514043f  +
-                low [i  ] *  0.3687056777514043f  +
-                low [i-1] * -0.01515228715813062f +
-                high[i+1] *  0.07071067811865475f +
-                high[i  ] * -0.8485281374238569f  +
-                high[i-1] *  0.07071067811865475f;
+        value = low [i + 2] * -0.01515228715813062f +
+                low [i + 1] *  0.3687056777514043f  +
+                low [i + 0] *  0.3687056777514043f  +
+                low [i - 1] * -0.01515228715813062f +
+                high[i + 1] *  0.07071067811865475f +
+                high[i + 0] * -0.8485281374238569f  +
+                high[i - 1] *  0.07071067811865475f;
         dest[i * 2 + 1] = av_clipf(value * SCALE, INT16_MIN, INT16_MAX);
     }
 }
@@ -423,14 +424,14 @@ static void reconstruction(AVCodecContext *avctx,
     int i, j, k;
 
     scaled_height = height >> nb_levels;
-    scaled_width  = width  >> nb_levels;
-    tmp = ctx->filter[0];
+    scaled_width  = width >> nb_levels;
+    tmp           = ctx->filter[0];
 
     for (i = 0; i < nb_levels; i++) {
         scaled_width  <<= 1;
         scaled_height <<= 1;
-        scale_H = scaling_H[i];
-        scale_V = scaling_V[i];
+        scale_H         = scaling_H[i];
+        scale_V         = scaling_V[i];
 
         ptr = dest;
         for (j = 0; j < scaled_height; j++) {
@@ -442,7 +443,7 @@ static void reconstruction(AVCodecContext *avctx,
             ptr = dest + j;
             for (k = 0; k < scaled_height; k++) {
                 tmp[k] = *ptr;
-                ptr += stride;
+                ptr   += stride;
             }
 
             filter(tmp, ctx->filter[1], scaled_height, scale_H);
@@ -467,9 +468,8 @@ static void postprocess_luma(AVFrame *frame, int w, int h, int depth)
     int i, j;
 
     for (j = 0; j < h; j++) {
-        for (i = 0; i < w; i++) {
+        for (i = 0; i < w; i++)
             dsty[i] = SQR(FFMAX(srcy[i], 0) * factor) * 65535;
-        }
         dsty += stridey;
         srcy += stridey;
     }
@@ -503,8 +503,8 @@ static int decode_plane(AVCodecContext *avctx, int plane,
                         AVPacket *avpkt, AVFrame *frame)
 {
     PixletContext *ctx = avctx->priv_data;
-    ptrdiff_t stride = frame->linesize[plane] / 2;
-    unsigned shift = plane > 0;
+    ptrdiff_t stride   = frame->linesize[plane] / 2;
+    unsigned shift     = plane > 0;
     int16_t *dst;
     int i, ret;
 
@@ -521,11 +521,11 @@ static int decode_plane(AVCodecContext *avctx, int plane,
 
     bytestream2_skip(&ctx->gb, 4);
 
-    dst = (int16_t *)frame->data[plane];
+    dst    = (int16_t *) frame->data[plane];
     dst[0] = sign_extend(bytestream2_get_be16(&ctx->gb), 16);
 
     ret = bitstream_init8(&ctx->bc, avpkt->data + bytestream2_tell(&ctx->gb),
-                               bytestream2_get_bytes_left(&ctx->gb));
+                          bytestream2_get_bytes_left(&ctx->gb));
     if (ret < 0)
         return ret;
 
@@ -638,8 +638,8 @@ static int pixlet_decode_frame(AVCodecContext *avctx, void *data,
 
     bytestream2_skip(&ctx->gb, 8);
 
-    p->pict_type = AV_PICTURE_TYPE_I;
-    p->key_frame = 1;
+    p->pict_type   = AV_PICTURE_TYPE_I;
+    p->key_frame   = 1;
     p->color_range = AVCOL_RANGE_JPEG;
 
     ret = ff_thread_get_buffer(avctx, &frame, 0);
@@ -667,14 +667,15 @@ static int pixlet_init_thread_copy(AVCodecContext *avctx)
 {
     PixletContext *ctx = avctx->priv_data;
 
-    ctx->filter[0] = NULL;
-    ctx->filter[1] = NULL;
+    ctx->filter[0]  = NULL;
+    ctx->filter[1]  = NULL;
     ctx->prediction = NULL;
-    ctx->w = ctx->h = 0;
+    ctx->w = 0;
+    ctx->h = 0;
 
     return 0;
 }
-#endif
+#endif /* HAVE_THREADS */
 
 AVCodec ff_pixlet_decoder = {
     .name             = "pixlet",
