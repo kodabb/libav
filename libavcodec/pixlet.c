@@ -27,8 +27,8 @@
 
 #include "avcodec.h"
 #include "bytestream.h"
-#include "get_bits.h"
-#include "unary_legacy.h"
+#include "bitstream.h"
+#include "unary.h"
 #include "internal.h"
 #include "thread.h"
 
@@ -47,7 +47,7 @@ typedef struct PixletContext {
     AVClass *class;
 
     GetByteContext gb;
-    GetBitContext gbit;
+    BitstreamContext bc;
 
     int levels;
     int depth;
@@ -122,7 +122,7 @@ static av_cold int pixlet_init(AVCodecContext *avctx)
 static int read_low_coeffs(AVCodecContext *avctx, int16_t *dst, int size, int width, ptrdiff_t stride)
 {
     PixletContext *ctx = avctx->priv_data;
-    GetBitContext *b = &ctx->gbit;
+    BitstreamContext *bc = &ctx->bc;
     unsigned cnt1, nbits, k, j = 0, i = 0;
     int64_t value, state = 3;
     int rlen, escape, flag = 0;
@@ -130,18 +130,18 @@ static int read_low_coeffs(AVCodecContext *avctx, int16_t *dst, int size, int wi
     while (i < size) {
         nbits = FFMIN(ff_clz((state >> 8) + 3) ^ 0x1F, 14);
 
-        cnt1 = get_unary(b, 0, 8);
+        cnt1 = get_unary(bc, 0, 8);
         if (cnt1 < 8) {
-            value = show_bits(b, nbits);
+            value = bitstream_peek(bc, nbits);
             if (value <= 1) {
-                skip_bits(b, nbits - 1);
+                bitstream_skip(bc, nbits - 1);
                 escape = ((1 << nbits) - 1) * cnt1;
             } else {
-                skip_bits(b, nbits);
+                bitstream_skip(bc, nbits);
                 escape = value + ((1 << nbits) - 1) * cnt1 - 1;
             }
         } else {
-            escape = get_bits(b, 16);
+            escape = bitstream_read(bc, 16);
         }
 
         value = -((escape + flag) & 1) | 1;
@@ -159,16 +159,16 @@ static int read_low_coeffs(AVCodecContext *avctx, int16_t *dst, int size, int wi
 
         nbits = ((state + 8) >> 5) + (state ? ff_clz(state) : 32) - 24;
         escape = av_mod_uintp2(16383, nbits);
-        cnt1 = get_unary(b, 0, 8);
+        cnt1 = get_unary(bc, 0, 8);
         if (cnt1 > 7) {
-            rlen = get_bits(b, 16);
+            rlen = bitstream_read(bc, 16);
         } else {
-            value = show_bits(b, nbits);
+            value = bitstream_peek(bc, nbits);
             if (value > 1) {
-                skip_bits(b, nbits);
+                bitstream_skip(bc, nbits);
                 rlen = value + escape * cnt1 - 1;
             } else {
-                skip_bits(b, nbits - 1);
+                bitstream_skip(bc, nbits - 1);
                 rlen = escape * cnt1;
             }
         }
@@ -189,8 +189,8 @@ static int read_low_coeffs(AVCodecContext *avctx, int16_t *dst, int size, int wi
         flag = rlen < 0xFFFF ? 1 : 0;
     }
 
-    align_get_bits(b);
-    return get_bits_count(b) >> 3;
+    bitstream_align(bc);
+    return bitstream_tell(bc) >> 3;
 }
 
 static int read_high_coeffs(AVCodecContext *avctx, uint8_t *src, int16_t *dst, int size,
@@ -198,12 +198,12 @@ static int read_high_coeffs(AVCodecContext *avctx, uint8_t *src, int16_t *dst, i
                             int width, ptrdiff_t stride)
 {
     PixletContext *ctx = avctx->priv_data;
-    GetBitContext *b = &ctx->gbit;
+    BitstreamContext *bc = &ctx->bc;
     unsigned cnt1, shbits, rlen, nbits, length, i = 0, j = 0, k;
     int ret, escape, pfx, value, yflag, xflag, flag = 0;
     int64_t state = 3, tmp;
 
-    if ((ret = init_get_bits8(b, src, bytestream2_get_bytes_left(&ctx->gb))) < 0)
+    if ((ret = bitstream_init8(bc, src, bytestream2_get_bytes_left(&ctx->gb))) < 0)
       return ret;
 
     if ((a >= 0) + (a ^ (a >> 31)) - (a >> 31) != 1) {
@@ -223,18 +223,18 @@ static int read_high_coeffs(AVCodecContext *avctx, uint8_t *src, int16_t *dst, i
             value = -1;
         }
 
-        cnt1 = get_unary(b, 0, length);
+        cnt1 = get_unary(bc, 0, length);
 
         if (cnt1 >= length) {
-            cnt1 = get_bits(b, nbits);
+            cnt1 = bitstream_read(bc, nbits);
         } else {
             pfx = 14 + ((((uint64_t)(value - 14)) >> 32) & (value - 14));
             cnt1 *= (1 << pfx) - 1;
-            shbits = show_bits(b, pfx);
+            shbits = bitstream_peek(bc, pfx);
             if (shbits <= 1) {
-                skip_bits(b, pfx - 1);
+                bitstream_skip(bc, pfx - 1);
             } else {
-                skip_bits(b, pfx);
+                bitstream_skip(bc, pfx);
                 cnt1 += shbits - 1;
             }
         }
@@ -265,23 +265,23 @@ static int read_high_coeffs(AVCodecContext *avctx, uint8_t *src, int16_t *dst, i
 
         pfx = ((state + 8) >> 5) + (state ? ff_clz(state): 32) - 24;
         escape = av_mod_uintp2(16383, pfx);
-        cnt1 = get_unary(b, 0, 8);
+        cnt1 = get_unary(bc, 0, 8);
         if (cnt1 < 8) {
             if (pfx < 1 || pfx > 25)
                 return AVERROR_INVALIDDATA;
-            value = show_bits(b, pfx);
+            value = bitstream_peek(bc, pfx);
             if (value > 1) {
-                skip_bits(b, pfx);
+                bitstream_skip(bc, pfx);
                 rlen = value + escape * cnt1 - 1;
             } else {
-                skip_bits(b, pfx - 1);
+                bitstream_skip(bc, pfx - 1);
                 rlen = escape * cnt1;
             }
         } else {
-            if (get_bits1(b))
-                value = get_bits(b, 16);
+            if (bitstream_read_bit(bc))
+                value = bitstream_read(bc, 16);
             else
-                value = get_bits(b, 8);
+                value = bitstream_read(bc, 8);
 
             rlen = value + 8 * escape;
         }
@@ -302,8 +302,8 @@ static int read_high_coeffs(AVCodecContext *avctx, uint8_t *src, int16_t *dst, i
         flag = rlen < 0xFFFF ? 1 : 0;
     }
 
-    align_get_bits(b);
-    return get_bits_count(b) >> 3;
+    bitstream_align(bc);
+    return bitstream_tell(bc) >> 3;
 }
 
 static int read_highpass(AVCodecContext *avctx, uint8_t *ptr, int plane, AVFrame *frame)
@@ -516,8 +516,8 @@ static int decode_plane(AVCodecContext *avctx, int plane, AVPacket *avpkt, AVFra
     dst = (int16_t *)frame->data[plane];
     dst[0] = sign_extend(bytestream2_get_be16(&ctx->gb), 16);
 
-    if ((ret = init_get_bits8(&ctx->gbit, avpkt->data + bytestream2_tell(&ctx->gb),
-                              bytestream2_get_bytes_left(&ctx->gb))) < 0)
+    if ((ret = bitstream_init8(&ctx->bc, avpkt->data + bytestream2_tell(&ctx->gb),
+                               bytestream2_get_bytes_left(&ctx->gb))) < 0)
         return ret;
 
     ret = read_low_coeffs(avctx, dst + 1, ctx->band[plane][0].width - 1, ctx->band[plane][0].width - 1, 0);
