@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#include "libavutil/ambisonic.h"
 #include "libavutil/channel_layout.h"
 #include "libavutil/display.h"
 #include "libavutil/intreadwrite.h"
@@ -343,6 +344,34 @@ static void dump_spherical(void *ctx, AVCodecParameters *par, AVPacketSideData *
     }
 }
 
+static void dump_ambisonic(void *ctx, AVPacketSideData *sd)
+{
+    AVAmbisonic *ambisonic = (AVAmbisonic *)sd->data;
+    int i;
+
+    if (sd->size < sizeof(*ambisonic)) {
+        av_log(ctx, AV_LOG_INFO, "invalid data");
+        return;
+    }
+
+    if (ambisonic->type == AV_AMBISONIC_NON_DIEGETIC) {
+        av_log(ctx, AV_LOG_INFO, "non diegetic ");
+    } else if (ambisonic->type == AV_AMBISONIC_PERIPHONIC) {
+        av_log(ctx, AV_LOG_INFO, "periphonic ");
+
+        av_log(ctx, AV_LOG_INFO, "(ACN order) ");
+        av_log(ctx, AV_LOG_INFO, "[SN3D normalization] ");
+
+        av_log(ctx, AV_LOG_INFO, "%d{ ", ambisonic->nb_channels);
+        for (i = 0; i < ambisonic->nb_channels; i++)
+            av_log(ctx, AV_LOG_INFO, "%d ", ambisonic->channel_map[i]);
+        av_log(ctx, AV_LOG_INFO, "}");
+    } else {
+        av_log(ctx, AV_LOG_WARNING, "unknown");
+        return;
+    }
+}
+
 static void dump_sidedata(void *ctx, AVStream *st, const char *indent)
 {
     int i;
@@ -394,6 +423,10 @@ static void dump_sidedata(void *ctx, AVStream *st, const char *indent)
         case AV_PKT_DATA_SPHERICAL:
             av_log(ctx, AV_LOG_INFO, "spherical: ");
             dump_spherical(ctx, st->codecpar, &sd);
+            break;
+        case AV_PKT_DATA_AMBISONIC:
+            av_log(ctx, AV_LOG_INFO, "ambisonic: ");
+            dump_ambisonic(ctx, &sd);
             break;
         default:
             av_log(ctx, AV_LOG_WARNING,

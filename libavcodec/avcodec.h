@@ -1068,6 +1068,12 @@ enum AVPacketSideDataType {
      * to the AVSphericalMapping structure.
      */
     AV_PKT_DATA_SPHERICAL,
+
+    /**
+     * This side data should be associated with an audio stream and corresponds
+     * to the AVAmbisonic structure.
+     */
+    AV_PKT_DATA_AMBISONIC,
 };
 
 typedef struct AVPacketSideData {

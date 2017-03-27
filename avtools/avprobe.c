@@ -23,6 +23,7 @@
 
 #include "libavformat/avformat.h"
 #include "libavcodec/avcodec.h"
+#include "libavutil/ambisonic.h"
 #include "libavutil/avstring.h"
 #include "libavutil/display.h"
 #include "libavutil/opt.h"
@@ -768,6 +769,7 @@ static void show_stream(InputFile *ifile, InputStream *ist)
             const AVPacketSideData* sd = &stream->side_data[i];
             AVStereo3D *stereo;
             AVSphericalMapping *spherical;
+            AVAmbisonic *ambisonic;
 
             switch (sd->type) {
             case AV_PKT_DATA_DISPLAYMATRIX:
@@ -818,6 +820,27 @@ static void show_stream(InputFile *ifile, InputStream *ist)
                 probe_object_footer("orientation");
 
                 probe_object_footer("spherical");
+                break;
+            case AV_PKT_DATA_AMBISONIC:
+                ambisonic = (AVAmbisonic *)sd->data;
+                probe_object_header("ambisonic");
+
+                if (ambisonic->type == AV_AMBISONIC_NON_DIEGETIC)
+                    probe_str("type", "non diegetic");
+                else if (ambisonic->type == AV_AMBISONIC_PERIPHONIC) {
+                    probe_str("type", "periphonic");
+
+                    probe_str("channel_order", "ACN");
+                    probe_str("normalization", "SN3D");
+                    probe_int("channel_count", ambisonic->nb_channels);
+
+                    probe_array_header("channel_map", 1);
+                    for (j = 0; j < ambisonic->nb_channels; j++)
+                        probe_int(NULL, ambisonic->channel_map[j]);
+                    probe_array_footer("channel_map", 1);
+
+                    probe_object_footer("ambisonic");
+                }
                 break;
             }
         }
