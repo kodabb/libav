@@ -27,6 +27,7 @@
 #include <limits.h>
 #include <stdint.h>
 
+#include "libavutil/ambisonic.h"
 #include "libavutil/attributes.h"
 #include "libavutil/channel_layout.h"
 #include "libavutil/intreadwrite.h"
@@ -42,6 +43,7 @@
 
 #include "libavcodec/ac3tab.h"
 #include "libavcodec/bitstream.h"
+#include "libavcodec/internal.h"
 
 #include "avformat.h"
 #include "internal.h"
@@ -3473,6 +3475,106 @@ static int mov_read_uuid(MOVContext *c, AVIOContext *pb, MOVAtom atom)
     return 0;
 }
 
+static int mov_read_SA3D(MOVContext *c, AVIOContext *pb, MOVAtom atom)
+{
+    AVStream *st;
+    MOVStreamContext *sc;
+    int i, version;
+    int type, channel_order, normalization, channel_count;
+
+    if (c->fc->nb_streams < 1)
+        return 0;
+
+    st = c->fc->streams[c->fc->nb_streams - 1];
+    sc = st->priv_data;
+
+    if (atom.size < 16) {
+        av_log(c->fc, AV_LOG_ERROR, "SA3D audio box too small\n");
+        return AVERROR_INVALIDDATA;
+    }
+
+    version = avio_r8(pb);
+    if (version) {
+        av_log(c->fc, AV_LOG_WARNING, "Unsupported SA3D %d\n", version);
+        return 0;
+    }
+
+    type = avio_r8(pb);
+    if (type) {
+        av_log(c->fc, AV_LOG_WARNING,
+               "Unsupported ambisonic type %d\n", type);
+        return 0;
+    }
+
+    avio_skip(pb, 4); // ambisonic_order
+
+    channel_order = avio_r8(pb);
+    if (channel_order) {
+        av_log(c->fc, AV_LOG_WARNING,
+               "Unsupported channel_order %d\n", channel_order);
+        return 0;
+    }
+
+    normalization = avio_r8(pb);
+    if (normalization) {
+        av_log(c->fc, AV_LOG_WARNING,
+               "Unsupported normalization %d\n", normalization);
+        return 0;
+    }
+
+    channel_count = avio_rb32(pb);
+    if (!channel_count || channel_count > FF_SANE_NB_CHANNELS - 2) {
+        av_log(c->fc, AV_LOG_WARNING,
+               "Unsupported nb_channels %d\n", channel_count);
+        return 0;
+    }
+
+    sc->ambisonic = av_ambisonic_alloc(&sc->ambisonic_size, channel_count);
+    if (!sc->ambisonic)
+        return AVERROR(ENOMEM);
+
+    sc->ambisonic->type = AV_AMBISONIC_PERIPHONIC;
+    sc->ambisonic->order = AV_AMBISONIC_CHANNEL_ACN;
+    sc->ambisonic->normalization = AV_AMBISONIC_NORM_SN3D;
+
+    for (i = 0; i < sc->ambisonic->nb_channels; i++)
+        sc->ambisonic->channel_map[i] = avio_rb32(pb);
+
+    return 0;
+}
+
+static int mov_read_SAND(MOVContext *c, AVIOContext *pb, MOVAtom atom)
+{
+    AVStream *st;
+    MOVStreamContext *sc;
+    int version;
+
+    if (c->fc->nb_streams < 1)
+        return 0;
+
+    st = c->fc->streams[c->fc->nb_streams - 1];
+    sc = st->priv_data;
+
+    if (atom.size < 5) {
+        av_log(c->fc, AV_LOG_ERROR, "Empty SAND audio box\n");
+        return AVERROR_INVALIDDATA;
+    }
+
+    version = avio_r8(pb);
+    if (version) {
+        av_log(c->fc, AV_LOG_WARNING, "Unsupported SAND %d\n", version);
+        return 0;
+    }
+
+    sc->ambisonic = av_ambisonic_alloc(&sc->ambisonic_size, 0);
+    if (!sc->ambisonic)
+        return AVERROR(ENOMEM);
+
+    sc->ambisonic->type = AV_AMBISONIC_NON_DIEGETIC;
+
+    return 0;
+}
+
 static const MOVParseTableEntry mov_default_parse_table[] = {
 { MKTAG('a','v','s','s'), mov_read_extradata },
 { MKTAG('c','h','p','l'), mov_read_chpl },
@@ -3537,6 +3639,8 @@ static const MOVParseTableEntry mov_default_parse_table[] = {
 { MKTAG('s','t','3','d'), mov_read_st3d }, /* stereoscopic 3D video box */
 { MKTAG('s','v','3','d'), mov_read_sv3d }, /* spherical video box */
 { MKTAG('u','u','i','d'), mov_read_uuid }, /* universal unique identifier */
+{ MKTAG('S','A','3','D'), mov_read_SA3D }, /* ambisonic periphonic audio box */
+{ MKTAG('S','A','N','D'), mov_read_SAND }, /* non diegetic audio box */
 { MKTAG('-','-','-','-'), mov_read_custom },
 { 0, NULL }
 };
@@ -3846,6 +3950,15 @@ static int mov_read_header(AVFormatContext *s)
             if (err < 0) {
                 mov_read_close(s);
                 return err;
+            }
+            if (sc->ambisonic) {
+                err = av_stream_add_side_data(st, AV_PKT_DATA_AMBISONIC,
+                                              (uint8_t *)sc->ambisonic,
+                                              sc->ambisonic_size);
+                if (err < 0)
+                    return err;
+
+                sc->ambisonic = NULL;
             }
             break;
         case AVMEDIA_TYPE_VIDEO:

@@ -27,6 +27,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "libavutil/ambisonic.h"
 #include "libavutil/spherical.h"
 #include "libavutil/stereo3d.h"
 
@@ -154,6 +155,8 @@ typedef struct MOVStreamContext {
     AVStereo3D *stereo3d;
     AVSphericalMapping *spherical;
     size_t spherical_size;
+    AVAmbisonic *ambisonic;
+    size_t ambisonic_size;
 } MOVStreamContext;
 
 typedef struct MOVContext {
