@@ -25,6 +25,7 @@
 
 #include <stdint.h>
 
+#include "libavutil/ambisonic.h"
 #include "libavutil/audio_fifo.h"
 #include "libavutil/float_dsp.h"
 #include "libavutil/frame.h"
@@ -191,6 +192,10 @@ typedef struct OpusContext {
     float   gain;
 
     ChannelMap *channel_maps;
+    AVAmbisonic *ambisonic;
+    size_t ambisonic_size;
+    AVAmbisonic *ambisonic_nondiegetic;
+    size_t ambisonic_nondiegetic_size;
 } OpusContext;
 
 static av_always_inline void opus_rc_normalize(OpusRangeCoder *rc)

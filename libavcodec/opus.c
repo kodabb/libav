@@ -346,7 +346,7 @@ av_cold int ff_opus_parse_extradata(AVCodecContext *avctx,
         streams        = 1;
         stereo_streams = channels - 1;
         channel_map    = default_channel_map;
-    } else if (map_type == 1 || map_type == 255) {
+    } else if (map_type == 1 || map_type == 2 || map_type == 255) {
         if (extradata_size < 21 + channels) {
             av_log(avctx, AV_LOG_ERROR, "Invalid extradata size: %d\n",
                    extradata_size);
@@ -370,8 +370,56 @@ av_cold int ff_opus_parse_extradata(AVCodecContext *avctx,
             }
             layout = ff_vorbis_channel_layouts[channels - 1];
             channel_reorder = channel_reorder_vorbis;
-        } else
+        } else if (map_type == 2) {
+            int ambisonic_order = ff_sqrt(channels) - 1;
+            if (channels == (ambisonic_order + 1 ) * (ambisonic_order + 1)) {
+                int i;
+
+                layout = 0;
+                streams = channels;
+                stereo_streams = 0;
+                channel_map = extradata + 21;
+
+                s->ambisonic = av_ambisonic_alloc(&s->ambisonic_size, streams);
+                if (!s->ambisonic)
+                    return AVERROR(ENOMEM);
+
+                s->ambisonic->type = AV_AMBISONIC_PERIPHONIC;
+                s->ambisonic->order = AV_AMBISONIC_CHANNEL_ACN;
+                s->ambisonic->normalization = AV_AMBISONIC_NORM_SN3D;
+                for (i = 0; i < streams; i++)
+                    s->ambisonic->channel_map[i] = channel_map[i];
+            } else if (channels == (ambisonic_order + 1 ) * (ambisonic_order + 1) + 2) {
+                int i;
+
+                layout = 0;
+                streams = channels - 2;
+                stereo_streams = streams;
+                channel_map = extradata + 21;
+
+                s->ambisonic = av_ambisonic_alloc(&s->ambisonic_size, streams);
+                if (!s->ambisonic)
+                    return AVERROR(ENOMEM);
+
+                s->ambisonic->type = AV_AMBISONIC_PERIPHONIC;
+                s->ambisonic->order = AV_AMBISONIC_CHANNEL_ACN;
+                s->ambisonic->normalization = AV_AMBISONIC_NORM_SN3D;
+                for (i = 0; i < streams; i++)
+                    s->ambisonic->channel_map[i] = channel_map[i];
+
+                s->ambisonic_nondiegetic = av_ambisonic_alloc(&s->ambisonic_nondiegetic_size, 0);
+                if (!s->ambisonic_nondiegetic)
+                    return AVERROR(ENOMEM);
+                s->ambisonic_nondiegetic->type = AV_AMBISONIC_NON_DIEGETIC;
+            } else {
+                av_log(avctx, AV_LOG_ERROR, "Channel mapping 2 is valid for "
+                       "channel counts described as (n + 1)^2 + j2 for "
+                       "nonnegative {n,j}.\n");
+                return AVERROR_INVALIDDATA;
+            }
+        } else {
             layout = 0;
+        }
 
         channel_map = extradata + 21;
     } else {

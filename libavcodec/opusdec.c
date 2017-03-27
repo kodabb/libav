@@ -594,6 +594,27 @@ static int opus_decode_packet(AVCodecContext *avctx, void *data,
         }
     }
 
+    if (c->ambisonic) {
+        AVFrameSideData *sd = av_frame_new_side_data(frame,
+                                                     AV_FRAME_DATA_AMBISONIC,
+                                                     c->ambisonic_size);
+        if (!sd)
+            return AVERROR(ENOMEM);
+
+        sd->data     = (uint8_t *)c->ambisonic;
+        c->ambisonic = NULL;
+    }
+    if (c->ambisonic_nondiegetic) {
+        AVFrameSideData *sd = av_frame_new_side_data(frame,
+                                                     AV_FRAME_DATA_AMBISONIC,
+                                                     c->ambisonic_nondiegetic_size);
+        if (!sd)
+            return AVERROR(ENOMEM);
+
+        sd->data                 = (uint8_t *)c->ambisonic_nondiegetic;
+        c->ambisonic_nondiegetic = NULL;
+    }
+
     frame->nb_samples = decoded_samples;
     *got_frame_ptr    = !!decoded_samples;
 
