@@ -27,6 +27,7 @@
 #include <stddef.h>
 
 #include "libavutil/adler32.h"
+#include "libavutil/ambisonic.h"
 #include "libavutil/attributes.h"
 #include "libavutil/channel_layout.h"
 #include "libavutil/common.h"
@@ -183,6 +184,35 @@ static void dump_audio_service_type(AVFilterContext *ctx, AVFrameSideData *sd)
     }
 }
 
+static void dump_ambisonic(void *ctx, AVFrameSideData *sd)
+{
+    AVAmbisonic *ambisonic = (AVAmbisonic *)sd->data;
+    int i;
+
+    av_log(ctx, AV_LOG_INFO, "ambisonic type: ");
+    if (sd->size < sizeof(*ambisonic)) {
+        av_log(ctx, AV_LOG_INFO, "invalid data");
+        return;
+    }
+
+    if (ambisonic->type == AV_AMBISONIC_NON_DIEGETIC) {
+        av_log(ctx, AV_LOG_INFO, "non diegetic ");
+    } else if (ambisonic->type == AV_AMBISONIC_PERIPHONIC) {
+        av_log(ctx, AV_LOG_INFO, "periphonic ");
+
+        av_log(ctx, AV_LOG_INFO, "(ACN order) ");
+        av_log(ctx, AV_LOG_INFO, "[SN3D normalization] ");
+
+        av_log(ctx, AV_LOG_INFO, "%d{ ", ambisonic->nb_channels);
+        for (i = 0; i < ambisonic->nb_channels; i++)
+            av_log(ctx, AV_LOG_INFO, "%d ", ambisonic->channel_map[i]);
+        av_log(ctx, AV_LOG_INFO, "}");
+    } else {
+        av_log(ctx, AV_LOG_WARNING, "unknown");
+        return;
+    }
+}
+
 static void dump_unknown(AVFilterContext *ctx, AVFrameSideData *sd)
 {
     av_log(ctx, AV_LOG_INFO, "unknown side data type: %d, size %d bytes", sd->type, sd->size);
@@ -235,6 +265,7 @@ static int filter_frame(AVFilterLink *inlink, AVFrame *buf)
         case AV_FRAME_DATA_DOWNMIX_INFO:   dump_downmix   (ctx, sd); break;
         case AV_FRAME_DATA_REPLAYGAIN:     dump_replaygain(ctx, sd); break;
         case AV_FRAME_DATA_AUDIO_SERVICE_TYPE: dump_audio_service_type(ctx, sd); break;
+        case AV_FRAME_DATA_AMBISONIC:      dump_ambisonic (ctx, sd); break;
         default:                           dump_unknown   (ctx, sd); break;
         }
 

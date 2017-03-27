@@ -13,6 +13,10 @@ libavutil:     2017-03-23
 
 API changes, most recent first:
 
+2017-03-xx - xxxxxxx - lavu 56.0.0 - hwcontext.h
+  Add AV_FRAME_DATA_AMBISONIC value, av_ambisonic_alloc(), av_ambisonic_free()
+  API and AVAmbisonic type to export and describe ambisonic sound tracks.
+
 2017-03-xx - xxxxxxx - lavc 57.37.0 - avcodec.h
   Add AVCodecContext.hwaccel_flags field. This will control some hwaccels at
   a later point.

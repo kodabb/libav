@@ -99,6 +99,12 @@ enum AVFrameSideDataType {
      * libavutil/spherical.h.
      */
     AV_FRAME_DATA_SPHERICAL,
+
+    /**
+     * The data represents the AVAmbisonic structure defined in
+     * libavutil/ambisonic.h.
+     */
+    AV_FRAME_DATA_AMBISONIC,
 };
 
 enum AVActiveFormatDescription {

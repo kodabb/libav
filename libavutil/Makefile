@@ -3,6 +3,7 @@ DESC = Libav utility library
 
 HEADERS = adler32.h                                                     \
           aes.h                                                         \
+          ambisonic.h                                                   \
           attributes.h                                                  \
           audio_fifo.h                                                  \
           avassert.h                                                    \
@@ -66,6 +67,7 @@ BUILT_HEADERS = avconfig.h
 
 OBJS = adler32.o                                                        \
        aes.o                                                            \
+       ambisonic.o                                                      \
        audio_fifo.o                                                     \
        avstring.o                                                       \
        base64.o                                                         \
