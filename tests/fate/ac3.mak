@@ -6,14 +6,14 @@ FATE_AC3 += fate-ac3-4.0
 fate-ac3-4.0: CMD = pcm -i $(TARGET_SAMPLES)/ac3/millers_crossing_4.0.ac3
 fate-ac3-4.0: REF = $(SAMPLES)/ac3/millers_crossing_4.0_v2.pcm
 
-#request_channel_layout 4 -> front channel
+#downmix 4.0 -> front channel
 FATE_AC3 += fate-ac3-4.0-downmix-mono
-fate-ac3-4.0-downmix-mono: CMD = pcm -request_channel_layout 4 -i $(TARGET_SAMPLES)/ac3/millers_crossing_4.0.ac3
+fate-ac3-4.0-downmix-mono: CMD = pcm -downmix 0x4 -i $(TARGET_SAMPLES)/ac3/millers_crossing_4.0.ac3
 fate-ac3-4.0-downmix-mono: REF = $(SAMPLES)/ac3/millers_crossing_4.0_mono_v2.pcm
 
-#request_channel_layout 3 -> left channel + right channel
+#downmix 3.0 -> left channel + right channel
 FATE_AC3 += fate-ac3-4.0-downmix-stereo
-fate-ac3-4.0-downmix-stereo: CMD = pcm -request_channel_layout 3 -i $(TARGET_SAMPLES)/ac3/millers_crossing_4.0.ac3
+fate-ac3-4.0-downmix-stereo: CMD = pcm -downmix 0x3 -i $(TARGET_SAMPLES)/ac3/millers_crossing_4.0.ac3
 fate-ac3-4.0-downmix-stereo: REF = $(SAMPLES)/ac3/millers_crossing_4.0_stereo_v2.pcm
 
 FATE_AC3 += fate-ac3-5.1
@@ -21,11 +21,11 @@ fate-ac3-5.1: CMD = pcm -i $(TARGET_SAMPLES)/ac3/monsters_inc_5.1_448_small.ac3
 fate-ac3-5.1: REF = $(SAMPLES)/ac3/monsters_inc_5.1_448_small_v2.pcm
 
 FATE_AC3 += fate-ac3-5.1-downmix-mono
-fate-ac3-5.1-downmix-mono: CMD = pcm -request_channel_layout 4 -i $(TARGET_SAMPLES)/ac3/monsters_inc_5.1_448_small.ac3
+fate-ac3-5.1-downmix-mono: CMD = pcm -downmix 0x4 -i $(TARGET_SAMPLES)/ac3/monsters_inc_5.1_448_small.ac3
 fate-ac3-5.1-downmix-mono: REF = $(SAMPLES)/ac3/monsters_inc_5.1_448_small_mono_v2.pcm
 
 FATE_AC3 += fate-ac3-5.1-downmix-stereo
-fate-ac3-5.1-downmix-stereo: CMD = pcm -request_channel_layout 3 -i $(TARGET_SAMPLES)/ac3/monsters_inc_5.1_448_small.ac3
+fate-ac3-5.1-downmix-stereo: CMD = pcm -downmix 0x3 -i $(TARGET_SAMPLES)/ac3/monsters_inc_5.1_448_small.ac3
 fate-ac3-5.1-downmix-stereo: REF = $(SAMPLES)/ac3/monsters_inc_5.1_448_small_stereo_v2.pcm
 
 FATE_EAC3 += fate-eac3-1

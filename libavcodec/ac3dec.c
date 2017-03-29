@@ -172,6 +172,8 @@ static av_cold void ac3_tables_init(void)
 static av_cold int ac3_decode_init(AVCodecContext *avctx)
 {
     AC3DecodeContext *s = avctx->priv_data;
+    static AVChannelLayout mono   = (AVChannelLayout)AV_CHANNEL_LAYOUT_MONO;
+    static AVChannelLayout stereo = (AVChannelLayout)AV_CHANNEL_LAYOUT_STEREO;
     int i;
 
     s->avctx = avctx;
@@ -190,12 +192,23 @@ static av_cold int ac3_decode_init(AVCodecContext *avctx)
     avctx->sample_fmt = AV_SAMPLE_FMT_FLTP;
 
     /* allow downmixing to stereo or mono */
-    if (avctx->channels > 1 &&
-        avctx->request_channel_layout == AV_CH_LAYOUT_MONO)
-        avctx->channels = 1;
-    else if (avctx->channels > 2 &&
-             avctx->request_channel_layout == AV_CH_LAYOUT_STEREO)
-        avctx->channels = 2;
+#if FF_API_OLD_CHANNEL_LAYOUT
+FF_DISABLE_DEPRECATION_WARNINGS
+    if (avctx->request_channel_layout) {
+        av_channel_layout_uninit(&s->downmix_layout);
+        av_channel_layout_from_mask(&s->downmix_layout, avctx->request_channel_layout);
+    }
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
+    if (avctx->ch_layout.nb_channels > 1 &&
+        !av_channel_layout_compare(&s->downmix_layout, &mono)) {
+        av_channel_layout_uninit(&avctx->ch_layout);
+        avctx->ch_layout = (AVChannelLayout)AV_CHANNEL_LAYOUT_MONO;
+    } else if (avctx->ch_layout.nb_channels > 2 &&
+             !av_channel_layout_compare(&s->downmix_layout, &stereo)) {
+        av_channel_layout_uninit(&avctx->ch_layout);
+        avctx->ch_layout = (AVChannelLayout)AV_CHANNEL_LAYOUT_STEREO;
+    }
     s->downmixed = 1;
 
     for (i = 0; i < AC3_MAX_CHANNELS; i++) {
@@ -1364,6 +1377,7 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data,
     const float *output[AC3_MAX_CHANNELS];
     enum AVMatrixEncoding matrix_encoding;
     AVDownmixInfo *downmix_info;
+    uint64_t mask;
 
     /* copy input buffer to decoder context to avoid reading past the end
        of the buffer, which can be caused by a damaged input stream. */
@@ -1440,16 +1454,19 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data,
 
     /* channel config */
     if (!err || (s->channels && s->out_channels != s->channels)) {
+        static AVChannelLayout mono   = (AVChannelLayout)AV_CHANNEL_LAYOUT_MONO;
+        static AVChannelLayout stereo = (AVChannelLayout)AV_CHANNEL_LAYOUT_STEREO;
+
         s->out_channels = s->channels;
         s->output_mode  = s->channel_mode;
         if (s->lfe_on)
             s->output_mode |= AC3_OUTPUT_LFEON;
         if (s->channels > 1 &&
-            avctx->request_channel_layout == AV_CH_LAYOUT_MONO) {
+            !av_channel_layout_compare(&s->downmix_layout, &mono)) {
             s->out_channels = 1;
             s->output_mode  = AC3_CHMODE_MONO;
         } else if (s->channels > 2 &&
-                   avctx->request_channel_layout == AV_CH_LAYOUT_STEREO) {
+                   !av_channel_layout_compare(&s->downmix_layout, &stereo)) {
             s->out_channels = 2;
             s->output_mode  = AC3_CHMODE_STEREO;
         }
@@ -1466,10 +1483,19 @@ static int ac3_decode_frame(AVCodecContext * avctx, void *data,
         av_log(avctx, AV_LOG_ERROR, "unable to determine channel mode\n");
         return AVERROR_INVALIDDATA;
     }
-    avctx->channels = s->out_channels;
-    avctx->channel_layout = avpriv_ac3_channel_layout_tab[s->output_mode & ~AC3_OUTPUT_LFEON];
+
+    mask = avpriv_ac3_channel_layout_tab[s->output_mode & ~AC3_OUTPUT_LFEON];
     if (s->output_mode & AC3_OUTPUT_LFEON)
-        avctx->channel_layout |= AV_CH_LOW_FREQUENCY;
+        mask |= AV_CH_LOW_FREQUENCY;
+
+    av_channel_layout_uninit(&avctx->ch_layout);
+    av_channel_layout_from_mask(&avctx->ch_layout, mask);
+#if FF_API_OLD_CHANNEL_LAYOUT
+FF_DISABLE_DEPRECATION_WARNINGS
+    avctx->channels = avctx->ch_layout.nb_channels;
+    avctx->channel_layout = avctx->ch_layout.u.mask;
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
 
     /* set audio service type based on bitstream mode for AC-3 */
     avctx->audio_service_type = s->bitstream_mode;
@@ -1588,6 +1614,7 @@ static av_cold int ac3_decode_end(AVCodecContext *avctx)
 #define PAR (AV_OPT_FLAG_DECODING_PARAM | AV_OPT_FLAG_AUDIO_PARAM)
 static const AVOption options[] = {
     { "drc_scale", "percentage of dynamic range compression to apply", OFFSET(drc_scale), AV_OPT_TYPE_FLOAT, {.dbl = 1.0}, 0.0, 6.0, PAR },
+    { "downmix", "Request a specific channel layout from the decoder", OFFSET(downmix_layout), AV_OPT_TYPE_CHANNEL_LAYOUT, {.str = NULL}, .flags = PAR },
     { NULL},
 };
 
