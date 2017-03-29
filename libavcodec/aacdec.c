@@ -81,6 +81,7 @@
  */
 
 #include "libavutil/float_dsp.h"
+#include "libavutil/opt.h"
 #include "avcodec.h"
 #include "internal.h"
 #include "get_bits.h"
@@ -193,7 +194,7 @@ static int frame_configure_elements(AVCodecContext *avctx)
     }
 
     /* map output channel pointers to AVFrame data */
-    for (ch = 0; ch < avctx->channels; ch++) {
+    for (ch = 0; ch < avctx->ch_layout.nb_channels; ch++) {
         if (ac->output_element[ch])
             ac->output_element[ch]->ret = (float *)ac->frame->extended_data[ch];
     }
@@ -432,8 +433,7 @@ static void push_output_configuration(AACContext *ac) {
 static void pop_output_configuration(AACContext *ac) {
     if (ac->oc[1].status != OC_LOCKED && ac->oc[0].status != OC_NONE) {
         ac->oc[1] = ac->oc[0];
-        ac->avctx->channels = ac->oc[1].channels;
-        ac->avctx->channel_layout = ac->oc[1].channel_layout;
+        av_channel_layout_copy(&ac->avctx->ch_layout, &ac->oc[1].ch_layout);
     }
 }
 
@@ -464,7 +464,15 @@ static int output_configure(AACContext *ac,
     }
     // Try to sniff a reasonable channel order, otherwise output the
     // channels in the order the PCE declared them.
-    if (avctx->request_channel_layout != AV_CH_LAYOUT_NATIVE)
+#if FF_API_OLD_CHANNEL_LAYOUT
+FF_DISABLE_DEPRECATION_WARNINGS
+    if (avctx->request_channel_layout) {
+        av_channel_layout_uninit(&ac->downmix_layout);
+        av_channel_layout_from_mask(&ac->downmix_layout, avctx->request_channel_layout);
+    }
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
+    if (ac->downmix_layout.order == AV_CHANNEL_ORDER_NATIVE)
         layout = sniff_channel_order(layout_map, tags);
     for (i = 0; i < tags; i++) {
         int type =     layout_map[i][0];
@@ -486,8 +494,18 @@ static int output_configure(AACContext *ac,
         }
     }
 
-    avctx->channel_layout = ac->oc[1].channel_layout = layout;
-    avctx->channels       = ac->oc[1].channels       = channels;
+    av_channel_layout_uninit(&ac->oc[1].ch_layout);
+    av_channel_layout_from_mask(&ac->oc[1].ch_layout, layout);
+    ret = av_channel_layout_copy(&avctx->ch_layout, &ac->oc[1].ch_layout);
+    if (ret < 0)
+        return ret;
+#if FF_API_OLD_CHANNEL_LAYOUT
+FF_DISABLE_DEPRECATION_WARNINGS
+    avctx->channels       = avctx->ch_layout.nb_channels;
+    avctx->channel_layout = layout;
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
+
     ac->oc[1].status = oc_type;
 
     if (get_new_frame) {
@@ -1073,12 +1091,12 @@ static av_cold int aac_decode_init(AVCodecContext *avctx)
 
         sr = sample_rate_idx(avctx->sample_rate);
         ac->oc[1].m4ac.sampling_index = sr;
-        ac->oc[1].m4ac.channels = avctx->channels;
+        ac->oc[1].m4ac.channels = avctx->ch_layout.nb_channels;
         ac->oc[1].m4ac.sbr = -1;
         ac->oc[1].m4ac.ps = -1;
 
         for (i = 0; i < FF_ARRAY_ELEMS(ff_mpeg4audio_channels); i++)
-            if (ff_mpeg4audio_channels[i] == avctx->channels)
+            if (ff_mpeg4audio_channels[i] == avctx->ch_layout.nb_channels)
                 break;
         if (i == FF_ARRAY_ELEMS(ff_mpeg4audio_channels)) {
             i = 0;
@@ -2226,7 +2244,8 @@ static int decode_extension_payload(AACContext *ac, GetBitContext *gb, int cnt,
             av_log(ac->avctx, AV_LOG_ERROR, "Implicit SBR was found with a first occurrence after the first frame.\n");
             skip_bits_long(gb, 8 * cnt - 4);
             return res;
-        } else if (ac->oc[1].m4ac.ps == -1 && ac->oc[1].status < OC_LOCKED && ac->avctx->channels == 1) {
+        } else if (ac->oc[1].m4ac.ps == -1 && ac->oc[1].status < OC_LOCKED &&
+                   ac->avctx->ch_layout.nb_channels == 1) {
             ac->oc[1].m4ac.sbr = 1;
             ac->oc[1].m4ac.ps = 1;
             ac->avctx->profile = FF_PROFILE_AAC_HE_V2;
@@ -2832,7 +2851,7 @@ static int aac_decode_frame_int(AVCodecContext *avctx, void *data,
         }
     }
 
-    if (avctx->channels)
+    if (avctx->ch_layout.nb_channels)
         if ((err = frame_configure_elements(avctx)) < 0)
             goto fail;
 
@@ -2845,7 +2864,7 @@ static int aac_decode_frame_int(AVCodecContext *avctx, void *data,
     while ((elem_type = get_bits(gb, 3)) != TYPE_END) {
         elem_id = get_bits(gb, 4);
 
-        if (!avctx->channels && elem_type != TYPE_PCE) {
+        if (!avctx->ch_layout.nb_channels && elem_type != TYPE_PCE) {
             err = AVERROR_INVALIDDATA;
             goto fail;
         }
@@ -2936,7 +2955,7 @@ static int aac_decode_frame_int(AVCodecContext *avctx, void *data,
         }
     }
 
-    if (!avctx->channels) {
+    if (!avctx->ch_layout.nb_channels) {
         *got_frame_ptr = 0;
         return 0;
     }
@@ -3318,6 +3337,20 @@ static av_cold int latm_decode_init(AVCodecContext *avctx)
     return ret;
 }
 
+#define OFFSET(x) offsetof(AACContext, x)
+#define A         AV_OPT_FLAG_AUDIO_PARAM | AV_OPT_FLAG_DECODING_PARAM
+static const AVOption options[] = {
+    { "downmix", "Request a specific channel layout from the decoder",
+        OFFSET(downmix_layout), AV_OPT_TYPE_CHANNEL_LAYOUT, {.str = NULL}, .flags = A },
+    { NULL },
+};
+
+static const AVClass aacdec_class = {
+    .class_name = "AAC decoder",
+    .item_name  = av_default_item_name,
+    .option     = options,
+    .version    = LIBAVUTIL_VERSION_INT,
+};
 
 AVCodec ff_aac_decoder = {
     .name            = "aac",
@@ -3325,6 +3358,7 @@ AVCodec ff_aac_decoder = {
     .type            = AVMEDIA_TYPE_AUDIO,
     .id              = AV_CODEC_ID_AAC,
     .priv_data_size  = sizeof(AACContext),
+    .priv_class      = &aacdec_class,
     .init            = aac_decode_init,
     .close           = aac_decode_close,
     .decode          = aac_decode_frame,
@@ -3333,7 +3367,19 @@ AVCodec ff_aac_decoder = {
     },
     .capabilities    = AV_CODEC_CAP_CHANNEL_CONF | AV_CODEC_CAP_DR1,
     .caps_internal   = FF_CODEC_CAP_INIT_THREADSAFE,
+#if FF_API_OLD_CHANNEL_LAYOUT
+FF_DISABLE_DEPRECATION_WARNINGS
     .channel_layouts = aac_channel_layout,
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
+    .ch_layouts      = aac_ch_layouts,
+};
+
+static const AVClass aaclatmdec_class = {
+    .class_name = "AAC-LATM decoder",
+    .item_name  = av_default_item_name,
+    .option     = options,
+    .version    = LIBAVUTIL_VERSION_INT,
 };
 
 /*
@@ -3347,6 +3393,7 @@ AVCodec ff_aac_latm_decoder = {
     .type            = AVMEDIA_TYPE_AUDIO,
     .id              = AV_CODEC_ID_AAC_LATM,
     .priv_data_size  = sizeof(struct LATMContext),
+    .priv_class      = &aaclatmdec_class,
     .init            = latm_decode_init,
     .close           = aac_decode_close,
     .decode          = latm_decode_frame,
@@ -3355,5 +3402,10 @@ AVCodec ff_aac_latm_decoder = {
     },
     .capabilities    = AV_CODEC_CAP_CHANNEL_CONF | AV_CODEC_CAP_DR1,
     .caps_internal   = FF_CODEC_CAP_INIT_THREADSAFE,
+#if FF_API_OLD_CHANNEL_LAYOUT
+FF_DISABLE_DEPRECATION_WARNINGS
     .channel_layouts = aac_channel_layout,
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
+    .ch_layouts      = aac_ch_layouts,
 };

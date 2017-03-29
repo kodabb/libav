@@ -82,8 +82,13 @@ get_next:
        seconds is still correct (as is the number of bits in the frame). */
     if (avctx->codec_id != AV_CODEC_ID_AAC) {
         avctx->sample_rate = s->sample_rate;
-        avctx->channels = s->channels;
-        avctx->channel_layout = s->channel_layout;
+
+        av_channel_layout_uninit(&avctx->ch_layout);
+        if (s->channel_layout)
+            av_channel_layout_from_mask(&avctx->ch_layout, s->channel_layout);
+        else
+            av_channel_layout_default(&avctx->ch_layout, s->channels);
+
         s1->duration = s->samples;
         avctx->audio_service_type = s->service_type;
     }

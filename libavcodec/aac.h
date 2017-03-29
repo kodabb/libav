@@ -30,6 +30,7 @@
 #ifndef AVCODEC_AAC_H
 #define AVCODEC_AAC_H
 
+#include "libavutil/channel_layout.h"
 #include "libavutil/float_dsp.h"
 #include "avcodec.h"
 #include "imdct15.h"
@@ -116,8 +117,7 @@ typedef struct OutputConfiguration {
     MPEG4AudioConfig m4ac;
     uint8_t layout_map[MAX_ELEM_ID*4][3];
     int layout_map_tags;
-    int channels;
-    uint64_t channel_layout;
+    AVChannelLayout ch_layout;
     enum OCStatus status;
 } OutputConfiguration;
 
@@ -260,6 +260,7 @@ typedef struct ChannelElement {
  * main AAC context
  */
 typedef struct AACContext {
+    const AVClass *class;
     AVCodecContext *avctx;
     AVFrame *frame;
 
@@ -306,6 +307,8 @@ typedef struct AACContext {
     DECLARE_ALIGNED(32, float, temp)[128];
 
     OutputConfiguration oc[2];
+
+    AVChannelLayout downmix_layout;
 } AACContext;
 
 #endif /* AVCODEC_AAC_H */
