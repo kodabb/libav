@@ -36,6 +36,7 @@
 #include "libavutil/attributes.h"
 #include "libavutil/avutil.h"
 #include "libavutil/buffer.h"
+#include "libavutil/channel_layout.h"
 #include "libavutil/frame.h"
 #include "libavutil/log.h"
 #include "libavutil/samplefmt.h"
@@ -334,7 +335,12 @@ struct AVFilterLink {
     int h;                      ///< agreed upon image height
     AVRational sample_aspect_ratio; ///< agreed upon sample aspect ratio
     /* These two parameters apply only to audio */
-    uint64_t channel_layout;    ///< channel layout of current buffer (see libavutil/channel_layout.h)
+#if FF_API_OLD_CHANNEL_LAYOUT
+    /**
+     * @deprecated use ch_layout instead
+     */
+    attribute_deprecated uint64_t channel_layout;
+#endif
     int sample_rate;            ///< samples per second
 
     int format;                 ///< agreed upon media format
@@ -347,6 +353,11 @@ struct AVFilterLink {
      * input link is assumed to be an unchangeable property.
      */
     AVRational time_base;
+
+    /**
+     * Channel layout of current buffer.
+     */
+    AVChannelLayout ch_layout;
 
     /*****************************************************************
      * All fields below this line are not part of the public API. They
