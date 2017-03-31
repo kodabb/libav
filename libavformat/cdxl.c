@@ -95,6 +95,7 @@ static int cdxl_read_packet(AVFormatContext *s, AVPacket *pkt)
 
     if (cdxl->read_chunk && audio_size) {
         if (cdxl->audio_stream_index == -1) {
+            int channels = !!(cdxl->header[1] & 0x10) + 1;
             AVStream *st = avformat_new_stream(s, NULL);
             if (!st)
                 return AVERROR(ENOMEM);
@@ -102,13 +103,7 @@ static int cdxl_read_packet(AVFormatContext *s, AVPacket *pkt)
             st->codecpar->codec_type    = AVMEDIA_TYPE_AUDIO;
             st->codecpar->codec_tag     = 0;
             st->codecpar->codec_id      = AV_CODEC_ID_PCM_S8;
-            if (cdxl->header[1] & 0x10) {
-                st->codecpar->channels       = 2;
-                st->codecpar->channel_layout = AV_CH_LAYOUT_STEREO;
-            } else {
-                st->codecpar->channels       = 1;
-                st->codecpar->channel_layout = AV_CH_LAYOUT_MONO;
-            }
+            av_channel_layout_default(&st->codecpar->ch_layout, channels);
             st->codecpar->sample_rate   = cdxl->sample_rate;
             st->start_time           = 0;
             cdxl->audio_stream_index = st->index;
