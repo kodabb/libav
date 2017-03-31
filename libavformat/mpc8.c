@@ -206,6 +206,7 @@ static int mpc8_read_header(AVFormatContext *s)
     AVIOContext *pb = s->pb;
     AVStream *st;
     int tag = 0;
+    int channels;
     int64_t size, pos;
 
     c->header_pos = avio_tell(pb);
@@ -246,7 +247,9 @@ static int mpc8_read_header(AVFormatContext *s)
     st->codecpar->extradata = av_mallocz(st->codecpar->extradata_size + AV_INPUT_BUFFER_PADDING_SIZE);
     avio_read(pb, st->codecpar->extradata, st->codecpar->extradata_size);
 
-    st->codecpar->channels = (st->codecpar->extradata[1] >> 4) + 1;
+    channels = (st->codecpar->extradata[1] >> 4) + 1;
+    st->codecpar->ch_layout.order = AV_CHANNEL_ORDER_UNSPEC;
+    st->codecpar->ch_layout.nb_channels = channels;
     st->codecpar->sample_rate = mpc8_rate[st->codecpar->extradata[0] >> 5];
     avpriv_set_pts_info(st, 32, 1152  << (st->codecpar->extradata[1]&3)*2, st->codecpar->sample_rate);
     st->start_time = 0;
