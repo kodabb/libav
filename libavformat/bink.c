@@ -139,6 +139,7 @@ static int read_header(AVFormatContext *s)
         avio_skip(pb, 4 * bink->num_audio_tracks);
 
         for (i = 0; i < bink->num_audio_tracks; i++) {
+            int channels;
             ast = avformat_new_stream(s, NULL);
             if (!ast)
                 return AVERROR(ENOMEM);
@@ -149,13 +150,8 @@ static int read_header(AVFormatContext *s)
             flags = avio_rl16(pb);
             ast->codecpar->codec_id = flags & BINK_AUD_USEDCT ?
                                    AV_CODEC_ID_BINKAUDIO_DCT : AV_CODEC_ID_BINKAUDIO_RDFT;
-            if (flags & BINK_AUD_STEREO) {
-                ast->codecpar->channels       = 2;
-                ast->codecpar->channel_layout = AV_CH_LAYOUT_STEREO;
-            } else {
-                ast->codecpar->channels       = 1;
-                ast->codecpar->channel_layout = AV_CH_LAYOUT_MONO;
-            }
+            channels = !!(flags & BINK_AUD_STEREO) + 1;
+            av_channel_layout_default(&ast->codecpar->ch_layout, channels);
             ast->codecpar->extradata = av_mallocz(4 + AV_INPUT_BUFFER_PADDING_SIZE);
             if (!ast->codecpar->extradata)
                 return AVERROR(ENOMEM);
@@ -242,7 +238,7 @@ static int read_packet(AVFormatContext *s, AVPacket *pkt)
                (in bytes). We use this value to calculate the audio PTS */
             if (pkt->size >= 4)
                 bink->audio_pts[bink->current_track -1] +=
-                    AV_RL32(pkt->data) / (2 * s->streams[bink->current_track]->codecpar->channels);
+                    AV_RL32(pkt->data) / (2 * s->streams[bink->current_track]->codecpar->ch_layout.nb_channels);
             return 0;
         } else {
             avio_skip(pb, audio_size);
