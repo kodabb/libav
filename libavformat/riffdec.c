@@ -58,11 +58,14 @@ static void parse_waveformatex(AVIOContext *pb, AVCodecParameters *par)
 {
     ff_asf_guid subformat;
     int bps;
+    uint64_t mask;
 
     bps = avio_rl16(pb);
     if (bps)
         par->bits_per_coded_sample = bps;
-    par->channel_layout        = avio_rl32(pb); /* dwChannelMask */
+
+    mask = avio_rl32(pb); /* dwChannelMask */
+    av_channel_layout_from_mask(&par->ch_layout, mask);
 
     ff_get_guid(pb, &subformat);
     if (!memcmp(subformat + 4,
@@ -82,7 +85,7 @@ static void parse_waveformatex(AVIOContext *pb, AVCodecParameters *par)
 int ff_get_wav_header(AVFormatContext *s, AVIOContext *pb,
                       AVCodecParameters *par, int size)
 {
-    int id;
+    int id, channels;
     uint64_t bitrate;
 
     if (size < 14)
@@ -90,7 +93,7 @@ int ff_get_wav_header(AVFormatContext *s, AVIOContext *pb,
 
     id                 = avio_rl16(pb);
     par->codec_type    = AVMEDIA_TYPE_AUDIO;
-    par->channels      = avio_rl16(pb);
+    channels           = avio_rl16(pb);
     par->sample_rate   = avio_rl32(pb);
     bitrate            = avio_rl32(pb) * 8;
     par->block_align   = avio_rl16(pb);
@@ -153,12 +156,14 @@ int ff_get_wav_header(AVFormatContext *s, AVIOContext *pb,
     if (par->codec_id == AV_CODEC_ID_AAC_LATM) {
         /* Channels and sample_rate values are those prior to applying SBR
          * and/or PS. */
-        par->channels    = 0;
+        channels         = 0;
         par->sample_rate = 0;
     }
     /* override bits_per_coded_sample for G.726 */
     if (par->codec_id == AV_CODEC_ID_ADPCM_G726)
         par->bits_per_coded_sample = par->bit_rate / par->sample_rate;
+
+    av_channel_layout_default(&par->ch_layout, channels);
 
     return 0;
 }
