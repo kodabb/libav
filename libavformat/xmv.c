@@ -243,7 +243,8 @@ static int xmv_read_header(AVFormatContext *s)
         ast->codecpar->codec_type            = AVMEDIA_TYPE_AUDIO;
         ast->codecpar->codec_id              = track->codec_id;
         ast->codecpar->codec_tag             = track->compression;
-        ast->codecpar->channels              = track->channels;
+        ast->codecpar->ch_layout.order       = AV_CHANNEL_ORDER_UNSPEC;
+        ast->codecpar->ch_layout.nb_channels = track->channels;
         ast->codecpar->sample_rate           = track->sample_rate;
         ast->codecpar->bits_per_coded_sample = track->bits_per_sample;
         ast->codecpar->bit_rate              = track->bit_rate;
