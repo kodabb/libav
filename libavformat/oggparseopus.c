@@ -54,7 +54,8 @@ static int opus_header(AVFormatContext *avf, int idx)
 
         st->codecpar->codec_type = AVMEDIA_TYPE_AUDIO;
         st->codecpar->codec_id   = AV_CODEC_ID_OPUS;
-        st->codecpar->channels   = AV_RL8(packet + 9);
+        st->codecpar->ch_layout.order = AV_CHANNEL_ORDER_UNSPEC;
+        st->codecpar->ch_layout.nb_channels = AV_RL8(packet + 9);
         priv->pre_skip        = AV_RL16(packet + 10);
 
         st->codecpar->initial_padding = priv->pre_skip;
