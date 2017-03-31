@@ -449,7 +449,7 @@ static int write_streamheader(AVFormatContext *avctx, AVIOContext *bc,
     case AVMEDIA_TYPE_AUDIO:
         ff_put_v(bc, par->sample_rate);
         ff_put_v(bc, 1);
-        ff_put_v(bc, par->channels);
+        ff_put_v(bc, par->ch_layout.nb_channels);
         break;
     case AVMEDIA_TYPE_VIDEO:
         ff_put_v(bc, par->width);
