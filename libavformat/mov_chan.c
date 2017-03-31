@@ -491,7 +491,7 @@ static uint32_t mov_get_channel_label(uint32_t label)
 }
 
 uint32_t ff_mov_get_channel_layout_tag(enum AVCodecID codec_id,
-                                       uint64_t channel_layout,
+                                       AVChannelLayout *ch_layout,
                                        uint32_t *bitmap)
 {
     int i, j;
@@ -511,7 +511,7 @@ uint32_t ff_mov_get_channel_layout_tag(enum AVCodecID codec_id,
         const struct MovChannelLayoutMap *layout_map;
 
         /* get the layout map based on the channel count */
-        channels = av_get_channel_layout_nb_channels(channel_layout);
+        channels = ch_layout->nb_channels;
         if (channels > 9)
             channels = 0;
         layout_map = mov_ch_layout_map[channels];
@@ -522,7 +522,8 @@ uint32_t ff_mov_get_channel_layout_tag(enum AVCodecID codec_id,
                 continue;
             for (j = 0; layout_map[j].tag != 0; j++) {
                 if (layout_map[j].tag    == layouts[i] &&
-                    layout_map[j].layout == channel_layout)
+                    (ch_layout->order == AV_CHANNEL_ORDER_NATIVE &&
+                     layout_map[j].layout == ch_layout->u.mask))
                     break;
             }
             if (layout_map[j].tag)
@@ -532,9 +533,9 @@ uint32_t ff_mov_get_channel_layout_tag(enum AVCodecID codec_id,
     }
 
     /* if no tag was found, use channel bitmap as a backup if possible */
-    if (tag == 0 && channel_layout > 0 && channel_layout < 0x40000) {
+    if (tag == 0 && av_channel_layout_check(ch_layout) && ch_layout->u.mask < 0x40000) {
         tag     = MOV_CH_LAYOUT_USE_BITMAP;
-        *bitmap = (uint32_t)channel_layout;
+        *bitmap = (uint32_t)ch_layout->u.mask;
     } else
         *bitmap = 0;
 
@@ -547,6 +548,7 @@ int ff_mov_read_chan(AVFormatContext *s, AVIOContext *pb, AVStream *st,
                      int64_t size)
 {
     uint32_t layout_tag, bitmap, num_descr, label_mask;
+    uint64_t mask;
     int i;
 
     if (size < 12)
@@ -585,11 +587,15 @@ int ff_mov_read_chan(AVFormatContext *s, AVIOContext *pb, AVStream *st,
             label_mask |= mask_incr;
         }
     }
-    if (layout_tag == 0) {
-        if (label_mask)
-            st->codecpar->channel_layout = label_mask;
-    } else
-        st->codecpar->channel_layout = ff_mov_get_channel_layout(layout_tag, bitmap);
+    if (layout_tag == 0)
+        mask = label_mask;
+    else
+        mask = ff_mov_get_channel_layout(layout_tag, bitmap);
+
+    if (mask) {
+        av_channel_layout_uninit(&st->codecpar->ch_layout);
+        av_channel_layout_from_mask(&st->codecpar->ch_layout, mask);
+    }
 
     return 0;
 }

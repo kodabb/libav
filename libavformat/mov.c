@@ -684,6 +684,7 @@ static int mov_read_dac3(MOVContext *c, AVIOContext *pb, MOVAtom atom)
     AVStream *st;
     enum AVAudioServiceType *ast;
     int ac3info, acmod, lfeon, bsmod;
+    uint64_t mask;
 
     if (c->fc->nb_streams < 1)
         return 0;
@@ -698,12 +699,15 @@ static int mov_read_dac3(MOVContext *c, AVIOContext *pb, MOVAtom atom)
     bsmod = (ac3info >> 14) & 0x7;
     acmod = (ac3info >> 11) & 0x7;
     lfeon = (ac3info >> 10) & 0x1;
-    st->codecpar->channels = ((int[]){2,1,2,3,3,4,4,5})[acmod] + lfeon;
-    st->codecpar->channel_layout = avpriv_ac3_channel_layout_tab[acmod];
+
+    mask = avpriv_ac3_channel_layout_tab[acmod];
     if (lfeon)
-        st->codecpar->channel_layout |= AV_CH_LOW_FREQUENCY;
+        mask |= 1ULL << AV_CH_LOW_FREQUENCY;
+    av_channel_layout_uninit(&st->codecpar->ch_layout);
+    av_channel_layout_from_mask(&st->codecpar->ch_layout, mask);
+
     *ast = bsmod;
-    if (st->codecpar->channels > 1 && bsmod == 0x7)
+    if (st->codecpar->ch_layout.nb_channels > 1 && bsmod == 0x7)
         *ast = AV_AUDIO_SERVICE_TYPE_KARAOKE;
 
 #if FF_API_LAVF_AVCTX
@@ -720,6 +724,7 @@ static int mov_read_dec3(MOVContext *c, AVIOContext *pb, MOVAtom atom)
     AVStream *st;
     enum AVAudioServiceType *ast;
     int eac3info, acmod, lfeon, bsmod;
+    uint64_t mask;
 
     if (c->fc->nb_streams < 1)
         return 0;
@@ -738,12 +743,15 @@ static int mov_read_dec3(MOVContext *c, AVIOContext *pb, MOVAtom atom)
     bsmod = (eac3info >> 12) & 0x1f;
     acmod = (eac3info >>  9) & 0x7;
     lfeon = (eac3info >>  8) & 0x1;
-    st->codecpar->channel_layout = avpriv_ac3_channel_layout_tab[acmod];
+
+    mask = avpriv_ac3_channel_layout_tab[acmod];
     if (lfeon)
-        st->codecpar->channel_layout |= AV_CH_LOW_FREQUENCY;
-    st->codecpar->channels = av_get_channel_layout_nb_channels(st->codecpar->channel_layout);
+        mask |= 1ULL << AV_CH_LOW_FREQUENCY;
+    av_channel_layout_uninit(&st->codecpar->ch_layout);
+    av_channel_layout_from_mask(&st->codecpar->ch_layout, mask);
+
     *ast = bsmod;
-    if (st->codecpar->channels > 1 && bsmod == 0x7)
+    if (st->codecpar->ch_layout.nb_channels > 1 && bsmod == 0x7)
         *ast = AV_AUDIO_SERVICE_TYPE_KARAOKE;
 
 #if FF_API_LAVF_AVCTX
@@ -1502,13 +1510,17 @@ static void mov_parse_stsd_audio(MOVContext *c, AVIOContext *pb,
 {
     int bits_per_sample, flags;
     uint16_t version = avio_rb16(pb);
+    int channel_count;
 
     avio_rb16(pb); /* revision level */
     avio_rb32(pb); /* vendor */
 
-    st->codecpar->channels              = avio_rb16(pb); /* channel count */
+    channel_count = avio_rb16(pb);
+
+    st->codecpar->ch_layout.order = AV_CHANNEL_ORDER_UNSPEC;
+    st->codecpar->ch_layout.nb_channels = channel_count;
     st->codecpar->bits_per_coded_sample = avio_rb16(pb); /* sample size */
-    av_log(c->fc, AV_LOG_TRACE, "audio channels %d\n", st->codecpar->channels);
+    av_log(c->fc, AV_LOG_TRACE, "audio channels %d\n", channel_count);
 
     sc->audio_cid = avio_rb16(pb);
     avio_rb16(pb); /* packet size = 0 */
@@ -1526,7 +1538,9 @@ static void mov_parse_stsd_audio(MOVContext *c, AVIOContext *pb,
         } else if (version == 2) {
             avio_rb32(pb); /* sizeof struct only */
             st->codecpar->sample_rate = av_int2double(avio_rb64(pb));
-            st->codecpar->channels    = avio_rb32(pb);
+            channel_count = avio_rb32(pb);
+            st->codecpar->ch_layout.order = AV_CHANNEL_ORDER_UNSPEC;
+            st->codecpar->ch_layout.nb_channels = channel_count;
             avio_rb32(pb); /* always 0x7F000000 */
             st->codecpar->bits_per_coded_sample = avio_rb32(pb);
 
@@ -1567,15 +1581,15 @@ static void mov_parse_stsd_audio(MOVContext *c, AVIOContext *pb,
     /* set values for old format before stsd version 1 appeared */
     case AV_CODEC_ID_MACE3:
         sc->samples_per_frame = 6;
-        sc->bytes_per_frame   = 2 * st->codecpar->channels;
+        sc->bytes_per_frame   = 2 * st->codecpar->ch_layout.nb_channels;
         break;
     case AV_CODEC_ID_MACE6:
         sc->samples_per_frame = 6;
-        sc->bytes_per_frame   = 1 * st->codecpar->channels;
+        sc->bytes_per_frame   = 1 * st->codecpar->ch_layout.nb_channels;
         break;
     case AV_CODEC_ID_ADPCM_IMA_QT:
         sc->samples_per_frame = 64;
-        sc->bytes_per_frame   = 34 * st->codecpar->channels;
+        sc->bytes_per_frame   = 34 * st->codecpar->ch_layout.nb_channels;
         break;
     case AV_CODEC_ID_GSM:
         sc->samples_per_frame = 160;
@@ -1588,7 +1602,7 @@ static void mov_parse_stsd_audio(MOVContext *c, AVIOContext *pb,
     bits_per_sample = av_get_bits_per_sample(st->codecpar->codec_id);
     if (bits_per_sample) {
         st->codecpar->bits_per_coded_sample = bits_per_sample;
-        sc->sample_size = (bits_per_sample >> 3) * st->codecpar->channels;
+        sc->sample_size = (bits_per_sample >> 3) * st->codecpar->ch_layout.nb_channels;
     }
 }
 
@@ -1705,18 +1719,21 @@ static int mov_finalize_stsd_codec(MOVContext *c, AVIOContext *pb,
 #endif
     /* no ifdef since parameters are always those */
     case AV_CODEC_ID_QCELP:
-        st->codecpar->channels = 1;
+        av_channel_layout_uninit(&st->codecpar->ch_layout);
+        st->codecpar->ch_layout = (AVChannelLayout)AV_CHANNEL_LAYOUT_MONO;
         // force sample rate for qcelp when not stored in mov
         if (st->codecpar->codec_tag != MKTAG('Q','c','l','p'))
             st->codecpar->sample_rate = 8000;
         break;
     case AV_CODEC_ID_AMR_NB:
-        st->codecpar->channels    = 1;
+        av_channel_layout_uninit(&st->codecpar->ch_layout);
+        st->codecpar->ch_layout = (AVChannelLayout)AV_CHANNEL_LAYOUT_MONO;
         /* force sample rate for amr, stsd in 3gp does not store sample rate */
         st->codecpar->sample_rate = 8000;
         break;
     case AV_CODEC_ID_AMR_WB:
-        st->codecpar->channels    = 1;
+        av_channel_layout_uninit(&st->codecpar->ch_layout);
+        st->codecpar->ch_layout = (AVChannelLayout)AV_CHANNEL_LAYOUT_MONO;
         st->codecpar->sample_rate = 16000;
         break;
     case AV_CODEC_ID_MP2:
@@ -1732,7 +1749,12 @@ static int mov_finalize_stsd_codec(MOVContext *c, AVIOContext *pb,
         break;
     case AV_CODEC_ID_ALAC:
         if (st->codecpar->extradata_size == 36) {
-            st->codecpar->channels    = AV_RB8 (st->codecpar->extradata + 21);
+            int channel_count = AV_RB8(st->codecpar->extradata + 21);
+            if (st->codecpar->ch_layout.nb_channels != channel_count) {
+                av_channel_layout_uninit(&st->codecpar->ch_layout);
+                st->codecpar->ch_layout.order = AV_CHANNEL_ORDER_UNSPEC;
+                st->codecpar->ch_layout.nb_channels = channel_count;
+            }
             st->codecpar->sample_rate = AV_RB32(st->codecpar->extradata + 32);
         }
         break;
