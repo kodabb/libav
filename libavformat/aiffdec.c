@@ -96,11 +96,14 @@ static unsigned int get_aiff_header(AVFormatContext *s, int size,
     uint64_t val;
     double sample_rate;
     unsigned int num_frames;
+    int channels;
 
     if (size & 1)
         size++;
     par->codec_type = AVMEDIA_TYPE_AUDIO;
-    par->channels = avio_rb16(pb);
+    channels = avio_rb16(pb);
+    par->ch_layout.order = AV_CHANNEL_ORDER_UNSPEC;
+    par->ch_layout.nb_channels = channels;
     num_frames = avio_rb32(pb);
     par->bits_per_coded_sample = avio_rb16(pb);
 
@@ -131,14 +134,14 @@ static unsigned int get_aiff_header(AVFormatContext *s, int size,
             aiff->block_duration = 1;
             break;
         case AV_CODEC_ID_ADPCM_IMA_QT:
-            par->block_align = 34 * par->channels;
+            par->block_align = 34 * channels;
             break;
         case AV_CODEC_ID_MACE3:
-            par->block_align = 2 * par->channels;
+            par->block_align = 2 * channels;
             break;
         case AV_CODEC_ID_ADPCM_G722:
         case AV_CODEC_ID_MACE6:
-            par->block_align = 1 * par->channels;
+            par->block_align = 1 * channels;
             break;
         case AV_CODEC_ID_GSM:
             par->block_align = 33;
@@ -157,7 +160,7 @@ static unsigned int get_aiff_header(AVFormatContext *s, int size,
     /* Block align needs to be computed in all cases, as the definition
      * is specific to applications -> here we use the WAVE format definition */
     if (!par->block_align)
-        par->block_align = (par->bits_per_coded_sample * par->channels) >> 3;
+        par->block_align = (par->bits_per_coded_sample * channels) >> 3;
 
     if (aiff->block_duration) {
         par->bit_rate = par->sample_rate * (par->block_align << 3) /
