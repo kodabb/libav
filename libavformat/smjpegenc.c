@@ -67,7 +67,7 @@ static int smjpeg_write_header(AVFormatContext *s)
             avio_wb32(pb, 8);
             avio_wb16(pb, par->sample_rate);
             avio_w8(pb, av_get_bits_per_sample(par->codec_id));
-            avio_w8(pb, par->channels);
+            avio_w8(pb, par->ch_layout.nb_channels);
             avio_wl32(pb, tag);
             avpriv_set_pts_info(st, 32, 1, 1000);
         } else if (par->codec_type == AVMEDIA_TYPE_VIDEO) {
