@@ -76,7 +76,8 @@ static int read_desc_chunk(AVFormatContext *s)
     caf->bytes_per_packet  = avio_rb32(pb);
     st->codecpar->block_align = caf->bytes_per_packet;
     caf->frames_per_packet = avio_rb32(pb);
-    st->codecpar->channels    = avio_rb32(pb);
+    st->codecpar->ch_layout.order = AV_CHANNEL_ORDER_UNSPEC;
+    st->codecpar->ch_layout.nb_channels = avio_rb32(pb);
     st->codecpar->bits_per_coded_sample = avio_rb32(pb);
 
     /* calculate bit rate for constant size packets */
