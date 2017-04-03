@@ -494,7 +494,7 @@ static int opus_decode_packet(AVCodecContext *avctx, void *data,
     frame->nb_samples = 0;
 
     memset(c->out, 0, c->nb_streams * 2 * sizeof(*c->out));
-    for (i = 0; i < avctx->channels; i++) {
+    for (i = 0; i < avctx->ch_layout.nb_channels; i++) {
         ChannelMap *map = &c->channel_maps[i];
         if (!map->copy)
             c->out[2 * map->stream_idx + map->channel_idx] = (float*)frame->extended_data[i];
@@ -575,7 +575,7 @@ static int opus_decode_packet(AVCodecContext *avctx, void *data,
         }
     }
 
-    for (i = 0; i < avctx->channels; i++) {
+    for (i = 0; i < avctx->ch_layout.nb_channels; i++) {
         ChannelMap *map = &c->channel_maps[i];
 
         /* handle copied channels */
@@ -687,7 +687,7 @@ static av_cold int opus_decode_init(AVCodecContext *avctx)
 
     for (i = 0; i < c->nb_streams; i++) {
         OpusStreamContext *s = &c->streams[i];
-        uint64_t layout;
+        AVChannelLayout ch_layout = { 0 };
 
         s->output_channels = (i < c->nb_stereo_streams) ? 2 : 1;
 
@@ -705,11 +705,12 @@ static av_cold int opus_decode_init(AVCodecContext *avctx)
         if (!s->avr)
             goto fail;
 
-        layout = (s->output_channels == 1) ? AV_CH_LAYOUT_MONO : AV_CH_LAYOUT_STEREO;
+        av_channel_layout_from_mask(&ch_layout, (s->output_channels == 1) ? AV_CH_LAYOUT_MONO
+                                                                          : AV_CH_LAYOUT_STEREO);
+        av_opt_set_channel_layout(s->avr, "in_ch_layout",  &ch_layout,    0);
+        av_opt_set_channel_layout(s->avr, "out_ch_layout", &ch_layout,    0);
         av_opt_set_int(s->avr, "in_sample_fmt",      avctx->sample_fmt,  0);
         av_opt_set_int(s->avr, "out_sample_fmt",     avctx->sample_fmt,  0);
-        av_opt_set_int(s->avr, "in_channel_layout",  layout,             0);
-        av_opt_set_int(s->avr, "out_channel_layout", layout,             0);
         av_opt_set_int(s->avr, "out_sample_rate",    avctx->sample_rate, 0);
 
         ret = ff_silk_init(avctx, &s->silk, s->output_channels);

@@ -295,11 +295,12 @@ av_cold int ff_opus_parse_extradata(AVCodecContext *avctx,
 
     const uint8_t *extradata, *channel_map;
     int extradata_size;
-    int version, channels, map_type, streams, stereo_streams, i, j;
+    int channels = avctx->ch_layout.nb_channels;
+    int version, map_type, streams, stereo_streams, i, j;
     uint64_t layout;
 
     if (!avctx->extradata) {
-        if (avctx->channels > 2) {
+        if (channels > 2) {
             av_log(avctx, AV_LOG_ERROR,
                    "Multichannel configuration without extradata.\n");
             return AVERROR(EINVAL);
@@ -325,7 +326,7 @@ av_cold int ff_opus_parse_extradata(AVCodecContext *avctx,
 
     avctx->delay = AV_RL16(extradata + 10);
 
-    channels = avctx->extradata ? extradata[9] : (avctx->channels == 1) ? 1 : 2;
+    channels = avctx->extradata ? extradata[9] : (channels == 1) ? 1 : 2;
     if (!channels) {
         av_log(avctx, AV_LOG_ERROR, "Zero channel count specified in the extadata\n");
         return AVERROR_INVALIDDATA;
@@ -368,7 +369,7 @@ av_cold int ff_opus_parse_extradata(AVCodecContext *avctx,
                        "Channel mapping 1 is only specified for up to 8 channels\n");
                 return AVERROR_INVALIDDATA;
             }
-            layout = ff_vorbis_channel_layouts[channels - 1];
+            layout = ff_vorbis_ch_layouts[channels - 1].u.mask;
             channel_reorder = channel_reorder_vorbis;
         } else
             layout = 0;
@@ -414,8 +415,11 @@ av_cold int ff_opus_parse_extradata(AVCodecContext *avctx,
         }
     }
 
-    avctx->channels       = channels;
-    avctx->channel_layout = layout;
+    av_channel_layout_uninit(&avctx->ch_layout);
+    if (layout)
+        av_channel_layout_from_mask(&avctx->ch_layout, layout);
+    else
+        av_channel_layout_default(&avctx->ch_layout, channels);
     s->nb_streams         = streams;
     s->nb_stereo_streams  = stereo_streams;
 
