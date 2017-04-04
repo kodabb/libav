@@ -114,7 +114,7 @@ static av_cold int aac_encode_init(AVCodecContext *avctx)
     int aot = FF_PROFILE_AAC_LOW + 1;
     int sce = 0, cpe = 0;
 
-    if ((err = aacEncOpen(&s->handle, 0, avctx->channels)) != AACENC_OK) {
+    if ((err = aacEncOpen(&s->handle, 0, avctx->ch_layout.nb_channels)) != AACENC_OK) {
         av_log(avctx, AV_LOG_ERROR, "Unable to open the encoder: %s\n",
                aac_get_error(err));
         goto error;
@@ -145,7 +145,7 @@ static av_cold int aac_encode_init(AVCodecContext *avctx)
         goto error;
     }
 
-    switch (avctx->channels) {
+    switch (avctx->ch_layout.nb_channels) {
     case 1: mode = MODE_1;       sce = 1; cpe = 0; break;
     case 2: mode = MODE_2;       sce = 0; cpe = 1; break;
     case 3: mode = MODE_1_2;     sce = 1; cpe = 1; break;
@@ -158,7 +158,7 @@ static av_cold int aac_encode_init(AVCodecContext *avctx)
     case 8:
         sce = 2;
         cpe = 3;
-        if (avctx->channel_layout == AV_CH_LAYOUT_7POINT1) {
+        if (avctx->ch_layout.u.mask == AV_CH_LAYOUT_7POINT1) {
             mode = MODE_7_1_REAR_SURROUND;
         } else {
             // MODE_1_2_2_2_1 and MODE_7_1_FRONT_CENTER use the same channel layout
@@ -168,7 +168,7 @@ static av_cold int aac_encode_init(AVCodecContext *avctx)
 #endif
     default:
         av_log(avctx, AV_LOG_ERROR,
-               "Unsupported number of channels %d\n", avctx->channels);
+               "Unsupported number of channels %d\n", avctx->ch_layout.nb_channels);
         goto error;
     }
 
@@ -329,10 +329,10 @@ static int aac_encode_frame(AVCodecContext *avctx, AVPacket *avpkt,
         in_args.numInSamples = -1;
     } else {
         in_ptr                   = frame->data[0];
-        in_buffer_size           = 2 * avctx->channels * frame->nb_samples;
+        in_buffer_size           = 2 * avctx->ch_layout.nb_channels * frame->nb_samples;
         in_buffer_element_size   = 2;
 
-        in_args.numInSamples     = avctx->channels * frame->nb_samples;
+        in_args.numInSamples     = avctx->ch_layout.nb_channels * frame->nb_samples;
         in_buf.numBufs           = 1;
         in_buf.bufs              = &in_ptr;
         in_buf.bufferIdentifiers = &in_buffer_identifier;
@@ -345,7 +345,7 @@ static int aac_encode_frame(AVCodecContext *avctx, AVPacket *avpkt,
     }
 
     /* The maximum packet size is 6144 bits aka 768 bytes per channel. */
-    if ((ret = ff_alloc_packet(avpkt, FFMAX(8192, 768 * avctx->channels)))) {
+    if ((ret = ff_alloc_packet(avpkt, FFMAX(8192, 768 * avctx->ch_layout.nb_channels)))) {
         av_log(avctx, AV_LOG_ERROR, "Error getting output packet\n");
         return ret;
     }
@@ -394,6 +394,7 @@ static const AVCodecDefault aac_encode_defaults[] = {
     { NULL }
 };
 
+#if FF_API_OLD_CHANNEL_LAYOUT
 static const uint64_t aac_channel_layout[] = {
     AV_CH_LAYOUT_MONO,
     AV_CH_LAYOUT_STEREO,
@@ -406,6 +407,21 @@ static const uint64_t aac_channel_layout[] = {
     AV_CH_LAYOUT_7POINT1,
 #endif
     0,
+};
+#endif /* FF_API_OLD_CHANNEL_LAYOUT */
+
+static const AVChannelLayout aac_ch_layouts[16] = {
+    AV_CHANNEL_LAYOUT_MONO,
+    AV_CHANNEL_LAYOUT_STEREO,
+    AV_CHANNEL_LAYOUT_SURROUND,
+    AV_CHANNEL_LAYOUT_4POINT0,
+    AV_CHANNEL_LAYOUT_5POINT0_BACK,
+    AV_CHANNEL_LAYOUT_5POINT1_BACK,
+#ifdef AACENCODER_LIB_VL0
+    AV_CHANNEL_LAYOUT_7POINT1_WIDE_BACK,
+    AV_CHANNEL_LAYOUT_7POINT1,
+#endif
+    { 0 },
 };
 
 static const int aac_sample_rates[] = {
@@ -429,6 +445,11 @@ AVCodec ff_libfdk_aac_encoder = {
     .defaults              = aac_encode_defaults,
     .profiles              = profiles,
     .supported_samplerates = aac_sample_rates,
-    .channel_layouts       = aac_channel_layout,
     .wrapper_name          = "libfdk",
+#if FF_API_OLD_CHANNEL_LAYOUT
+FF_DISABLE_DEPRECATION_WARNINGS
+    .channel_layouts       = aac_channel_layout,
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
+    .ch_layouts            = aac_ch_layouts,
 };
