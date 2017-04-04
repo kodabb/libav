@@ -76,7 +76,7 @@ static int filter_frame(AVFilterLink *inlink, AVFrame *in)
     const int16_t *in_data;
     int32_t *out_data;
     int n, result;
-    int channel_count = av_get_channel_layout_nb_channels(in->channel_layout);
+    int channel_count = in->ch_layout.nb_channels;
 
     out = ff_get_audio_buffer(outlink, in->nb_samples);
     if (!out) {
