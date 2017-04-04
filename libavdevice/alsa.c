@@ -229,7 +229,7 @@ static av_cold int alsa_open(AVFormatContext *ctx, snd_pcm_stream_t mode,
     snd_pcm_t *h;
     snd_pcm_hw_params_t *hw_params;
     snd_pcm_uframes_t buffer_size, period_size;
-    uint64_t layout = ctx->streams[0]->codecpar->channel_layout;
+    uint64_t layout = ctx->streams[0]->codecpar->ch_layout.u.mask;
 
     if (ctx->filename[0] == 0) audio_device = "default";
     else                       audio_device = ctx->filename;
@@ -327,10 +327,12 @@ static av_cold int alsa_open(AVFormatContext *ctx, snd_pcm_stream_t mode,
 
     if (channels > 2 && layout) {
         if (find_reorder_func(s, *codec_id, layout, mode == SND_PCM_STREAM_PLAYBACK) < 0) {
-            char name[128];
-            av_get_channel_layout_string(name, sizeof(name), channels, layout);
+            char *chlstr = av_channel_layout(&ctx->streams[0]->codecpar->ch_layout);
+            if (!chlstr)
+                goto fail1;
             av_log(ctx, AV_LOG_WARNING, "ALSA channel layout unknown or unimplemented for %s %s.\n",
-                   name, mode == SND_PCM_STREAM_PLAYBACK ? "playback" : "capture");
+                   chlstr, mode == SND_PCM_STREAM_PLAYBACK ? "playback" : "capture");
+            av_free(chlstr);
         }
         if (s->reorder_func) {
             s->reorder_buf_size = buffer_size;
