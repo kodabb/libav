@@ -642,6 +642,7 @@ static int decode_frame(AVCodecContext *avctx, const uint8_t *databuf,
     ATRAC3Context *q = avctx->priv_data;
     int ret, i;
     uint8_t *ptr1;
+    int channels = avctx->ch_layout.nb_channels;
 
     if (q->coding_mode == JOINT_STEREO) {
         /* channel coupling mode */
@@ -704,11 +705,11 @@ static int decode_frame(AVCodecContext *avctx, const uint8_t *databuf,
     } else {
         /* normal stereo mode or mono */
         /* Decode the channel sound units. */
-        for (i = 0; i < avctx->channels; i++) {
+        for (i = 0; i < channels; i++) {
             /* Set the bitstream reader at the start of a channel sound unit. */
             bitstream_init8(&q->bc,
-                            databuf + i * avctx->block_align / avctx->channels,
-                            avctx->block_align / avctx->channels);
+                            databuf + i * avctx->block_align / channels,
+                            avctx->block_align / channels);
 
             ret = decode_channel_sound_unit(q, &q->bc, &q->units[i],
                                             out_samples[i], i, q->coding_mode);
@@ -718,7 +719,7 @@ static int decode_frame(AVCodecContext *avctx, const uint8_t *databuf,
     }
 
     /* Apply the iQMF synthesis filter. */
-    for (i = 0; i < avctx->channels; i++) {
+    for (i = 0; i < channels; i++) {
         float *p1 = out_samples[i];
         float *p2 = p1 + 256;
         float *p3 = p2 + 256;
@@ -797,8 +798,9 @@ static av_cold int atrac3_decode_init(AVCodecContext *avctx)
     int version, delay, samples_per_frame, frame_factor;
     const uint8_t *edata_ptr = avctx->extradata;
     ATRAC3Context *q = avctx->priv_data;
+    int channels = avctx->ch_layout.nb_channels;
 
-    if (avctx->channels <= 0 || avctx->channels > 2) {
+    if (channels <= 0 || channels > 2) {
         av_log(avctx, AV_LOG_ERROR, "Channel configuration error!\n");
         return AVERROR(EINVAL);
     }
@@ -817,18 +819,18 @@ static av_cold int atrac3_decode_init(AVCodecContext *avctx)
                bytestream_get_le16(&edata_ptr));  // Unknown always 0
 
         /* setup */
-        samples_per_frame    = SAMPLES_PER_FRAME * avctx->channels;
+        samples_per_frame    = SAMPLES_PER_FRAME * channels;
         version              = 4;
         delay                = 0x88E;
         q->coding_mode       = q->coding_mode ? JOINT_STEREO : STEREO;
         q->scrambled_stream  = 0;
 
-        if (avctx->block_align !=  96 * avctx->channels * frame_factor &&
-            avctx->block_align != 152 * avctx->channels * frame_factor &&
-            avctx->block_align != 192 * avctx->channels * frame_factor) {
+        if (avctx->block_align !=  96 * channels * frame_factor &&
+            avctx->block_align != 152 * channels * frame_factor &&
+            avctx->block_align != 192 * channels * frame_factor) {
             av_log(avctx, AV_LOG_ERROR, "Unknown frame/channel/frame_factor "
                    "configuration %d/%d/%d\n", avctx->block_align,
-                   avctx->channels, frame_factor);
+                   channels, frame_factor);
             return AVERROR_INVALIDDATA;
         }
     } else if (avctx->extradata_size == 10) {
@@ -868,7 +870,7 @@ static av_cold int atrac3_decode_init(AVCodecContext *avctx)
     if (q->coding_mode == STEREO)
         av_log(avctx, AV_LOG_DEBUG, "Normal stereo detected.\n");
     else if (q->coding_mode == JOINT_STEREO) {
-        if (avctx->channels != 2)
+        if (channels != 2)
             return AVERROR_INVALIDDATA;
         av_log(avctx, AV_LOG_DEBUG, "Joint stereo detected.\n");
     } else {
@@ -911,7 +913,7 @@ static av_cold int atrac3_decode_init(AVCodecContext *avctx)
     ff_atrac_init_gain_compensation(&q->gainc_ctx, 4, 3);
     avpriv_float_dsp_init(&q->fdsp, avctx->flags & AV_CODEC_FLAG_BITEXACT);
 
-    q->units = av_mallocz(sizeof(*q->units) * avctx->channels);
+    q->units = av_mallocz(sizeof(*q->units) * channels);
     if (!q->units) {
         atrac3_decode_close(avctx);
         return AVERROR(ENOMEM);
