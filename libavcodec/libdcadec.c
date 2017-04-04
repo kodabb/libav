@@ -75,8 +75,8 @@ static int dcadec_decode_frame(AVCodecContext *avctx, void *data,
         return AVERROR_UNKNOWN;
     }
 
-    avctx->channels       = av_get_channel_layout_nb_channels(channel_mask);
-    avctx->channel_layout = channel_mask;
+    av_channel_layout_uninit(&avctx->ch_layout);
+    av_channel_layout_from_mask(&avctx->ch_layout, channel_mask);
     avctx->sample_rate    = sample_rate;
 
     if (bits_per_sample == 16)
@@ -128,7 +128,7 @@ static int dcadec_decode_frame(AVCodecContext *avctx, void *data,
     if ((ret = ff_get_buffer(avctx, frame, 0)) < 0)
         return ret;
 
-    for (i = 0; i < avctx->channels; i++) {
+    for (i = 0; i < avctx->ch_layout.nb_channels; i++) {
         if (frame->format == AV_SAMPLE_FMT_S16P) {
             int16_t *plane = (int16_t *)frame->extended_data[i];
             for (k = 0; k < nsamples; k++)
