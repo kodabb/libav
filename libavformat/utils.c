@@ -1862,11 +1862,18 @@ static void estimate_timings(AVFormatContext *ic, int64_t old_offset)
 static int has_codec_parameters(AVStream *st)
 {
     AVCodecContext *avctx = st->internal->avctx;
-    int val;
+    int val, ch;
 
     switch (avctx->codec_type) {
     case AVMEDIA_TYPE_AUDIO:
-        val = avctx->sample_rate && avctx->channels;
+        ch = avctx->ch_layout.nb_channels;
+#if FF_API_OLD_CHANNEL_LAYOUT
+FF_DISABLE_DEPRECATION_WARNINGS
+        if (!ch)
+            ch = avctx->channels;
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
+        val = avctx->sample_rate && ch;
         if (st->info->found_decoder >= 0 &&
             avctx->sample_fmt == AV_SAMPLE_FMT_NONE)
             return 0;
@@ -1964,6 +1971,21 @@ FF_ENABLE_DEPRECATION_WARNINGS
             ret       = got_picture;
         }
     }
+
+#if FF_API_OLD_CHANNEL_LAYOUT
+FF_DISABLE_DEPRECATION_WARNINGS
+    /* temporary compatibility layer */
+    if (!avctx->ch_layout.nb_channels) {
+        av_channel_layout_uninit(&avctx->ch_layout);
+        if (avctx->channel_layout)
+            av_channel_layout_from_mask(&avctx->ch_layout, avctx->channel_layout);
+        else {
+            avctx->ch_layout.order = AV_CHANNEL_ORDER_UNSPEC;
+            avctx->ch_layout.nb_channels = avctx->channels;
+        }
+    }
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
 
 fail:
     av_frame_free(&frame);

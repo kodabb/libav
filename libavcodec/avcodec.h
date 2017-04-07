@@ -1848,7 +1848,13 @@ typedef struct AVCodecContext {
 
     /* audio only */
     int sample_rate; ///< samples per second
+#if FF_API_OLD_CHANNEL_LAYOUT
+    /**
+     * @deprecated use ch_layout.nb_channels
+     */
+    attribute_deprecated
     int channels;    ///< number of audio channels
+#endif
 
     /**
      * audio sample format
@@ -1893,19 +1899,25 @@ typedef struct AVCodecContext {
      */
     int cutoff;
 
+#if FF_API_OLD_CHANNEL_LAYOUT
     /**
      * Audio channel layout.
      * - encoding: set by user.
      * - decoding: set by libavcodec.
+     *   @deprecated use ch_layout
      */
+    attribute_deprecated
     uint64_t channel_layout;
 
     /**
      * Request decoder to use this channel layout if it can (0 for default)
      * - encoding: unused
      * - decoding: Set by user.
+     *   @deprecated use "downmix" codec private option
      */
+    attribute_deprecated
     uint64_t request_channel_layout;
+#endif
 
     /**
      * Type of service that the audio stream conveys.
@@ -2744,6 +2756,14 @@ typedef struct AVCodecContext {
      *             AVCodecContext.get_format callback)
      */
     int hwaccel_flags;
+
+    /**
+     * Audio channel layout.
+     * - encoding: must be set by the caller, to one of AVCodec.ch_layouts.
+     * - decoding: may be set by the caller if known e.g. from the container.
+     *             The decoder can then override during decoding as needed.
+     */
+    AVChannelLayout ch_layout;
 } AVCodecContext;
 
 /**
@@ -2840,7 +2860,13 @@ typedef struct AVCodec {
     const enum AVPixelFormat *pix_fmts;     ///< array of supported pixel formats, or NULL if unknown, array is terminated by -1
     const int *supported_samplerates;       ///< array of supported audio samplerates, or NULL if unknown, array is terminated by 0
     const enum AVSampleFormat *sample_fmts; ///< array of supported sample formats, or NULL if unknown, array is terminated by -1
+#if FF_API_OLD_CHANNEL_LAYOUT
+    /**
+     * @deprecated use ch_layouts instead
+     */
+    attribute_deprecated
     const uint64_t *channel_layouts;         ///< array of support channel layouts, or NULL if unknown. array is terminated by 0
+#endif
     const AVClass *priv_class;              ///< AVClass for the private context
     const AVProfile *profiles;              ///< array of recognized profiles, or NULL if unknown, array is terminated by {FF_PROFILE_UNKNOWN}
 
@@ -2855,6 +2881,11 @@ typedef struct AVCodec {
      * (usually AVCodec.name will be of the form "<codec_name>_<wrapper_name>").
      */
     const char *wrapper_name;
+
+    /**
+     * Array of supported channel layouts, terminated with a zeroed layout.
+     */
+    const AVChannelLayout *ch_layouts;
 
     /*****************************************************************
      * No fields below this line are part of the public API. They

@@ -481,10 +481,25 @@ int attribute_align_arg avcodec_open2(AVCodecContext *avctx, const AVCodec *code
     if (av_codec_is_decoder(codec))
         av_freep(&avctx->subtitle_header);
 
+#if FF_API_OLD_CHANNEL_LAYOUT
+FF_DISABLE_DEPRECATION_WARNINGS
+    /* if the caller set the deprecated channels/channel_layout fields,
+     * convert them to the new channel layout */
     if (avctx->channels > FF_SANE_NB_CHANNELS) {
         ret = AVERROR(EINVAL);
         goto free_and_end;
     }
+    if (!avctx->ch_layout.nb_channels) {
+        if (avctx->channel_layout)
+            av_channel_layout_from_mask(&avctx->ch_layout, avctx->channel_layout);
+        else
+            avctx->ch_layout = (AVChannelLayout){
+                .nb_channels = avctx->channels,
+                .order = AV_CHANNEL_ORDER_UNSPEC,
+            };
+    }
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
 
     avctx->codec = codec;
     if ((avctx->codec_type == AVMEDIA_TYPE_UNKNOWN || avctx->codec_type == codec->type) &&
@@ -543,7 +558,7 @@ FF_ENABLE_DEPRECATION_WARNINGS
             for (i = 0; avctx->codec->sample_fmts[i] != AV_SAMPLE_FMT_NONE; i++) {
                 if (avctx->sample_fmt == avctx->codec->sample_fmts[i])
                     break;
-                if (avctx->channels == 1 &&
+                if (avctx->ch_layout.nb_channels == 1 &&
                     av_get_planar_sample_fmt(avctx->sample_fmt) ==
                     av_get_planar_sample_fmt(avctx->codec->sample_fmts[i])) {
                     avctx->sample_fmt = avctx->codec->sample_fmts[i];
@@ -581,7 +596,50 @@ FF_ENABLE_DEPRECATION_WARNINGS
                 goto free_and_end;
             }
         }
-        if (avctx->codec->channel_layouts) {
+
+        if (avctx->codec->ch_layouts) {
+            if (avctx->ch_layout.order == AV_CHANNEL_ORDER_UNSPEC) {
+                /* if the layout is unspecified, select a supported native one
+                 * with provided number of channels */
+                for (i = 0; avctx->codec->ch_layouts[i].nb_channels; i++) {
+                    if (avctx->codec->ch_layouts[i].nb_channels == avctx->ch_layout.nb_channels) {
+                        ret = av_channel_layout_copy(&avctx->ch_layout,
+                                                     &avctx->codec->ch_layouts[i]);
+                        if (ret < 0)
+                            goto free_and_end;
+                        break;
+                    }
+                }
+                if (avctx->ch_layout.order == AV_CHANNEL_ORDER_UNSPEC) {
+                    av_log(avctx, AV_LOG_ERROR, "This encoder does not "
+                           "support any channel layout with %d channels.\n",
+                           avctx->ch_layout.nb_channels);
+                    ret = AVERROR(EINVAL);
+                    goto free_and_end;
+                }
+            } else {
+                /* check that the selected channel layout is supported */
+                for (i = 0; avctx->codec->ch_layouts[i].nb_channels; i++) {
+                    if (!av_channel_layout_compare(&avctx->codec->ch_layouts[i],
+                                                   &avctx->ch_layout))
+                        break;
+                }
+                if (!avctx->codec->ch_layouts[i].nb_channels) {
+                    av_log(avctx, AV_LOG_ERROR,
+                           "Specified channel_layout is not supported\n");
+                    ret = AVERROR(EINVAL);
+                    goto free_and_end;
+                }
+            }
+
+            if (!av_channel_layout_check(&avctx->ch_layout)) {
+                av_log(avctx, AV_LOG_ERROR, "Invalid channel layout provided.\n");
+                ret = AVERROR_INVALIDDATA;
+                goto free_and_end;
+            }
+#if FF_API_OLD_CHANNEL_LAYOUT
+FF_DISABLE_DEPRECATION_WARNINGS
+        } else if (avctx->codec->channel_layouts) {
             if (!avctx->channel_layout) {
                 av_log(avctx, AV_LOG_WARNING, "channel_layout not specified\n");
             } else {
@@ -594,15 +652,9 @@ FF_ENABLE_DEPRECATION_WARNINGS
                     goto free_and_end;
                 }
             }
-        }
-        if (avctx->channel_layout && avctx->channels) {
-            if (av_get_channel_layout_nb_channels(avctx->channel_layout) != avctx->channels) {
-                av_log(avctx, AV_LOG_ERROR, "channel layout does not match number of channels\n");
-                ret = AVERROR(EINVAL);
-                goto free_and_end;
-            }
-        } else if (avctx->channel_layout) {
-            avctx->channels = av_get_channel_layout_nb_channels(avctx->channel_layout);
+            av_channel_layout_from_mask(&avctx->ch_layout, avctx->channel_layout);
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
         }
 
         if (!avctx->rc_initial_buffer_occupancy)
@@ -647,24 +699,22 @@ FF_ENABLE_DEPRECATION_WARNINGS
         }
     }
 
-    if (av_codec_is_decoder(avctx->codec)) {
-        /* validate channel layout from the decoder */
-        if (avctx->channel_layout) {
-            int channels = av_get_channel_layout_nb_channels(avctx->channel_layout);
-            if (!avctx->channels)
-                avctx->channels = channels;
-            else if (channels != avctx->channels) {
-                av_log(avctx, AV_LOG_WARNING,
-                       "channel layout does not match number of channels\n");
-                avctx->channel_layout = 0;
-            }
-        }
-        if (avctx->channels && avctx->channels < 0 ||
-            avctx->channels > FF_SANE_NB_CHANNELS) {
-            ret = AVERROR(EINVAL);
-            goto free_and_end;
+#if FF_API_OLD_CHANNEL_LAYOUT
+FF_DISABLE_DEPRECATION_WARNINGS
+    if (avctx->ch_layout.order == AV_CHANNEL_ORDER_NATIVE ||
+        avctx->ch_layout.order == AV_CHANNEL_ORDER_UNSPEC) {
+        if (avctx->channel_layout && avctx->channel_layout != avctx->ch_layout.u.mask)
+            av_channel_layout_from_mask(&avctx->ch_layout, avctx->channel_layout);
+        else if (avctx->channels && avctx->channels != avctx->ch_layout.nb_channels)
+            av_channel_layout_default(&avctx->ch_layout, avctx->channels);
+        if (avctx->ch_layout.nb_channels) {
+            avctx->channel_layout = avctx->ch_layout.u.mask;
+            avctx->channels = avctx->ch_layout.nb_channels;
         }
     }
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
+
 end:
     if (!(codec->caps_internal & FF_CODEC_CAP_INIT_THREADSAFE) && codec->init) {
         entangled_thread_counter--;
@@ -765,6 +815,8 @@ av_cold int avcodec_close(AVCodecContext *avctx)
         av_freep(&avctx->internal);
     }
 
+    av_channel_layout_uninit(&avctx->ch_layout);
+
     for (i = 0; i < avctx->nb_coded_side_data; i++)
         av_freep(&avctx->coded_side_data[i].data);
     av_freep(&avctx->coded_side_data);
@@ -860,7 +912,7 @@ static int get_bit_rate(AVCodecContext *ctx)
         break;
     case AVMEDIA_TYPE_AUDIO:
         bits_per_sample = av_get_bits_per_sample(ctx->codec_id);
-        bit_rate = bits_per_sample ? ctx->sample_rate * ctx->channels * bits_per_sample : ctx->bit_rate;
+        bit_rate = bits_per_sample ? ctx->sample_rate * ctx->ch_layout.nb_channels * bits_per_sample : ctx->bit_rate;
         break;
     default:
         bit_rate = 0;
@@ -1005,7 +1057,13 @@ void avcodec_string(char *buf, int buf_size, AVCodecContext *enc, int encode)
             snprintf(buf + strlen(buf), buf_size - strlen(buf),
                      "%d Hz, ", enc->sample_rate);
         }
-        av_get_channel_layout_string(buf + strlen(buf), buf_size - strlen(buf), enc->channels, enc->channel_layout);
+
+        if (av_channel_layout_check(&enc->ch_layout)) {
+            char *chlstr = av_channel_layout_describe(&enc->ch_layout);
+            av_strlcat(buf, chlstr, buf_size);
+            av_free(chlstr);
+        }
+
         if (enc->sample_fmt != AV_SAMPLE_FMT_NONE) {
             snprintf(buf + strlen(buf), buf_size - strlen(buf),
                      ", %s", av_get_sample_fmt_name(enc->sample_fmt));
@@ -1293,8 +1351,15 @@ static int get_audio_frame_duration(enum AVCodecID id, int sr, int ch, int ba,
 
 int av_get_audio_frame_duration(AVCodecContext *avctx, int frame_bytes)
 {
+    int channels = avctx->ch_layout.nb_channels;
+#if FF_API_OLD_CHANNEL_LAYOUT
+FF_DISABLE_DEPRECATION_WARNINGS
+    if (!channels)
+        channels = avctx->channels;
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
     return get_audio_frame_duration(avctx->codec_id, avctx->sample_rate,
-                                    avctx->channels, avctx->block_align,
+                                    channels, avctx->block_align,
                                     avctx->codec_tag, avctx->bits_per_coded_sample,
                                     frame_bytes);
 }
@@ -1608,6 +1673,8 @@ int avcodec_parameters_copy(AVCodecParameters *dst, const AVCodecParameters *src
 int avcodec_parameters_from_context(AVCodecParameters *par,
                                     const AVCodecContext *codec)
 {
+    int ret;
+
     codec_parameters_reset(par);
 
     par->codec_type = codec->codec_type;
@@ -1634,16 +1701,23 @@ int avcodec_parameters_from_context(AVCodecParameters *par,
         break;
     case AVMEDIA_TYPE_AUDIO:
         par->format          = codec->sample_fmt;
+        ret = av_channel_layout_copy(&par->ch_layout, &codec->ch_layout);
+        if (ret < 0)
+            return ret;
 #if FF_API_OLD_CHANNEL_LAYOUT
 FF_DISABLE_DEPRECATION_WARNINGS
-        par->channel_layout  = codec->channel_layout;
-        par->channels        = codec->channels;
+        if (!av_channel_layout_check(&codec->ch_layout))
+            if (codec->channel_layout)
+                av_channel_layout_from_mask(&par->ch_layout, codec->channel_layout);
+            else
+                av_channel_layout_default(&par->ch_layout, codec->channels);
+        if (codec->ch_layout.order == AV_CHANNEL_ORDER_NATIVE ||
+            codec->ch_layout.order == AV_CHANNEL_ORDER_UNSPEC) {
+            par->channel_layout  = codec->channel_layout;
+            par->channels        = codec->channels;
+        }
 FF_ENABLE_DEPRECATION_WARNINGS
 #endif
-        if (codec->channel_layout)
-            av_channel_layout_from_mask(&par->ch_layout, codec->channel_layout);
-        else
-            av_channel_layout_default(&par->ch_layout, codec->channels);
         par->sample_rate     = codec->sample_rate;
         par->block_align     = codec->block_align;
         par->initial_padding = codec->initial_padding;
@@ -1664,6 +1738,8 @@ FF_ENABLE_DEPRECATION_WARNINGS
 int avcodec_parameters_to_context(AVCodecContext *codec,
                                   const AVCodecParameters *par)
 {
+    int ret;
+
     codec->codec_type = par->codec_type;
     codec->codec_id   = par->codec_id;
     codec->codec_tag  = par->codec_tag;
@@ -1688,16 +1764,18 @@ int avcodec_parameters_to_context(AVCodecContext *codec,
         break;
     case AVMEDIA_TYPE_AUDIO:
         codec->sample_fmt      = par->format;
+        ret = av_channel_layout_copy(&codec->ch_layout, &par->ch_layout);
+        if (ret < 0)
+            return ret;
 #if FF_API_OLD_CHANNEL_LAYOUT
 FF_DISABLE_DEPRECATION_WARNINGS
-        codec->channel_layout = par->channel_layout;
-        codec->channels       = par->channels;
+        if (par->ch_layout.order == AV_CHANNEL_ORDER_NATIVE ||
+            par->ch_layout.order == AV_CHANNEL_ORDER_UNSPEC) {
+            codec->channel_layout = par->ch_layout.u.mask;
+            codec->channels       = par->ch_layout.nb_channels;
+        }
 FF_ENABLE_DEPRECATION_WARNINGS
 #endif
-        if (par->ch_layout.u.mask)
-            codec->channel_layout = par->ch_layout.u.mask;
-        if (par->ch_layout.nb_channels)
-            codec->channels = par->ch_layout.nb_channels;
         codec->sample_rate     = par->sample_rate;
         codec->block_align     = par->block_align;
         codec->initial_padding = par->initial_padding;

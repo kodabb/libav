@@ -75,7 +75,9 @@
 
 #define FF_DEFAULT_QUANT_BIAS 999999
 
+#if FF_API_OLD_CHANNEL_LAYOUT
 #define FF_SANE_NB_CHANNELS 63U
+#endif
 
 #define FF_SIGNBIT(x) (x >> CHAR_BIT * sizeof(x) - 1)
 
