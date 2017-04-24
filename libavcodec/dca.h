@@ -286,6 +286,8 @@ typedef struct DCAContext {
     DCADSPContext dcadsp;
     QMF64_table *qmf64_table;
     FmtConvertContext fmt_conv;
+
+    AVChannelLayout downmix_layout;
 } DCAContext;
 
 extern av_export_avcodec const uint32_t avpriv_dca_sample_rates[16];

@@ -448,7 +448,7 @@ int ff_dca_xll_decode_audio(DCAContext *s, AVFrame *frame)
              * other parameters from the previous segment. */
             int use_seg_state_code_param;
             XllChSetSubHeader *chset = &s->xll_chsets[chset_i];
-            if (in_channel >= s->avctx->channels)
+            if (in_channel >= s->avctx->ch_layout.nb_channels)
                 /* FIXME: Could go directly to next segment */
                 goto next_chset;
 
@@ -673,7 +673,7 @@ int ff_dca_xll_decode_audio(DCAContext *s, AVFrame *frame)
                     out_channel = out_channel ? out_channel - 1 : 2;
 
                 out_channel += in_channel;
-                if (out_channel >= s->avctx->channels)
+                if (out_channel >= s->avctx->ch_layout.nb_channels)
                     continue;
 
                 out  = (float *) frame->extended_data[out_channel];
@@ -717,7 +717,7 @@ int ff_dca_xll_decode_audio(DCAContext *s, AVFrame *frame)
                         mix_buf[j] *= coeff;
 
                     for (row = 0;
-                         row < chset->channels && in_channel + row < s->avctx->channels;
+                         row < chset->channels && in_channel + row < s->avctx->ch_layout.nb_channels;
                          row++)
                         if (col[row + 1]) {
                             const float *new_channel =
