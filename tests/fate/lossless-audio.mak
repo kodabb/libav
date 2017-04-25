@@ -17,7 +17,7 @@ fate-lossless-tak: REF = a28d4e5f2192057f7d4bece870f40bd0
 
 FATE_TRUEHD = fate-lossless-truehd-5.1 fate-lossless-truehd-5.1-downmix-2.0
 fate-lossless-truehd-5.1: CMD = md5 -f truehd -i $(TARGET_SAMPLES)/lossless-audio/truehd_5.1.raw -f s32le
-fate-lossless-truehd-5.1-downmix-2.0: CMD = md5 -f truehd -request_channel_layout 2 -i $(TARGET_SAMPLES)/lossless-audio/truehd_5.1.raw -f s32le
+fate-lossless-truehd-5.1-downmix-2.0: CMD = md5 -f truehd -downmix stereo -i $(TARGET_SAMPLES)/lossless-audio/truehd_5.1.raw -f s32le
 fate-lossless-truehd: $(FATE_TRUEHD)
 FATE_SAMPLES_AVCONV-$(call DEMDEC, TRUEHD, TRUEHD) += $(FATE_TRUEHD)
 

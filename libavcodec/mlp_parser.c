@@ -40,11 +40,6 @@ static const uint8_t mlp_quants[16] = {
      0,  0,  0, 0, 0, 0, 0, 0,
 };
 
-static const uint8_t mlp_channels[32] = {
-    1, 2, 3, 4, 3, 4, 5, 3, 4, 5, 4, 5, 6, 4, 5, 4,
-    5, 6, 5, 5, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-};
-
 static const uint64_t mlp_layout[32] = {
     AV_CH_LAYOUT_MONO,
     AV_CH_LAYOUT_STEREO,
@@ -70,11 +65,6 @@ static const uint64_t mlp_layout[32] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
-static const uint8_t thd_chancount[13] = {
-//  LR    C   LFE  LRs LRvh  LRc LRrs  Cs   Ts  LRsd  LRw  Cvh  LFE2
-     2,   1,   1,   2,   2,   2,   2,   1,   1,   2,   2,   1,   1
-};
-
 static const uint64_t thd_layout[13] = {
     AV_CH_FRONT_LEFT|AV_CH_FRONT_RIGHT,                     // LR
     AV_CH_FRONT_CENTER,                                     // C
@@ -97,16 +87,6 @@ static int mlp_samplerate(int in)
         return 0;
 
     return (in & 8 ? 44100 : 48000) << (in & 7) ;
-}
-
-static int truehd_channels(int chanmap)
-{
-    int channels = 0, i;
-
-    for (i = 0; i < 13; i++)
-        channels += thd_chancount[i] * ((chanmap >> i) & 1);
-
-    return channels;
 }
 
 static uint64_t truehd_layout(int chanmap)
@@ -179,7 +159,6 @@ int ff_mlp_read_major_sync(void *log, MLPHeaderInfo *mh, BitstreamContext *bc)
         bitstream_skip(bc, 11);
 
         channel_arrangement    = bitstream_read(bc, 5);
-        mh->channels_mlp       = mlp_channels[channel_arrangement];
         mh->channel_layout_mlp = mlp_layout[channel_arrangement];
     } else if (mh->stream_type == 0xba) {
         mh->group1_bits = 24; // TODO: Is this information actually conveyed anywhere?
@@ -195,13 +174,11 @@ int ff_mlp_read_major_sync(void *log, MLPHeaderInfo *mh, BitstreamContext *bc)
         mh->channel_modifier_thd_stream1 = bitstream_read(bc, 2);
 
         channel_arrangement            = bitstream_read(bc, 5);
-        mh->channels_thd_stream1       = truehd_channels(channel_arrangement);
         mh->channel_layout_thd_stream1 = truehd_layout(channel_arrangement);
 
         mh->channel_modifier_thd_stream2 = bitstream_read(bc, 2);
 
         channel_arrangement            = bitstream_read(bc, 13);
-        mh->channels_thd_stream2       = truehd_channels(channel_arrangement);
         mh->channel_layout_thd_stream2 = truehd_layout(channel_arrangement);
     } else
         return AVERROR_INVALIDDATA;
@@ -346,16 +323,13 @@ static int mlp_parse(AVCodecParserContext *s,
 
         if (mh.stream_type == 0xbb) {
             /* MLP stream */
-            avctx->channels       = mh.channels_mlp;
-            avctx->channel_layout = mh.channel_layout_mlp;
+            av_channel_layout_from_mask(&avctx->ch_layout, mh.channel_layout_mlp);
         } else { /* mh.stream_type == 0xba */
             /* TrueHD stream */
-            if (!mh.channels_thd_stream2) {
-                avctx->channels       = mh.channels_thd_stream1;
-                avctx->channel_layout = mh.channel_layout_thd_stream1;
+            if (!mh.channel_layout_thd_stream2) {
+                av_channel_layout_from_mask(&avctx->ch_layout, mh.channel_layout_thd_stream1);
             } else {
-                avctx->channels       = mh.channels_thd_stream2;
-                avctx->channel_layout = mh.channel_layout_thd_stream2;
+                av_channel_layout_from_mask(&avctx->ch_layout, mh.channel_layout_thd_stream2);
             }
         }
 
