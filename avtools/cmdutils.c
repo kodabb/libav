@@ -1571,7 +1571,7 @@ int check_stream_specifier(AVFormatContext *s, AVStream *st, const char *spec)
         int val;
         switch (par->codec_type) {
         case AVMEDIA_TYPE_AUDIO:
-            val = par->sample_rate && par->channels;
+            val = par->sample_rate && par->ch_layout.nb_channels;
             if (par->format == AV_SAMPLE_FMT_NONE)
                 return 0;
             break;

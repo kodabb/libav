@@ -2609,7 +2609,7 @@ static void stream_cycle_channel(PlayerState *is, int codec_type)
             switch (codec_type) {
             case AVMEDIA_TYPE_AUDIO:
                 if (st->codecpar->sample_rate != 0 &&
-                    st->codecpar->channels != 0)
+                    st->codecpar->ch_layout.nb_channels != 0)
                     goto the_end;
                 break;
             case AVMEDIA_TYPE_VIDEO:

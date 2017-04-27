@@ -756,7 +756,7 @@ static void show_stream(InputFile *ifile, InputStream *ist)
                   value_string(val_str, sizeof(val_str),
                                par->sample_rate,
                                unit_hertz_str));
-        probe_int("channels", par->channels);
+        probe_int("channels", par->ch_layout.nb_channels);
         probe_int("bits_per_sample",
                   av_get_bits_per_sample(par->codec_id));
         break;

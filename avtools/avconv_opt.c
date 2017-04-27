@@ -1678,8 +1678,8 @@ static int open_output_file(OptionsContext *o, const char *filename)
             for (i = 0; i < nb_input_streams; i++) {
                 ist = input_streams[i];
                 if (ist->st->codecpar->codec_type == AVMEDIA_TYPE_AUDIO &&
-                    ist->st->codecpar->channels > channels) {
-                    channels = ist->st->codecpar->channels;
+                    ist->st->codecpar->ch_layout.nb_channels > channels) {
+                    channels = ist->st->codecpar->ch_layout.nb_channels;
                     idx = i;
                 }
             }
