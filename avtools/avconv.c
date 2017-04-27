@@ -1209,7 +1209,7 @@ static int ifilter_send_frame(InputFilter *ifilter, AVFrame *frame)
     switch (ifilter->ist->st->codecpar->codec_type) {
     case AVMEDIA_TYPE_AUDIO:
         need_reinit |= ifilter->sample_rate    != frame->sample_rate ||
-                       ifilter->channel_layout != frame->channel_layout;
+                       ifilter->channel_layout != frame->ch_layout.u.mask;
         break;
     case AVMEDIA_TYPE_VIDEO:
         need_reinit |= ifilter->width  != frame->width ||

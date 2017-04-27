@@ -798,7 +798,7 @@ int ifilter_parameters_from_frame(InputFilter *ifilter, const AVFrame *frame)
     ifilter->sample_aspect_ratio = frame->sample_aspect_ratio;
 
     ifilter->sample_rate         = frame->sample_rate;
-    ifilter->channel_layout      = frame->channel_layout;
+    ifilter->channel_layout      = frame->ch_layout.u.mask;
 
     if (frame->hw_frames_ctx) {
         ifilter->hw_frames_ctx = av_buffer_ref(frame->hw_frames_ctx);

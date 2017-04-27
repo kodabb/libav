@@ -1837,11 +1837,11 @@ static int audio_decode_frame(PlayerState *is, double *pts_ptr)
                                                    is->frame->format, 1);
 
             audio_resample = is->frame->format         != is->sdl_sample_fmt     ||
-                             is->frame->channel_layout != is->sdl_channel_layout ||
+                             is->frame->ch_layout.u.mask != is->sdl_channel_layout ||
                              is->frame->sample_rate    != is->sdl_sample_rate;
 
             resample_changed = is->frame->format         != is->resample_sample_fmt     ||
-                               is->frame->channel_layout != is->resample_channel_layout ||
+                               is->frame->ch_layout.u.mask != is->resample_channel_layout ||
                                is->frame->sample_rate    != is->resample_sample_rate;
 
             if ((!is->avr && audio_resample) || resample_changed) {
