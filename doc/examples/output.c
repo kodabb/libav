@@ -77,6 +77,8 @@ static void add_audio_stream(OutputStream *ost, AVFormatContext *oc,
 {
     AVCodecContext *c;
     AVCodec *codec;
+    AVChannelLayout ch_layout;
+    static AVChannelLayout stereo = (AVChannelLayout)AV_CHANNEL_LAYOUT_STEREO;
     int ret;
 
     /* find the audio encoder */
@@ -99,12 +101,17 @@ static void add_audio_stream(OutputStream *ost, AVFormatContext *oc,
     }
     ost->enc = c;
 
+    ch_layout = codec->ch_layouts ? codec->ch_layouts[0] : stereo;
+
     /* put sample parameters */
     c->sample_fmt     = codec->sample_fmts           ? codec->sample_fmts[0]           : AV_SAMPLE_FMT_S16;
     c->sample_rate    = codec->supported_samplerates ? codec->supported_samplerates[0] : 44100;
-    c->channel_layout = codec->channel_layouts       ? codec->channel_layouts[0]       : AV_CH_LAYOUT_STEREO;
-    c->channels       = av_get_channel_layout_nb_channels(c->channel_layout);
     c->bit_rate       = 64000;
+    ret = av_channel_layout_copy(&c->ch_layout, &ch_layout);
+    if (ret < 0) {
+        fprintf(stderr, "Could not copy channel layout\n");
+        exit(1);
+    }
 
     ost->st->time_base = (AVRational){ 1, c->sample_rate };
 
@@ -125,10 +132,10 @@ static void add_audio_stream(OutputStream *ost, AVFormatContext *oc,
 
     av_opt_set_int(ost->avr, "in_sample_fmt",      AV_SAMPLE_FMT_S16,   0);
     av_opt_set_int(ost->avr, "in_sample_rate",     44100,               0);
-    av_opt_set_int(ost->avr, "in_channel_layout",  AV_CH_LAYOUT_STEREO, 0);
+    av_opt_set_channel_layout(ost->avr, "in_ch_layout", &stereo,        0);
     av_opt_set_int(ost->avr, "out_sample_fmt",     c->sample_fmt,       0);
     av_opt_set_int(ost->avr, "out_sample_rate",    c->sample_rate,      0);
-    av_opt_set_int(ost->avr, "out_channel_layout", c->channel_layout,   0);
+    av_opt_set_channel_layout(ost->avr, "out_ch_layout", &c->ch_layout, 0);
 
     ret = avresample_open(ost->avr);
     if (ret < 0) {
@@ -138,7 +145,7 @@ static void add_audio_stream(OutputStream *ost, AVFormatContext *oc,
 }
 
 static AVFrame *alloc_audio_frame(enum AVSampleFormat sample_fmt,
-                                  uint64_t channel_layout,
+                                  AVChannelLayout *ch_layout,
                                   int sample_rate, int nb_samples)
 {
     AVFrame *frame = av_frame_alloc();
@@ -150,9 +157,13 @@ static AVFrame *alloc_audio_frame(enum AVSampleFormat sample_fmt,
     }
 
     frame->format = sample_fmt;
-    frame->channel_layout = channel_layout;
     frame->sample_rate = sample_rate;
     frame->nb_samples = nb_samples;
+    ret = av_channel_layout_copy(&frame->ch_layout, ch_layout);
+    if (ret < 0) {
+        fprintf(stderr, "Error copying a channel layout in an audio frame\n");
+        exit(1);
+    }
 
     if (nb_samples) {
         ret = av_frame_get_buffer(frame, 0);
@@ -169,6 +180,7 @@ static void open_audio(AVFormatContext *oc, OutputStream *ost)
 {
     AVCodecContext *c;
     int nb_samples, ret;
+    static AVChannelLayout stereo = (AVChannelLayout)AV_CHANNEL_LAYOUT_STEREO;
 
     c = ost->enc;
 
@@ -189,9 +201,9 @@ static void open_audio(AVFormatContext *oc, OutputStream *ost)
     else
         nb_samples = c->frame_size;
 
-    ost->frame     = alloc_audio_frame(c->sample_fmt, c->channel_layout,
+    ost->frame     = alloc_audio_frame(c->sample_fmt, &c->ch_layout,
                                        c->sample_rate, nb_samples);
-    ost->tmp_frame = alloc_audio_frame(AV_SAMPLE_FMT_S16, AV_CH_LAYOUT_STEREO,
+    ost->tmp_frame = alloc_audio_frame(AV_SAMPLE_FMT_S16, &stereo,
                                        44100, nb_samples);
 
     /* copy the stream parameters to the muxer */
@@ -218,7 +230,7 @@ static AVFrame *get_audio_frame(OutputStream *ost)
 
     for (j = 0; j < frame->nb_samples; j++) {
         v = (int)(sin(ost->t) * 10000);
-        for (i = 0; i < ost->enc->channels; i++)
+        for (i = 0; i < ost->enc->ch_layout.nb_channels; i++)
             *q++ = v;
         ost->t     += ost->tincr;
         ost->tincr += ost->tincr2;

@@ -63,7 +63,7 @@ static void decode(AVCodecContext *dec_ctx, AVPacket *pkt, AVFrame *frame,
 
         /* the stream parameters may change at any time, check that they are
          * what we expect */
-        if (av_get_channel_layout_nb_channels(frame->channel_layout) != 2 ||
+        if (frame->ch_layout.nb_channels != 2 ||
             frame->format != AV_SAMPLE_FMT_S16P) {
             fprintf(stderr, "Unsupported frame parameters\n");
             exit(1);
