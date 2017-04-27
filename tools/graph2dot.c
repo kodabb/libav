@@ -86,13 +86,12 @@ static void print_digraph(FILE *outfile, AVFilterGraph *graph)
                             desc->name, link->w, link->h, link->time_base.num,
                             link->time_base.den);
                 } else if (link->type == AVMEDIA_TYPE_AUDIO) {
-                    char buf[255];
-                    av_get_channel_layout_string(buf, sizeof(buf), -1,
-                                                 link->channel_layout);
+                    char *chlstr = av_channel_layout_describe(&link->ch_layout);
                     fprintf(outfile,
                             " [ label= \"fmt:%s sr:%d cl:%s\" ]",
                             av_get_sample_fmt_name(link->format),
-                            link->sample_rate, buf);
+                            link->sample_rate, chlstr);
+                    av_free(chlstr);
                 }
                 fprintf(outfile, ";\n");
             }
