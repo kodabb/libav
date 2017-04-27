@@ -73,8 +73,30 @@ DEF_CHOOSE_FORMAT(sample_fmts, enum AVSampleFormat, format, formats,
 DEF_CHOOSE_FORMAT(sample_rates, int, sample_rate, sample_rates, 0,
                   GET_SAMPLE_RATE_NAME)
 
-DEF_CHOOSE_FORMAT(channel_layouts, uint64_t, channel_layout, channel_layouts, 0,
-                  GET_CH_LAYOUT_NAME)
+static char *choose_channel_layouts(OutputFilter *ofilter)
+{
+    if (av_channel_layout_check(&ofilter->ch_layout)) {
+        return av_channel_layout_describe(&ofilter->ch_layout);
+    } else if (ofilter->ch_layouts) {
+        const AVChannelLayout *p;
+        AVIOContext *s = NULL;
+        uint8_t *ret;
+        int len;
+
+        if (avio_open_dyn_buf(&s) < 0)
+            exit(1);
+
+        for (p = ofilter->ch_layouts; av_channel_layout_check(p); p++) {
+            char *chlstr = av_channel_layout_describe(p);
+            avio_printf(s, "%s|", chlstr);
+            av_free(chlstr);
+        }
+        len = avio_close_dyn_buf(s, &ret);
+        ret[len - 1] = 0;
+        return ret;
+    } else
+        return NULL;
+}
 
 int init_simple_filtergraph(InputStream *ist, OutputStream *ost)
 {
@@ -391,7 +413,6 @@ static int configure_output_audio_filter(FilterGraph *fg, OutputFilter *ofilter,
 {
     OutputStream *ost = ofilter->ost;
     OutputFile    *of = output_files[ost->file_index];
-    AVCodecContext *codec  = ost->enc_ctx;
     AVFilterContext *last_filter = out->filter_ctx;
     int pad_idx = out->pad_idx;
     char *sample_fmts, *sample_rates, *channel_layouts;
@@ -405,9 +426,6 @@ static int configure_output_audio_filter(FilterGraph *fg, OutputFilter *ofilter,
                                        name, NULL, NULL, fg->graph);
     if (ret < 0)
         return ret;
-
-    if (codec->channels && !codec->channel_layout)
-        codec->channel_layout = av_get_default_channel_layout(codec->channels);
 
     sample_fmts     = choose_sample_fmts(ofilter);
     sample_rates    = choose_sample_rates(ofilter);
@@ -591,7 +609,9 @@ static int configure_input_audio_filter(FilterGraph *fg, InputFilter *ifilter,
     par->time_base      = (AVRational){ 1, ifilter->sample_rate };
     par->sample_rate    = ifilter->sample_rate;
     par->format         = ifilter->format;
-    av_channel_layout_from_mask(&par->ch_layout, ifilter->channel_layout);
+    ret = av_channel_layout_copy(&par->ch_layout, &ifilter->ch_layout);
+    if (ret < 0)
+        return ret;
 
     ret = av_buffersrc_parameters_set(ifilter->filter, par);
     av_freep(&par);
@@ -758,7 +778,9 @@ int configure_filtergraph(FilterGraph *fg)
         ofilter->height = link->h;
 
         ofilter->sample_rate    = link->sample_rate;
-        ofilter->channel_layout = link->ch_layout.u.mask;
+        ret = av_channel_layout_copy(&ofilter->ch_layout, &link->ch_layout);
+        if (ret < 0)
+            return ret;
     }
 
     for (i = 0; i < fg->nb_inputs; i++) {
@@ -789,6 +811,8 @@ fail:
 
 int ifilter_parameters_from_frame(InputFilter *ifilter, const AVFrame *frame)
 {
+    int ret;
+
     av_buffer_unref(&ifilter->hw_frames_ctx);
 
     ifilter->format = frame->format;
@@ -798,7 +822,9 @@ int ifilter_parameters_from_frame(InputFilter *ifilter, const AVFrame *frame)
     ifilter->sample_aspect_ratio = frame->sample_aspect_ratio;
 
     ifilter->sample_rate         = frame->sample_rate;
-    ifilter->channel_layout      = frame->ch_layout.u.mask;
+    ret = av_channel_layout_copy(&ifilter->ch_layout, &frame->ch_layout);
+    if (ret < 0)
+        return ret;
 
     if (frame->hw_frames_ctx) {
         ifilter->hw_frames_ctx = av_buffer_ref(frame->hw_frames_ctx);

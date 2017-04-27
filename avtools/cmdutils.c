@@ -1038,8 +1038,19 @@ static void print_codec(const AVCodec *c)
                           GET_SAMPLE_RATE_NAME);
     PRINT_CODEC_SUPPORTED(c, sample_fmts, enum AVSampleFormat, "sample formats",
                           AV_SAMPLE_FMT_NONE, GET_SAMPLE_FMT_NAME);
-    PRINT_CODEC_SUPPORTED(c, channel_layouts, uint64_t, "channel layouts",
-                          0, GET_CH_LAYOUT_DESC);
+
+    if (c->ch_layouts) {
+        const AVChannelLayout *p = c->ch_layouts;
+
+        printf("    Supported channel layouts:");
+        while (!av_channel_layout_check(p)) {
+            char *chlstr = av_channel_layout_describe(p);
+            printf(" %s", chlstr);
+            av_free(chlstr);
+            p++;
+        }
+        printf("\n");
+    }
 
     if (c->priv_class) {
         show_help_children(c->priv_class,

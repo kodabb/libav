@@ -216,7 +216,7 @@ typedef struct InputFilter {
     AVRational sample_aspect_ratio;
 
     int sample_rate;
-    uint64_t channel_layout;
+    AVChannelLayout ch_layout;
 
     AVBufferRef *hw_frames_ctx;
 
@@ -238,11 +238,11 @@ typedef struct OutputFilter {
     AVRational frame_rate;
     int format;
     int sample_rate;
-    uint64_t channel_layout;
+    AVChannelLayout ch_layout;
 
     // those are only set if no format is specified and the encoder gives us multiple options
     int *formats;
-    uint64_t *channel_layouts;
+    AVChannelLayout *ch_layouts;
     int *sample_rates;
 } OutputFilter;
 
@@ -494,8 +494,6 @@ void show_usage(void);
 void opt_output_file(void *optctx, const char *filename);
 
 void assert_avoptions(AVDictionary *m);
-
-int guess_input_channel_layout(InputStream *ist);
 
 int configure_filtergraph(FilterGraph *fg);
 int configure_output_filter(FilterGraph *fg, OutputFilter *ofilter, AVFilterInOut *out);

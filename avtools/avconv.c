@@ -163,7 +163,7 @@ static void avconv_cleanup(int ret)
         for (j = 0; j < fg->nb_outputs; j++) {
             av_freep(&fg->outputs[j]->name);
             av_freep(&fg->outputs[j]->formats);
-            av_freep(&fg->outputs[j]->channel_layouts);
+            av_freep(&fg->outputs[j]->ch_layouts);
             av_freep(&fg->outputs[j]->sample_rates);
             av_freep(&fg->outputs[j]);
         }
@@ -1209,7 +1209,8 @@ static int ifilter_send_frame(InputFilter *ifilter, AVFrame *frame)
     switch (ifilter->ist->st->codecpar->codec_type) {
     case AVMEDIA_TYPE_AUDIO:
         need_reinit |= ifilter->sample_rate    != frame->sample_rate ||
-                       ifilter->channel_layout != frame->ch_layout.u.mask;
+                       av_channel_layout_compare(&ifilter->ch_layout,
+                                                 &frame->ch_layout);
         break;
     case AVMEDIA_TYPE_VIDEO:
         need_reinit |= ifilter->width  != frame->width ||
@@ -1320,24 +1321,6 @@ static int decode(AVCodecContext *avctx, AVFrame *frame, int *got_frame, AVPacke
         *got_frame = 1;
 
     return 0;
-}
-
-int guess_input_channel_layout(InputStream *ist)
-{
-    AVCodecContext *dec = ist->dec_ctx;
-
-    if (!dec->channel_layout) {
-        char layout_name[256];
-
-        dec->channel_layout = av_get_default_channel_layout(dec->channels);
-        if (!dec->channel_layout)
-            return 0;
-        av_get_channel_layout_string(layout_name, sizeof(layout_name),
-                                     dec->channels, dec->channel_layout);
-        av_log(NULL, AV_LOG_WARNING, "Guessed Channel Layout for Input Stream "
-               "#%d.%d : %s\n", ist->file_index, ist->st->index, layout_name);
-    }
-    return 1;
 }
 
 static int decode_audio(InputStream *ist, AVPacket *pkt, int *got_output,
@@ -2014,6 +1997,7 @@ static int init_output_stream_encode(OutputStream *ost)
     InputStream *ist = get_input_stream(ost);
     AVCodecContext *enc_ctx = ost->enc_ctx;
     AVCodecContext *dec_ctx = NULL;
+    int ret;
 
     set_encoder_id(output_files[ost->file_index], ost);
 
@@ -2030,8 +2014,10 @@ static int init_output_stream_encode(OutputStream *ost)
     case AVMEDIA_TYPE_AUDIO:
         enc_ctx->sample_fmt     = ost->filter->filter->inputs[0]->format;
         enc_ctx->sample_rate    = ost->filter->filter->inputs[0]->sample_rate;
-        enc_ctx->channel_layout = ost->filter->filter->inputs[0]->ch_layout.u.mask;
-        enc_ctx->channels       = av_get_channel_layout_nb_channels(enc_ctx->channel_layout);
+        ret = av_channel_layout_copy(&enc_ctx->ch_layout,
+                                     &ost->filter->filter->inputs[0]->ch_layout);
+        if (ret < 0)
+            return ret;
         enc_ctx->time_base      = (AVRational){ 1, enc_ctx->sample_rate };
         break;
     case AVMEDIA_TYPE_VIDEO:

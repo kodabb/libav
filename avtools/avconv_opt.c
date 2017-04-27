@@ -661,8 +661,6 @@ static void add_input_streams(OptionsContext *o, AVFormatContext *ic)
 
             break;
         case AVMEDIA_TYPE_AUDIO:
-            guess_input_channel_layout(ist);
-            break;
         case AVMEDIA_TYPE_DATA:
         case AVMEDIA_TYPE_SUBTITLE:
         case AVMEDIA_TYPE_ATTACHMENT:
@@ -1413,7 +1411,17 @@ static OutputStream *new_audio_stream(OptionsContext *o, AVFormatContext *oc)
     if (!ost->stream_copy) {
         char *sample_fmt = NULL;
 
-        MATCH_PER_STREAM_OPT(audio_channels, i, audio_enc->channels, oc, st);
+        {
+            int i, ret;
+            for (i = 0; i < o->nb_audio_channels; i++) {
+                char *spec = o->audio_channels[i].specifier;
+                if ((ret = check_stream_specifier(oc, st, spec)) > 0)
+                    av_channel_layout_default(&audio_enc->ch_layout,
+                                              o->audio_channels[i].u.i);
+                else if (ret < 0)
+                    exit_program(1);
+            }
+        }
 
         MATCH_PER_STREAM_OPT(sample_fmts, str, sample_fmt, oc, st);
         if (sample_fmt &&
@@ -1929,17 +1937,18 @@ loop_end:
                     memcpy(f->sample_rates, ost->enc->supported_samplerates,
                            (count + 1) * sizeof(*f->sample_rates));
                 }
-                if (ost->enc_ctx->channels) {
-                    f->channel_layout = av_get_default_channel_layout(ost->enc_ctx->channels);
-                } else if (ost->enc->channel_layouts) {
+                if (av_channel_layout_check(&ost->enc_ctx->ch_layout)) {
+                    av_channel_layout_copy(&f->ch_layout, &ost->enc_ctx->ch_layout);
+                } else if (ost->enc->ch_layouts) {
                     count = 0;
-                    while (ost->enc->channel_layouts[count])
+                    while (av_channel_layout_check(&ost->enc->ch_layouts[count]))
                         count++;
-                    f->channel_layouts = av_mallocz_array(count + 1, sizeof(*f->channel_layouts));
-                    if (!f->channel_layouts)
+                    f->ch_layouts = av_mallocz_array(count + 1, sizeof(*f->ch_layouts));
+                    if (!f->ch_layouts)
                         exit_program(1);
-                    memcpy(f->channel_layouts, ost->enc->channel_layouts,
-                           (count + 1) * sizeof(*f->channel_layouts));
+                    // TODO use av_channel_layout_copy?
+                    memcpy(f->ch_layouts, ost->enc->ch_layouts,
+                           (count + 1) * sizeof(*f->ch_layouts));
                 }
                 break;
             }
@@ -2299,22 +2308,21 @@ static int opt_channel_layout(void *optctx, const char *opt, const char *arg)
     char layout_str[32];
     char *stream_str;
     char *ac_str;
-    int ret, channels, ac_str_size;
-    uint64_t layout;
+    int ret, ac_str_size;
+    AVChannelLayout ch_layout = {0};
 
-    layout = av_get_channel_layout(arg);
-    if (!layout) {
+    ret = av_channel_layout_from_string(&ch_layout, arg);
+    if (ret < 0) {
         av_log(NULL, AV_LOG_ERROR, "Unknown channel layout: %s\n", arg);
-        return AVERROR(EINVAL);
+        return ret;
     }
-    snprintf(layout_str, sizeof(layout_str), "%"PRIu64, layout);
-    ret = opt_default(NULL, opt, layout_str);
+    snprintf(layout_str, sizeof(layout_str), "%s", arg);
+    ret = opt_default(NULL, "ch_layout", layout_str);
     if (ret < 0)
         return ret;
 
     /* set 'ac' option based on channel layout */
-    channels = av_get_channel_layout_nb_channels(layout);
-    snprintf(layout_str, sizeof(layout_str), "%d", channels);
+    snprintf(layout_str, sizeof(layout_str), "%d", ch_layout.nb_channels);
     stream_str = strchr(opt, ':');
     ac_str_size = 3 + (stream_str ? strlen(stream_str) : 0);
     ac_str = av_mallocz(ac_str_size);
