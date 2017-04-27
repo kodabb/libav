@@ -160,11 +160,10 @@ typedef struct PlayerState {
     AVPacket audio_pkt_temp;
     AVPacket audio_pkt;
     enum AVSampleFormat sdl_sample_fmt;
-    uint64_t sdl_channel_layout;
-    int sdl_channels;
+    AVChannelLayout sdl_ch_layout;
     int sdl_sample_rate;
     enum AVSampleFormat resample_sample_fmt;
-    uint64_t resample_channel_layout;
+    AVChannelLayout resample_ch_layout;
     int resample_sample_rate;
     AVAudioResampleContext *avr;
     AVFrame *frame;
@@ -721,7 +720,7 @@ static void video_audio_display(PlayerState *s)
     nb_freq = 1 << (rdft_bits - 1);
 
     /* compute display index : center on currently output samples */
-    channels = s->sdl_channels;
+    channels = s->sdl_ch_layout.nb_channels;
     nb_display_channels = channels;
     if (!s->paused) {
         int data_used = s->show_audio == 1 ? s->width : (2 * nb_freq);
@@ -930,7 +929,7 @@ static double get_audio_clock(PlayerState *is)
     hw_buf_size = audio_write_get_buf_size(is);
     bytes_per_sec = 0;
     if (is->audio_st) {
-        bytes_per_sec = is->sdl_sample_rate * is->sdl_channels *
+        bytes_per_sec = is->sdl_sample_rate * is->sdl_ch_layout.nb_channels *
                         av_get_bytes_per_sample(is->sdl_sample_fmt);
     }
     if (bytes_per_sec)
@@ -1725,7 +1724,7 @@ static int synchronize_audio(PlayerState *is, short *samples,
     int n, samples_size;
     double ref_clock;
 
-    n = is->sdl_channels * av_get_bytes_per_sample(is->sdl_sample_fmt);
+    n = is->sdl_ch_layout.nb_channels * av_get_bytes_per_sample(is->sdl_sample_fmt);
     samples_size = samples_size1;
 
     /* if not master, then we try to remove or add samples to correct the clock */
@@ -1832,16 +1831,18 @@ static int audio_decode_frame(PlayerState *is, double *pts_ptr)
                     flush_complete = 1;
                 continue;
             }
-            data_size = av_samples_get_buffer_size(NULL, dec->channels,
+            data_size = av_samples_get_buffer_size(NULL, dec->ch_layout.nb_channels,
                                                    is->frame->nb_samples,
                                                    is->frame->format, 1);
 
             audio_resample = is->frame->format         != is->sdl_sample_fmt     ||
-                             is->frame->ch_layout.u.mask != is->sdl_channel_layout ||
+                             av_channel_layout_compare(&is->frame->ch_layout,
+                                                       &is->sdl_ch_layout) ||
                              is->frame->sample_rate    != is->sdl_sample_rate;
 
             resample_changed = is->frame->format         != is->resample_sample_fmt     ||
-                               is->frame->ch_layout.u.mask != is->resample_channel_layout ||
+                               av_channel_layout_compare(&is->frame->ch_layout,
+                                                         &is->resample_ch_layout) ||
                                is->frame->sample_rate    != is->resample_sample_rate;
 
             if ((!is->avr && audio_resample) || resample_changed) {
@@ -1856,10 +1857,10 @@ static int audio_decode_frame(PlayerState *is, double *pts_ptr)
                     }
                 }
                 if (audio_resample) {
-                    av_opt_set_int(is->avr, "in_channel_layout",  is->frame->channel_layout, 0);
+                    av_opt_set_channel_layout(is->avr, "in_ch_layout", &is->frame->ch_layout, 0);
                     av_opt_set_int(is->avr, "in_sample_fmt",      is->frame->format,         0);
                     av_opt_set_int(is->avr, "in_sample_rate",     is->frame->sample_rate,    0);
-                    av_opt_set_int(is->avr, "out_channel_layout", is->sdl_channel_layout,    0);
+                    av_opt_set_channel_layout(is->avr, "out_ch_layout", &is->sdl_ch_layout,    0);
                     av_opt_set_int(is->avr, "out_sample_fmt",     is->sdl_sample_fmt,        0);
                     av_opt_set_int(is->avr, "out_sample_rate",    is->sdl_sample_rate,       0);
 
@@ -1869,7 +1870,9 @@ static int audio_decode_frame(PlayerState *is, double *pts_ptr)
                     }
                 }
                 is->resample_sample_fmt     = is->frame->format;
-                is->resample_channel_layout = is->frame->channel_layout;
+                ret = av_channel_layout_copy(&is->resample_ch_layout, &is->frame->ch_layout);
+                if (ret < 0)
+                    break;
                 is->resample_sample_rate    = is->frame->sample_rate;
             }
 
@@ -1880,7 +1883,7 @@ static int audio_decode_frame(PlayerState *is, double *pts_ptr)
                 int nb_samples = is->frame->nb_samples;
 
                 out_size = av_samples_get_buffer_size(&out_linesize,
-                                                      is->sdl_channels,
+                                                      is->sdl_ch_layout.nb_channels,
                                                       nb_samples,
                                                       is->sdl_sample_fmt, 0);
                 tmp_out = av_realloc(is->audio_buf1, out_size);
@@ -1899,7 +1902,7 @@ static int audio_decode_frame(PlayerState *is, double *pts_ptr)
                     break;
                 }
                 is->audio_buf = is->audio_buf1;
-                data_size = out_samples * osize * is->sdl_channels;
+                data_size = out_samples * osize * is->sdl_ch_layout.nb_channels;
             } else {
                 is->audio_buf = is->frame->data[0];
             }
@@ -1907,7 +1910,7 @@ static int audio_decode_frame(PlayerState *is, double *pts_ptr)
             /* if no pts, then compute it */
             pts = is->audio_clock;
             *pts_ptr = pts;
-            n = is->sdl_channels * av_get_bytes_per_sample(is->sdl_sample_fmt);
+            n = is->sdl_ch_layout.nb_channels * av_get_bytes_per_sample(is->sdl_sample_fmt);
             is->audio_clock += (double)data_size /
                 (double)(n * is->sdl_sample_rate);
 #ifdef DEBUG
@@ -2085,22 +2088,19 @@ static int stream_component_open(PlayerState *is, int stream_index)
     if (avctx->codec_type == AVMEDIA_TYPE_AUDIO) {
         is->sdl_sample_rate = avctx->sample_rate;
 
-        if (!avctx->channel_layout)
-            avctx->channel_layout = av_get_default_channel_layout(avctx->channels);
-        if (!avctx->channel_layout) {
+        if (!av_channel_layout_check(&avctx->ch_layout)) {
             fprintf(stderr, "unable to guess channel layout\n");
             ret = AVERROR_INVALIDDATA;
             goto fail;
         }
-        if (avctx->channels == 1)
-            is->sdl_channel_layout = AV_CH_LAYOUT_MONO;
+        if (avctx->ch_layout.nb_channels == 1)
+            is->sdl_ch_layout = (AVChannelLayout)AV_CHANNEL_LAYOUT_MONO;
         else
-            is->sdl_channel_layout = AV_CH_LAYOUT_STEREO;
-        is->sdl_channels = av_get_channel_layout_nb_channels(is->sdl_channel_layout);
+            is->sdl_ch_layout = (AVChannelLayout)AV_CHANNEL_LAYOUT_STEREO;
 
         wanted_spec.format = AUDIO_S16SYS;
         wanted_spec.freq = is->sdl_sample_rate;
-        wanted_spec.channels = is->sdl_channels;
+        wanted_spec.channels = is->sdl_ch_layout.nb_channels;
         wanted_spec.silence = 0;
         wanted_spec.samples = SDL_AUDIO_BUFFER_SIZE;
         wanted_spec.callback = sdl_audio_callback;
@@ -2113,7 +2113,9 @@ static int stream_component_open(PlayerState *is, int stream_index)
         is->audio_hw_buf_size = spec.size;
         is->sdl_sample_fmt          = AV_SAMPLE_FMT_S16;
         is->resample_sample_fmt     = is->sdl_sample_fmt;
-        is->resample_channel_layout = avctx->channel_layout;
+        ret = av_channel_layout_copy(&is->resample_ch_layout, &avctx->ch_layout);
+        if (ret < 0)
+            goto fail;
         is->resample_sample_rate    = avctx->sample_rate;
     }
 
