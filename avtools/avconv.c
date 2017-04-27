@@ -2030,7 +2030,7 @@ static int init_output_stream_encode(OutputStream *ost)
     case AVMEDIA_TYPE_AUDIO:
         enc_ctx->sample_fmt     = ost->filter->filter->inputs[0]->format;
         enc_ctx->sample_rate    = ost->filter->filter->inputs[0]->sample_rate;
-        enc_ctx->channel_layout = ost->filter->filter->inputs[0]->channel_layout;
+        enc_ctx->channel_layout = ost->filter->filter->inputs[0]->ch_layout.u.mask;
         enc_ctx->channels       = av_get_channel_layout_nb_channels(enc_ctx->channel_layout);
         enc_ctx->time_base      = (AVRational){ 1, enc_ctx->sample_rate };
         break;

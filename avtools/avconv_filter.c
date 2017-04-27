@@ -591,7 +591,7 @@ static int configure_input_audio_filter(FilterGraph *fg, InputFilter *ifilter,
     par->time_base      = (AVRational){ 1, ifilter->sample_rate };
     par->sample_rate    = ifilter->sample_rate;
     par->format         = ifilter->format;
-    par->channel_layout = ifilter->channel_layout;
+    av_channel_layout_from_mask(&par->ch_layout, ifilter->channel_layout);
 
     ret = av_buffersrc_parameters_set(ifilter->filter, par);
     av_freep(&par);
@@ -758,7 +758,7 @@ int configure_filtergraph(FilterGraph *fg)
         ofilter->height = link->h;
 
         ofilter->sample_rate    = link->sample_rate;
-        ofilter->channel_layout = link->channel_layout;
+        ofilter->channel_layout = link->ch_layout.u.mask;
     }
 
     for (i = 0; i < fg->nb_inputs; i++) {
