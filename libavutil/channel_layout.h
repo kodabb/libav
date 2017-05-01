@@ -68,6 +68,8 @@ enum AVChannel {
 
     /** Channel is empty can be safely skipped. */
     AV_CHAN_SILENCE = 64,
+    /** Channel represents an ambisonic component. */
+    AV_CHAN_AMBISONIC,
 };
 
 enum AVChannelOrder {
@@ -88,6 +90,26 @@ enum AVChannelOrder {
      * about the channel order.
      */
     AV_CHANNEL_ORDER_UNSPEC,
+    /**
+     * Each channel represents a different speaker position, also known as
+     * ambisonic components. Channels are ordered according to ACN (Ambisonic
+     * Channel Number), and they follow these mathematical properties:
+     *
+     * @code{.unparsed}
+     *   ACN = n * (n + 1) + m
+     *   n   = floor(sqrt(k)) - 1,
+     *   m   = k - n * (n + 1) - 1.
+     * @endcode
+     *
+     * for order n and degree m; the ACN component corresponds to channel
+     * index as k = ACN + 1. In case non-diegetic channels are present,
+     * they are always the last ones, and mask is initialized with a correct
+     * layout.
+     *
+     * Normalization is assumed to be SN3D (Schmidt Semi-Normalization)
+     * as defined in AmbiX format § 2.1.
+     */
+    AV_CHANNEL_ORDER_AMBISONIC,
 };
 
 
@@ -236,6 +258,10 @@ typedef struct AVChannelLayout {
          * modified manually (i.e.  not using any of the av_channel_layout_*
          * functions), the code doing it must ensure that the number of set bits
          * is equal to nb_channels.
+         *
+         * This member maybe be optionially used for AV_CHANNEL_ORDER_AMBISONIC.
+         * It is a bitmask that indicates the channel layout of the last
+         * non-diegetic channels present in the stream.
          */
         uint64_t mask;
         /**
@@ -307,6 +333,8 @@ typedef struct AVChannelLayout {
     { .order = AV_CHANNEL_ORDER_NATIVE, .nb_channels = 16, .u = { .mask = AV_CH_LAYOUT_HEXAGONAL }}
 #define AV_CHANNEL_LAYOUT_STEREO_DOWNMIX \
     { .order = AV_CHANNEL_ORDER_NATIVE, .nb_channels = 2,  .u = { .mask = AV_CH_LAYOUT_STEREO_DOWNMIX }}
+#define AV_CHANNEL_LAYOUT_AMBISONIC_FIRST_ORDER \
+    { .order = AV_CHANNEL_ORDER_AMBISONIC, .nb_channels = 4, .u = { .mask = 0 }}
 
 #if FF_API_OLD_CHANNEL_LAYOUT
 /**
@@ -424,6 +452,8 @@ void av_channel_layout_from_mask(AVChannelLayout *channel_layout, uint64_t mask)
  *  - a hexadecimal value of a channel layout (eg. "0x4")
  *  - the number of channels with default layout (eg. "5")
  *  - the number of unordered channels (eg. "4 channels")
+ *  - the ambisonic channel count and order followed by optional non-diegetic
+ *    channels (eg. "ambisonic channels 9 order 2|stereo")
  *
  * @note channel_layout should be properly allocated as described above.
  *
@@ -492,6 +522,9 @@ int av_channel_layout_get_channel(const AVChannelLayout *channel_layout, int idx
 /**
  * Get the index of a given channel in a channel layout. In case multiple
  * channels are found, only the first match will be returned.
+ *
+ * @note AV_CHAN_AMBISONIC will always be at index 0: callers need to use the
+ *       ACN mathematical properties to determine the order.
  *
  * @param channel_layout input channel layout
  * @return index of channel in channel_layout on success or a negative number if
