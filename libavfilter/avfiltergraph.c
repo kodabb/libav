@@ -374,6 +374,8 @@ static int query_formats(AVFilterGraph *graph, AVClass *log_ctx)
 
 static int pick_format(AVFilterLink *link)
 {
+    int ret;
+
     if (!link || !link->in_formats)
         return 0;
 
@@ -399,11 +401,15 @@ static int pick_format(AVFilterLink *link)
         link->in_channel_layouts->nb_channel_layouts = 1;
 #if FF_API_OLD_CHANNEL_LAYOUT
 FF_DISABLE_DEPRECATION_WARNINGS
-        link->channel_layout = link->in_channel_layouts->channel_layouts[0];
+        if (link->in_channel_layouts->channel_layouts[0].order == AV_CHANNEL_ORDER_NATIVE ||
+            link->in_channel_layouts->channel_layouts[0].order == AV_CHANNEL_ORDER_UNSPEC)
+            link->channel_layout = link->in_channel_layouts->channel_layouts[0].u.mask;
 FF_ENABLE_DEPRECATION_WARNINGS
 #endif
-        av_channel_layout_from_mask(&link->ch_layout,
-                                    link->in_channel_layouts->channel_layouts[0]);
+        ret = av_channel_layout_copy(&link->ch_layout,
+                                     &link->in_channel_layouts->channel_layouts[0]);
+        if (ret < 0)
+            return ret;
     }
 
     ff_formats_unref(&link->in_formats);
@@ -451,6 +457,47 @@ do {                                                                   \
     }                                                                  \
 } while (0)
 
+static int reduce_formats_channel_layout(AVFilterContext *filter)
+{
+    int i, j, k, ret = 0;
+
+    for (i = 0; i < filter->nb_inputs; i++) {
+        AVFilterLink *link = filter->inputs[i];
+        AVChannelLayout *fmt;
+
+        if (!link->out_channel_layouts || link->out_channel_layouts->nb_channel_layouts != 1)
+            continue;
+        fmt = &link->out_channel_layouts->channel_layouts[0];
+
+        for (j = 0; j < filter->nb_outputs; j++) {
+            AVFilterLink *out_link = filter->outputs[j];
+            AVFilterChannelLayouts *fmts;
+
+            if (link->type != out_link->type ||
+                out_link->in_channel_layouts->nb_channel_layouts == 1)
+                continue;
+            fmts = out_link->in_channel_layouts;
+
+            if (!out_link->in_channel_layouts->nb_channel_layouts) {
+                ff_add_channel_layout(&out_link->in_channel_layouts, fmt);
+                break;
+            }
+
+            for (k = 0; k < out_link->in_channel_layouts->nb_channel_layouts; k++)
+                if (!av_channel_layout_compare(&fmts->channel_layouts[k], fmt)) {
+                    ret = av_channel_layout_copy(&fmts->channel_layouts[0], fmt);
+                    if (ret < 0)
+                        return ret;
+                    fmts->nb_channel_layouts = 1;
+                    ret = 1;
+                    break;
+                }
+        }
+    }
+
+    return ret;
+}
+
 static int reduce_formats_on_filter(AVFilterContext *filter)
 {
     int i, j, k, ret = 0;
@@ -459,10 +506,11 @@ static int reduce_formats_on_filter(AVFilterContext *filter)
                    nb_formats, ff_add_format);
     REDUCE_FORMATS(int,      AVFilterFormats,        samplerates,     formats,
                    nb_formats, ff_add_format);
-    REDUCE_FORMATS(uint64_t, AVFilterChannelLayouts, channel_layouts,
-                   channel_layouts, nb_channel_layouts, ff_add_channel_layout);
 
-    return ret;
+    if (ret < 0)
+        return ret;
+
+    return reduce_formats_channel_layout(filter);
 }
 
 static void reduce_formats(AVFilterGraph *graph)
@@ -582,20 +630,22 @@ static void swap_channel_layouts_on_filter(AVFilterContext *filter)
             continue;
 
         for (j = 0; j < outlink->in_channel_layouts->nb_channel_layouts; j++) {
-            uint64_t  in_chlayout = link->out_channel_layouts->channel_layouts[0];
-            uint64_t out_chlayout = outlink->in_channel_layouts->channel_layouts[j];
+            AVChannelLayout  *in_ch_layout = &link->out_channel_layouts->channel_layouts[0];
+            AVChannelLayout *out_ch_layout = &outlink->in_channel_layouts->channel_layouts[j];
+            AVChannelLayout in = {0}, out = {0};
             int  in_channels;
             int out_channels;
+            uint64_t in_mask = 0, out_mask = 0;
             int count_diff;
             int matched_channels, extra_channels;
             int score = 0;
-            AVChannelLayout  in_ch_layout = {0};
-            AVChannelLayout out_ch_layout = {0};
 
-            av_channel_layout_from_mask( &in_ch_layout,  in_chlayout);
-            av_channel_layout_from_mask(&out_ch_layout, out_chlayout);
-            in_channels  =  in_ch_layout.nb_channels;
-            out_channels = out_ch_layout.nb_channels;
+            in_channels  =  in_ch_layout->nb_channels;
+            out_channels = out_ch_layout->nb_channels;
+            if ( in_ch_layout->order == AV_CHANNEL_ORDER_NATIVE)
+                in_mask  =  in_ch_layout->u.mask;
+            if (out_ch_layout->order == AV_CHANNEL_ORDER_NATIVE)
+                out_mask = out_ch_layout->u.mask;
             count_diff = out_channels - in_channels;
 
             /* channel substitution */
@@ -603,10 +653,13 @@ static void swap_channel_layouts_on_filter(AVFilterContext *filter)
                 uint64_t cmp0 = ch_subst[k][0];
                 uint64_t cmp1 = ch_subst[k][1];
                 AVChannelLayout tmp = {0};
-                if (( in_chlayout & cmp0) && (!(out_chlayout & cmp0)) &&
-                    (out_chlayout & cmp1) && (!( in_chlayout & cmp1))) {
-                    in_chlayout  &= ~cmp0;
-                    out_chlayout &= ~cmp1;
+
+                if ( av_channel_layout_subset( in_ch_layout, cmp0) &&
+                    !av_channel_layout_subset(out_ch_layout, cmp0) &&
+                     av_channel_layout_subset(out_ch_layout, cmp1) &&
+                    !av_channel_layout_subset( in_ch_layout, cmp1)) {
+                    in_mask  &= ~cmp0;
+                    out_mask &= ~cmp1;
                     /* add score for channel match, minus a deduction for
                        having to do the substitution */
                     av_channel_layout_from_mask(&tmp, cmp1);
@@ -615,19 +668,17 @@ static void swap_channel_layouts_on_filter(AVFilterContext *filter)
             }
 
             /* no penalty for LFE channel mismatch */
-            if ( (in_chlayout & AV_CH_LOW_FREQUENCY) &&
-                (out_chlayout & AV_CH_LOW_FREQUENCY))
+            if (av_channel_layout_subset( in_ch_layout, AV_CH_LOW_FREQUENCY) &&
+                av_channel_layout_subset(out_ch_layout, AV_CH_LOW_FREQUENCY))
                 score += 10;
-            in_chlayout  &= ~AV_CH_LOW_FREQUENCY;
-            out_chlayout &= ~AV_CH_LOW_FREQUENCY;
+            in_mask  &= ~AV_CH_LOW_FREQUENCY;
+            out_mask &= ~AV_CH_LOW_FREQUENCY;
 
-            av_channel_layout_uninit( &in_ch_layout);
-            av_channel_layout_uninit(&out_ch_layout);
-            av_channel_layout_from_mask( &in_ch_layout,  in_chlayout &  out_chlayout);
-            av_channel_layout_from_mask(&out_ch_layout, out_chlayout & (~in_chlayout));
+            av_channel_layout_from_mask( &in,  in_mask &  out_mask);
+            av_channel_layout_from_mask(&out, out_mask & (~in_mask));
 
-            matched_channels = in_ch_layout.nb_channels;
-            extra_channels   = out_ch_layout.nb_channels;
+            matched_channels =  in.nb_channels;
+            extra_channels   = out.nb_channels;
             score += 10 * matched_channels - 5 * extra_channels;
 
             if (score > best_score ||
@@ -638,7 +689,7 @@ static void swap_channel_layouts_on_filter(AVFilterContext *filter)
             }
         }
         av_assert0(best_idx >= 0);
-        FFSWAP(uint64_t, outlink->in_channel_layouts->channel_layouts[0],
+        FFSWAP(AVChannelLayout, outlink->in_channel_layouts->channel_layouts[0],
                outlink->in_channel_layouts->channel_layouts[best_idx]);
     }
 

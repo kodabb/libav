@@ -296,7 +296,7 @@ static int channelmap_query_formats(AVFilterContext *ctx)
     ChannelMapContext *s = ctx->priv;
     AVFilterChannelLayouts *channel_layouts = NULL;
 
-    ff_add_channel_layout(&channel_layouts, s->ch_layout.u.mask);
+    ff_add_channel_layout(&channel_layouts, &s->ch_layout);
 
     ff_set_common_formats(ctx, ff_planar_sample_fmts());
     ff_set_common_samplerates(ctx, ff_all_samplerates());

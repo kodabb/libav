@@ -347,7 +347,7 @@ static int query_formats(AVFilterContext *ctx)
         ff_add_format(&samplerates,       c->sample_rate);
         ff_set_common_samplerates(ctx, samplerates);
 
-        ff_add_channel_layout(&channel_layouts, c->ch_layout.u.mask);
+        ff_add_channel_layout(&channel_layouts, &c->ch_layout);
         ff_set_common_channel_layouts(ctx, channel_layouts);
         break;
     default:

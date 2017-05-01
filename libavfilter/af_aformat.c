@@ -94,11 +94,29 @@ static int get_sample_rate(const char *samplerate)
     return FFMAX(ret, 0);
 }
 
-static int get_channel_layout(const char *channel_layout)
+static int parse_channel_layout_string(AVFilterContext *ctx)
 {
-    AVChannelLayout ch_layout = { 0 };
-    av_channel_layout_from_string(&ch_layout, channel_layout);
-    return ch_layout.u.mask;
+    AFormatContext *s = ctx->priv;
+    char *next, *cur = s->channel_layouts_str, sep = '|';
+    int ret;
+
+    while (cur) {
+        AVChannelLayout fmt = { 0 };
+        next = strchr(cur, sep);
+        if (next)
+            *next++ = 0;
+
+        ret = av_channel_layout_from_string(&fmt, cur);
+        if (ret < 0) {
+            av_log(ctx, AV_LOG_ERROR, "Error parsing channel layout: %s.\n", cur);\
+            return ret;
+        }
+        ff_add_channel_layout(&s->channel_layouts, &fmt);
+
+        cur = next;
+    }
+
+    return 0;
 }
 
 static av_cold int init(AVFilterContext *ctx)
@@ -109,10 +127,8 @@ static av_cold int init(AVFilterContext *ctx)
                   ff_add_format, av_get_sample_fmt, AV_SAMPLE_FMT_NONE, "sample format");
     PARSE_FORMATS(s->sample_rates_str, int, s->sample_rates, ff_add_format,
                   get_sample_rate, 0, "sample rate");
-    PARSE_FORMATS(s->channel_layouts_str, uint64_t, s->channel_layouts,
-                  ff_add_channel_layout, get_channel_layout, 0, "channel layout");
 
-    return 0;
+    return parse_channel_layout_string(ctx);
 }
 
 static int query_formats(AVFilterContext *ctx)

@@ -131,8 +131,31 @@ AVFilterChannelLayouts *ff_merge_channel_layouts(AVFilterChannelLayouts *a,
     if (a == b) return a;
 
     if (a->nb_channel_layouts && b->nb_channel_layouts) {
-        MERGE_FORMATS(ret, a, b, channel_layouts, nb_channel_layouts,
-                      AVFilterChannelLayouts, fail);
+        int i, j, k = 0, count = FFMIN(a->nb_channel_layouts, b->nb_channel_layouts);
+
+        if (!(ret = av_mallocz(sizeof(*ret))))
+            goto fail;
+
+        if (count) {
+            if (!(ret->channel_layouts = av_malloc(sizeof(*ret->channel_layouts) * count)))
+                goto fail;
+            for (i = 0; i < a->nb_channel_layouts; i++)
+                for (j = 0; j < b->nb_channel_layouts; j++)
+                    if (!av_channel_layout_compare(&a->channel_layouts[i],
+                                                   &b->channel_layouts[j]))
+                        if (av_channel_layout_copy(&ret->channel_layouts[k++],
+                                                   &a->channel_layouts[i]) < 0)
+                            goto fail;
+
+            ret->nb_channel_layouts = k;
+        }
+        /* check that there was at least one common format */
+        if (!ret->nb_channel_layouts)
+            goto fail;
+
+        MERGE_REF(ret, a, channel_layouts, AVFilterChannelLayouts, fail);
+        MERGE_REF(ret, b, channel_layouts, AVFilterChannelLayouts, fail);
+
     } else if (a->nb_channel_layouts) {
         MERGE_REF(a, b, channel_layouts, AVFilterChannelLayouts, fail);
         ret = a;
@@ -210,9 +233,23 @@ int ff_add_format(AVFilterFormats **avff, int fmt)
     ADD_FORMAT(avff, fmt, int, formats, nb_formats);
 }
 
-int ff_add_channel_layout(AVFilterChannelLayouts **l, uint64_t channel_layout)
+int ff_add_channel_layout(AVFilterChannelLayouts **f, AVChannelLayout *channel_layout)
 {
-    ADD_FORMAT(l, channel_layout, uint64_t, channel_layouts, nb_channel_layouts);
+    AVChannelLayout *fmts;
+
+    if (!(*f) && !(*f = av_mallocz(sizeof(**f))))
+        return AVERROR(ENOMEM);
+
+    fmts = av_realloc((*f)->channel_layouts,
+                      sizeof(*(*f)->channel_layouts) * ((*f)->nb_channel_layouts + 1));\
+    if (!fmts) {
+        av_freep(&f);
+        return AVERROR(ENOMEM);
+    }
+
+    (*f)->channel_layouts = fmts;
+    return av_channel_layout_copy(&(*f)->channel_layouts[(*f)->nb_channel_layouts++],
+                                  channel_layout);
 }
 
 AVFilterFormats *ff_all_formats(enum AVMediaType type)

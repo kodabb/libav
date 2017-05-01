@@ -85,16 +85,18 @@ static int query_formats(AVFilterContext *ctx)
     ff_set_common_formats    (ctx, ff_planar_sample_fmts());
     ff_set_common_samplerates(ctx, ff_all_samplerates());
 
-    ff_add_channel_layout(&in_layouts, s->ch_layout.u.mask);
+    ff_add_channel_layout(&in_layouts, &s->ch_layout);
     ff_channel_layouts_ref(in_layouts, &ctx->inputs[0]->out_channel_layouts);
 
     for (i = 0; i < ctx->nb_outputs; i++) {
         AVFilterChannelLayouts *out_layouts = NULL;
+        AVChannelLayout tmp = {0};
         int ret = av_channel_layout_get_channel(&s->ch_layout, i);
         if (ret < 0)
             return ret;
 
-        ff_add_channel_layout(&out_layouts, 1ULL << ret);
+        av_channel_layout_from_mask(&tmp, 1ULL << ret);
+        ff_add_channel_layout(&out_layouts, &tmp);
         ff_channel_layouts_ref(out_layouts, &ctx->outputs[i]->in_channel_layouts);
     }
 

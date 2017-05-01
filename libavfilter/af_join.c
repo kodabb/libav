@@ -234,7 +234,7 @@ static int join_query_formats(AVFilterContext *ctx)
     AVFilterChannelLayouts *layouts = NULL;
     int i;
 
-    ff_add_channel_layout(&layouts, s->ch_layout.u.mask);
+    ff_add_channel_layout(&layouts, &s->ch_layout);
     ff_channel_layouts_ref(layouts, &ctx->outputs[0]->in_channel_layouts);
 
     for (i = 0; i < ctx->nb_inputs; i++)

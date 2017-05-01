@@ -70,7 +70,7 @@ struct AVFilterFormats {
 };
 
 typedef struct AVFilterChannelLayouts {
-    uint64_t *channel_layouts;  ///< list of channel layouts
+    AVChannelLayout *channel_layouts;  ///< list of channel layouts
     int    nb_channel_layouts;  ///< number of channel layouts
 
     unsigned refcount;          ///< number of references to this list
@@ -114,7 +114,7 @@ void ff_set_common_samplerates(AVFilterContext *ctx,
  */
 void ff_set_common_formats(AVFilterContext *ctx, AVFilterFormats *formats);
 
-int ff_add_channel_layout(AVFilterChannelLayouts **l, uint64_t channel_layout);
+int ff_add_channel_layout(AVFilterChannelLayouts **l, AVChannelLayout *channel_layout);
 
 /**
  * Add *ref as a new reference to f.
