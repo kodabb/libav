@@ -347,7 +347,7 @@ av_cold int ff_opus_parse_extradata(AVCodecContext *avctx,
         streams        = 1;
         stereo_streams = channels - 1;
         channel_map    = default_channel_map;
-    } else if (map_type == 1 || map_type == 255) {
+    } else if (map_type == 1 || map_type == 2 || map_type == 255) {
         if (extradata_size < 21 + channels) {
             av_log(avctx, AV_LOG_ERROR, "Invalid extradata size: %d\n",
                    extradata_size);
@@ -363,6 +363,7 @@ av_cold int ff_opus_parse_extradata(AVCodecContext *avctx,
             return AVERROR_INVALIDDATA;
         }
 
+        layout = 0;
         if (map_type == 1) {
             if (channels > 8) {
                 av_log(avctx, AV_LOG_ERROR,
@@ -371,8 +372,24 @@ av_cold int ff_opus_parse_extradata(AVCodecContext *avctx,
             }
             layout = ff_vorbis_ch_layouts[channels - 1].u.mask;
             channel_reorder = channel_reorder_vorbis;
-        } else
-            layout = 0;
+        } else if (map_type == 2) {
+            int ambisonic_order = ff_sqrt(channels) - 1;
+            int idx = (ambisonic_order + 1) * (ambisonic_order + 1);
+            if (channels <= 227 && (channels == idx || channels == idx + 2)) {
+                av_channel_layout_uninit(&avctx->ch_layout);
+                avctx->ch_layout.order = AV_CHANNEL_ORDER_AMBISONIC;
+                avctx->ch_layout.nb_channels = channels;
+
+                /* ACN order, followed by two optional channels of non-diegetic stereo */
+                if (idx != channels)
+                    avctx->ch_layout.u.mask = AV_CH_LAYOUT_STEREO;
+            } else {
+                av_log(avctx, AV_LOG_ERROR, "Channel map 2 is only valid for "
+                       "channel counts equal to (n + 1)^2 + 2j for {n,j} >= 0 "
+                       "(max 227 channels).\n");
+                return AVERROR_INVALIDDATA;
+            }
+        }
 
         channel_map = extradata + 21;
     } else {
@@ -415,11 +432,14 @@ av_cold int ff_opus_parse_extradata(AVCodecContext *avctx,
         }
     }
 
-    av_channel_layout_uninit(&avctx->ch_layout);
-    if (layout)
-        av_channel_layout_from_mask(&avctx->ch_layout, layout);
-    else
-        av_channel_layout_default(&avctx->ch_layout, channels);
+    if (avctx->ch_layout.order == AV_CHANNEL_ORDER_NATIVE) {
+        av_channel_layout_uninit(&avctx->ch_layout);
+        if (layout)
+            av_channel_layout_from_mask(&avctx->ch_layout, layout);
+        else
+            av_channel_layout_default(&avctx->ch_layout, channels);
+    }
+
     s->nb_streams         = streams;
     s->nb_stereo_streams  = stereo_streams;
 
