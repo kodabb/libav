@@ -667,6 +667,7 @@ static void show_stream(InputFile *ifile, InputStream *ist)
     AVRational display_aspect_ratio, *sar = NULL;
     const AVPixFmtDescriptor *desc;
     const char *val;
+    char *chlstr;
 
     probe_object_header("stream");
 
@@ -757,6 +758,9 @@ static void show_stream(InputFile *ifile, InputStream *ist)
                                par->sample_rate,
                                unit_hertz_str));
         probe_int("channels", par->ch_layout.nb_channels);
+        chlstr = av_channel_layout_describe(&par->ch_layout);
+        probe_str("layout", chlstr);
+        av_free(chlstr);
         probe_int("bits_per_sample",
                   av_get_bits_per_sample(par->codec_id));
         break;
