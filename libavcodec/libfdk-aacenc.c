@@ -410,7 +410,7 @@ static const uint64_t aac_channel_layout[] = {
 };
 #endif /* FF_API_OLD_CHANNEL_LAYOUT */
 
-static const AVChannelLayout aac_ch_layouts[16] = {
+static const AVChannelLayout aac_ch_layouts[17] = {
     AV_CHANNEL_LAYOUT_MONO,
     AV_CHANNEL_LAYOUT_STEREO,
     AV_CHANNEL_LAYOUT_SURROUND,
@@ -421,6 +421,7 @@ static const AVChannelLayout aac_ch_layouts[16] = {
     AV_CHANNEL_LAYOUT_7POINT1_WIDE_BACK,
     AV_CHANNEL_LAYOUT_7POINT1,
 #endif
+    AV_CHANNEL_LAYOUT_AMBISONIC_FIRST_ORDER,
     { 0 },
 };
 

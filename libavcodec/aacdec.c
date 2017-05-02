@@ -494,11 +494,14 @@ FF_ENABLE_DEPRECATION_WARNINGS
         }
     }
 
-    av_channel_layout_uninit(&ac->oc[1].ch_layout);
-    av_channel_layout_from_mask(&ac->oc[1].ch_layout, layout);
-    ret = av_channel_layout_copy(&avctx->ch_layout, &ac->oc[1].ch_layout);
-    if (ret < 0)
-        return ret;
+    if (avctx->ch_layout.order == AV_CHANNEL_ORDER_NATIVE ||
+        avctx->ch_layout.order == AV_CHANNEL_ORDER_UNSPEC) {
+        av_channel_layout_uninit(&ac->oc[1].ch_layout);
+        av_channel_layout_from_mask(&ac->oc[1].ch_layout, layout);
+        ret = av_channel_layout_copy(&avctx->ch_layout, &ac->oc[1].ch_layout);
+        if (ret < 0)
+            return ret;
+    }
 #if FF_API_OLD_CHANNEL_LAYOUT
 FF_DISABLE_DEPRECATION_WARNINGS
     avctx->channels       = avctx->ch_layout.nb_channels;

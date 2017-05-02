@@ -184,8 +184,10 @@ static int get_stream_info(AVCodecContext *avctx)
         }
     }
 
-    av_channel_layout_uninit(&avctx->ch_layout);
-    av_channel_layout_from_mask(&avctx->ch_layout, ch_layout);
+    if (avctx->ch_layout.order == AV_CHANNEL_ORDER_NATIVE) {
+        av_channel_layout_uninit(&avctx->ch_layout);
+        av_channel_layout_from_mask(&avctx->ch_layout, ch_layout);
+    }
     if (!ch_error && avctx->ch_layout.nb_channels != info->numChannels) {
         av_log(avctx, AV_LOG_WARNING, "unsupported channel configuration\n");
         ch_error = 1;
