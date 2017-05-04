@@ -44,6 +44,14 @@ int avresample_open(AVAudioResampleContext *avr)
         return AVERROR(EINVAL);
     }
 
+    if (( avr->in_ch_layout.order == AV_CHANNEL_ORDER_AMBISONIC ||
+         avr->out_ch_layout.order == AV_CHANNEL_ORDER_AMBISONIC) &&
+        av_channel_layout_compare(&avr->in_ch_layout, &avr->out_ch_layout)) {
+        av_log(avr, AV_LOG_ERROR,
+               "Only pass-through resampling is supported for ambisonic.\n");
+        return AVERROR(ENOSYS);
+    }
+
     /* set channel mixing parameters */
 #if FF_API_OLD_CHANNEL_LAYOUT
     if (avr->in_channel_layout) {
