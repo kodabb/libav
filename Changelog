@@ -20,6 +20,7 @@ version <next>:
 - Intel QSV-accelerated MJPEG encoding
 - NVIDIA CUVID-accelerated H.264 and HEVC decoding
 - Intel QSV-accelerated overlay filter
+- Opus and MP4/MOV ambisonic detection
 
 
 version 12:

@@ -13,6 +13,28 @@ libavutil:     2017-03-23
 
 API changes, most recent first:
 
+2018-xx-xx - lavu 56.xx.0 lavr 4.xx.0 lavfi 7.xx.0 lavc 58.xx.0 lavf 58.xx.0
+  xxxxxxx - Introduce AVChannelLayout and related API: use AVChannel and
+            AVChannelOrder to describe a layout, deprecate old functions
+            operating on channels and channel_layout fields.
+  xxxxxxx - Allow a new AVOption type AV_OPT_TYPE_CHANNEL_LAYOUT, with
+            av_opt_set_channel_layout(), and av_opt_get_channel_layout().
+  xxxxxxx - Add AVFrame.ch_layout, deprecate channel_layout field.
+  xxxxxxx - Add avresample_build_matrix2(), in_ch_layout and out_ch_layout
+            options to libavresample, deprecate avresample_build_matrix(), and
+            in_channel_layout, out_channel_layout options.
+  xxxxxxx - Add AVFilterLink.ch_layout, deprecates channel_layout field.
+  xxxxxxx - Add AVBufferSrcParameters.ch_layout, deprecate channel_layout field.
+  xxxxxxx - Add AVCodecParameters.ch_layout, deprecate channel_layout and
+            channels fields.
+  xxxxxxx - Add AVCodecContext.ch_layout, deprecate channel_layout and channels
+            fields (and options), and replace request_channel_layout with a
+            codec private option.
+  xxxxxxx - Support Ambisonic ordering in AVChannelLayout with
+            AV_CHANNEL_ORDER_AMBISONIC and av_channel_layout_ambisonic() helper.
+  xxxxxxx - Add AV_DISPOSITION_NON_DIEGETIC flag for detecting streams that
+            can be mixed with spatial audio.
+
 2017-xx-xx - xxxxxxx - lavc 58.8.0 - avcodec.h
   Add const to AVCodecContext.hwaccel.
 
