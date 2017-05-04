@@ -673,6 +673,12 @@ typedef struct AVIndexEntry {
  * It can also be accessed at any time in AVStream.attached_pic.
  */
 #define AV_DISPOSITION_ATTACHED_PIC      0x0400
+/**
+ * The stream is intended to be mixed with a spatial audio track. For example,
+ * it could be used for narration or stereo music, and may remain unchanged by
+ * listener head rotation.
+ */
+#define AV_DISPOSITION_NON_DIEGETIC 0x1000
 
 typedef struct AVStreamInternal AVStreamInternal;
 
