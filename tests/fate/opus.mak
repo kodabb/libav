@@ -32,6 +32,11 @@ $(FATE_OPUS): FUZZ = 3
 $(FATE_OPUS_CELT): CMP = oneoff
 $(FATE_OPUS_CELT): FUZZ = 6
 
+# ambisonic does not change coding, only introduces a new map type
+# so a simple probe test should be enough
+FATE_OPUS += fate-opus-ambisonic
+fate-opus-ambisonic: CMD = probestream layout $(TARGET_SAMPLES)/opus/11ch-different-talkers.mka
+
 FATE_SAMPLES_AVCONV-$(call DEMDEC, MATROSKA, OPUS) += $(FATE_OPUS)
 fate-opus-celt: $(FATE_OPUS_CELT)
 fate-opus-hybrid: $(FATE_OPUS_HYBRID)

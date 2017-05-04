@@ -1,3 +1,6 @@
+FATE_MOV += fate-mov-ambisonic
+fate-mov-ambisonic: CMD = probestream layout $(TARGET_SAMPLES)/mov/ambisonic.mp4
+
 FATE_MOV += fate-mov-dar
 fate-mov-dar: CMD = probestream display_aspect_ratio $(TARGET_SAMPLES)/mov/displaymatrix.mov
 
