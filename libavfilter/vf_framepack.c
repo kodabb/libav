@@ -218,7 +218,7 @@ static void vertical_frame_pack(AVFilterLink *outlink,
     for (i = 0; i < 2; i++) {
         const uint8_t *src[4];
         uint8_t *dst[4];
-        int linesizes[4];
+        av_stride linesizes[4];
         int sub_h = s->input_views[i]->height >> s->pix_desc->log2_chroma_h;
 
         src[0] = s->input_views[i]->data[0];

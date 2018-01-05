@@ -127,7 +127,7 @@ static inline int eval_sse(const uint8_t *a, const uint8_t *b, int count)
 // FIXME Could use DSPContext.sse, but it is not so speed critical (used
 // just for motion estimation).
 static int block_sse(uint8_t * const *buf1, uint8_t * const *buf2, int x1, int y1,
-                     int x2, int y2, const int *stride1, const int *stride2, int size)
+                     int x2, int y2, const av_stride *stride1, const av_stride *stride2, int size)
 {
     int i, k;
     int sse=0;
@@ -268,7 +268,7 @@ static void get_frame_mb(const AVFrame *frame, int x, int y, uint8_t mb[], int d
     int i, j, cp;
 
     for (cp=0; cp<3; cp++) {
-        int stride = frame->linesize[cp];
+        av_stride stride = frame->linesize[cp];
         for (i=0; i<dim; i++)
             for (j=0; j<dim; j++)
                 *mb++ = frame->data[cp][(y+i)*stride + x + j];
@@ -742,13 +742,13 @@ static void reconstruct_and_encode_image(RoqContext *enc, RoqTempdata *tempData,
  * Create a single YUV cell from a 2x2 section of the image
  */
 static inline void frame_block_to_cell(uint8_t *block, uint8_t * const *data,
-                                       int top, int left, const int *stride)
+                                       int top, int left, const av_stride *stride)
 {
     int i, j, u=0, v=0;
 
     for (i=0; i<2; i++)
         for (j=0; j<2; j++) {
-            int x = (top+i)*stride[0] + left + j;
+            av_stride x = (top+i)*stride[0] + left + j;
             *block++ = data[0][x];
             x = (top+i)*stride[1] + left + j;
             u       += data[1][x];

@@ -56,8 +56,8 @@
 struct SwsContext;
 
 typedef int (*SwsFunc)(struct SwsContext *context, const uint8_t *src[],
-                       int srcStride[], int srcSliceY, int srcSliceH,
-                       uint8_t *dst[], int dstStride[]);
+                       av_stride srcStride[], int srcSliceY, int srcSliceH,
+                       uint8_t *dst[], av_stride dstStride[]);
 
 /**
  * Write one line of horizontally scaled data to planar output

@@ -3203,7 +3203,7 @@ typedef struct AVSubtitleRect {
      * Can be set for text/ass as well once they are rendered.
      */
     uint8_t *data[4];
-    int linesize[4];
+    av_stride linesize[4];
 
     enum AVSubtitleType type;
 

@@ -982,7 +982,7 @@ static int update_frame_pool(AVCodecContext *avctx, AVFrame *frame)
     switch (avctx->codec_type) {
     case AVMEDIA_TYPE_VIDEO: {
         uint8_t *data[4];
-        int linesize[4];
+        av_stride linesize[4];
         int size[4] = { 0 };
         int w = frame->width;
         int h = frame->height;
@@ -1036,17 +1036,19 @@ static int update_frame_pool(AVCodecContext *avctx, AVFrame *frame)
         int ch     = av_get_channel_layout_nb_channels(frame->channel_layout);
         int planar = av_sample_fmt_is_planar(frame->format);
         int planes = planar ? ch : 1;
+        int stride;
 
         if (pool->format == frame->format && pool->planes == planes &&
             pool->channels == ch && frame->nb_samples == pool->samples)
             return 0;
 
         av_buffer_pool_uninit(&pool->pools[0]);
-        ret = av_samples_get_buffer_size(&pool->linesize[0], ch,
+        ret = av_samples_get_buffer_size(&stride, ch,
                                          frame->nb_samples, frame->format, 0);
         if (ret < 0)
             goto fail;
 
+        pool->linesize[0] = stride;
         pool->pools[0] = av_buffer_pool_init(pool->linesize[0], NULL);
         if (!pool->pools[0]) {
             ret = AVERROR(ENOMEM);

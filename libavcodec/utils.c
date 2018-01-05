@@ -301,7 +301,7 @@ int avcodec_fill_audio_frame(AVFrame *frame, int nb_channels,
         frame->extended_data = frame->data;
     }
 
-    if ((ret = av_samples_fill_arrays(frame->extended_data, &frame->linesize[0],
+    if ((ret = av_samples_fill_arrays(frame->extended_data, (int*)&frame->linesize[0],
                                       buf, nb_channels, frame->nb_samples,
                                       sample_fmt, align)) < 0) {
         if (frame->extended_data != frame->data)

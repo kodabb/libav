@@ -106,7 +106,7 @@ static int filter_frame(AVFilterLink *inlink, AVFrame *frame)
     for (plane = 0; frame->data[plane] && plane < 4; plane++) {
         uint8_t *data = frame->data[plane];
         int h = plane == 1 || plane == 2 ? inlink->h >> vsub : inlink->h;
-        int linesize = av_image_get_linesize(frame->format, frame->width, plane);
+        av_stride linesize = av_image_get_linesize(frame->format, frame->width, plane);
         if (linesize < 0)
             return linesize;
 

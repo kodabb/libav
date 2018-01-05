@@ -728,7 +728,7 @@ static int omx_encode_frame(AVCodecContext *avctx, AVPacket *pkt,
 
     if (frame) {
         uint8_t *dst[4];
-        int linesize[4];
+        av_stride linesize[4];
         int need_copy;
         buffer = get_buffer(&s->input_mutex, &s->input_cond,
                             &s->num_free_in_buffers, s->free_in_buffers, 1);
@@ -737,7 +737,7 @@ static int omx_encode_frame(AVCodecContext *avctx, AVPacket *pkt,
 
         if (s->input_zerocopy) {
             uint8_t *src[4] = { NULL };
-            int src_linesize[4];
+            av_stride src_linesize[4];
             av_image_fill_arrays(src, src_linesize, frame->data[0], avctx->pix_fmt, s->stride, s->plane_size, 1);
             if (frame->linesize[0] == src_linesize[0] &&
                 frame->linesize[1] == src_linesize[1] &&

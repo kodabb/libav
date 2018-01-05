@@ -153,8 +153,8 @@ static void copy_picture_field(InterlaceContext *s,
             dstp += dst_frame->linesize[plane];
         }
         if (lowpass) {
-            int srcp_linesize = src_frame->linesize[plane] * 2;
-            int dstp_linesize = dst_frame->linesize[plane] * 2;
+            av_stride srcp_linesize = src_frame->linesize[plane] * 2;
+            av_stride dstp_linesize = dst_frame->linesize[plane] * 2;
             for (j = lines; j > 0; j--) {
                 const uint8_t *srcp_above = srcp - src_frame->linesize[plane];
                 const uint8_t *srcp_below = srcp + src_frame->linesize[plane];

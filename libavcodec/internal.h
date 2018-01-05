@@ -92,7 +92,7 @@ typedef struct FramePool {
     int format;
     int width, height;
     int stride_align[AV_NUM_DATA_POINTERS];
-    int linesize[4];
+    av_stride linesize[4];
     int planes;
     int channels;
     int samples;

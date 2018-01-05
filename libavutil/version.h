@@ -96,6 +96,9 @@
 #ifndef FF_API_CRYPTO_SIZE_T
 #define FF_API_CRYPTO_SIZE_T            (LIBAVUTIL_VERSION_MAJOR < 57)
 #endif
+#ifndef FF_API_STRIDE_TYPE
+#define FF_API_STRIDE_TYPE              (LIBAVUTIL_VERSION_MAJOR < 57)
+#endif
 
 
 /**

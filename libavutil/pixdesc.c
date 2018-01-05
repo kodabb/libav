@@ -31,7 +31,7 @@
 #include "version.h"
 
 void av_read_image_line(uint16_t *dst,
-                        const uint8_t *data[4], const int linesize[4],
+                        const uint8_t *data[4], const av_stride linesize[4],
                         const AVPixFmtDescriptor *desc,
                         int x, int y, int c, int w,
                         int read_pal_component)
@@ -79,7 +79,7 @@ void av_read_image_line(uint16_t *dst,
 }
 
 void av_write_image_line(const uint16_t *src,
-                         uint8_t *data[4], const int linesize[4],
+                         uint8_t *data[4], const av_stride linesize[4],
                          const AVPixFmtDescriptor *desc,
                          int x, int y, int c, int w)
 {

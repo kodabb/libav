@@ -287,7 +287,7 @@ static void encode_plane(FFV1Context *s, uint8_t *src, int w, int h,
 }
 
 static void encode_rgb_frame(FFV1Context *s, const uint8_t *src[3],
-                             int w, int h, const int stride[3])
+                             int w, int h, const av_stride stride[3])
 {
     int x, y, p, i;
     const int ring_size = s->context_model ? 3 : 2;

@@ -323,7 +323,7 @@ static int d3d11va_create_staging_texture(AVHWFramesContext *ctx)
     return 0;
 }
 
-static void fill_texture_ptrs(uint8_t *data[4], int linesize[4],
+static void fill_texture_ptrs(uint8_t *data[4], av_stride linesize[4],
                               AVHWFramesContext *ctx,
                               D3D11_TEXTURE2D_DESC *desc,
                               D3D11_MAPPED_SUBRESOURCE *map)
@@ -352,7 +352,7 @@ static int d3d11va_transfer_data(AVHWFramesContext *ctx, AVFrame *dst,
     int w = FFMIN(dst->width,  src->width);
     int h = FFMIN(dst->height, src->height);
     uint8_t *map_data[4];
-    int map_linesize[4];
+    av_stride map_linesize[4];
     D3D11_TEXTURE2D_DESC desc;
     D3D11_MAPPED_SUBRESOURCE map;
     HRESULT hr;

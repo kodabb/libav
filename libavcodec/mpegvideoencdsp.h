@@ -37,8 +37,8 @@ typedef struct MpegvideoEncDSPContext {
     int (*pix_sum)(uint8_t *pix, int line_size);
     int (*pix_norm1)(uint8_t *pix, int line_size);
 
-    void (*shrink[4])(uint8_t *dst, int dst_wrap, const uint8_t *src,
-                      int src_wrap, int width, int height);
+    void (*shrink[4])(uint8_t *dst, av_stride dst_wrap, const uint8_t *src,
+                      av_stride src_wrap, int width, int height);
 
     void (*draw_edges)(uint8_t *buf, int wrap, int width, int height,
                        int w, int h, int sides);

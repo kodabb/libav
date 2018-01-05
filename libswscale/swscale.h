@@ -205,8 +205,8 @@ struct SwsContext *sws_getContext(int srcW, int srcH, enum AVPixelFormat srcForm
  * @return          the height of the output slice
  */
 int sws_scale(struct SwsContext *c, const uint8_t *const srcSlice[],
-              const int srcStride[], int srcSliceY, int srcSliceH,
-              uint8_t *const dst[], const int dstStride[]);
+              const av_stride srcStride[], int srcSliceY, int srcSliceH,
+              uint8_t *const dst[], const av_stride dstStride[]);
 
 /**
  * @param inv_table the yuv2rgb coefficients, normally ff_yuv2rgb_coeffs[x]

@@ -162,7 +162,7 @@ typedef struct AVFrame {
      * @note The linesize may be larger than the size of usable data -- there
      * may be extra padding present for performance reasons.
      */
-    int linesize[AV_NUM_DATA_POINTERS];
+    av_stride linesize[AV_NUM_DATA_POINTERS];
 
     /**
      * pointers to the data planes/channels.

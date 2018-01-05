@@ -79,7 +79,7 @@ int ff_fill_line_with_color(uint8_t *line[4], int pixel_step[4], int w, uint8_t 
     return 0;
 }
 
-void ff_draw_rectangle(uint8_t *dst[4], int dst_linesize[4],
+void ff_draw_rectangle(uint8_t *dst[4], av_stride dst_linesize[4],
                        uint8_t *src[4], int pixelstep[4],
                        int hsub, int vsub, int x, int y, int w, int h)
 {
@@ -99,8 +99,8 @@ void ff_draw_rectangle(uint8_t *dst[4], int dst_linesize[4],
     }
 }
 
-void ff_copy_rectangle(uint8_t *dst[4], int dst_linesize[4],
-                       uint8_t *src[4], int src_linesize[4], int pixelstep[4],
+void ff_copy_rectangle(uint8_t *dst[4], av_stride dst_linesize[4],
+                       uint8_t *src[4], av_stride src_linesize[4], int pixelstep[4],
                        int hsub, int vsub, int x, int y, int y2, int w, int h)
 {
     int i, plane;

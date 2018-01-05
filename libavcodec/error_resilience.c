@@ -58,7 +58,7 @@ static void set_mv_strides(ERContext *s, ptrdiff_t *mv_step, ptrdiff_t *stride)
 static void put_dc(ERContext *s, uint8_t *dest_y, uint8_t *dest_cb,
                    uint8_t *dest_cr, int mb_x, int mb_y)
 {
-    int *linesize = s->cur_pic.f->linesize;
+    av_stride *linesize = s->cur_pic.f->linesize;
     int dc, dcu, dcv, y, i;
     for (i = 0; i < 4; i++) {
         dc = s->dc_val[0][mb_x * 2 + (i &  1) + (mb_y * 2 + (i >> 1)) * s->b8_stride];
@@ -575,7 +575,7 @@ skip_mean_and_median:
 skip_last_mv:
 
                     for (j = 0; j < pred_count; j++) {
-                        int *linesize = s->cur_pic.f->linesize;
+                        av_stride *linesize = s->cur_pic.f->linesize;
                         int score = 0;
                         uint8_t *src = s->cur_pic.f->data[0] +
                                        mb_x * 16 + mb_y * 16 * linesize[0];
@@ -695,7 +695,7 @@ static int is_intra_more_likely(ERContext *s)
                 continue;
 
             if (s->cur_pic.f->pict_type == AV_PICTURE_TYPE_I) {
-                int *linesize = s->cur_pic.f->linesize;
+                av_stride *linesize = s->cur_pic.f->linesize;
                 uint8_t *mb_ptr      = s->cur_pic.f->data[0] +
                                        mb_x * 16 + mb_y * 16 * linesize[0];
                 uint8_t *last_mb_ptr = s->last_pic.f->data[0] +
@@ -815,7 +815,7 @@ void ff_er_add_slice(ERContext *s, int startx, int starty,
 
 void ff_er_frame_end(ERContext *s)
 {
-    int *linesize = s->cur_pic.f->linesize;
+    av_stride *linesize = s->cur_pic.f->linesize;
     int i, mb_x, mb_y, error, error_type, dc_error, mv_error, ac_error;
     int distance;
     int threshold_part[4] = { 100, 100, 100 };

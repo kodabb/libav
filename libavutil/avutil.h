@@ -262,6 +262,18 @@ enum AVMediaType {
  * @{
  */
 
+#include "version.h"
+
+/**
+ * Safe type defining the correct C type for linesize/stride/pitch arrays,
+ * and pointer offsets.
+ */
+#if 0
+#define av_stride int
+#else
+#define av_stride ptrdiff_t
+#endif
+
 enum AVPictureType {
     AV_PICTURE_TYPE_I = 1, ///< Intra
     AV_PICTURE_TYPE_P,     ///< Predicted
@@ -287,7 +299,6 @@ char av_get_picture_type_char(enum AVPictureType pict_type);
 
 #include "error.h"
 #include "rational.h"
-#include "version.h"
 #include "macros.h"
 
 /**

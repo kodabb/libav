@@ -34,7 +34,7 @@ static int vda_retrieve_data(AVCodecContext *s, AVFrame *frame)
     OSType pixel_format = CVPixelBufferGetPixelFormatType(pixbuf);
     CVReturn err;
     uint8_t *data[4] = { 0 };
-    int linesize[4] = { 0 };
+    av_stride linesize[4] = { 0 };
     int planes, ret, i;
 
     av_frame_unref(vda->tmp_frame);

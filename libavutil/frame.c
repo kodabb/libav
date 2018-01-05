@@ -146,11 +146,13 @@ static int get_audio_buffer(AVFrame *frame, int align)
     int ret, i;
 
     if (!frame->linesize[0]) {
-        ret = av_samples_get_buffer_size(&frame->linesize[0], channels,
+        int stride;
+        ret = av_samples_get_buffer_size(&stride, channels,
                                          frame->nb_samples, frame->format,
                                          align);
         if (ret < 0)
             return ret;
+        frame->linesize[0] = stride;
     }
 
     if (planes > AV_NUM_DATA_POINTERS) {

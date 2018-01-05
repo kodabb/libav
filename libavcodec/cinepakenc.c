@@ -444,8 +444,8 @@ static int encode_codebook(CinepakEncContext *s, int *codebook, int size,
 
 // sets out to the sub picture starting at (x,y) in in
 static void get_sub_picture(CinepakEncContext *s, int x, int y,
-                            uint8_t * in_data[4], int  in_linesize[4],
-                            uint8_t *out_data[4], int out_linesize[4])
+                            uint8_t * in_data[4], av_stride  in_linesize[4],
+                            uint8_t *out_data[4], av_stride out_linesize[4])
 {
     out_data[0]     = in_data[0] + x + y * in_linesize[0];
     out_linesize[0] = in_linesize[0];
@@ -461,7 +461,7 @@ static void get_sub_picture(CinepakEncContext *s, int x, int y,
 
 // decodes the V1 vector in mb into the 4x4 MB pointed to by data
 static void decode_v1_vector(CinepakEncContext *s, uint8_t *data[4],
-                             int linesize[4], int v1_vector, strip_info *info)
+                             av_stride linesize[4], int v1_vector, strip_info *info)
 {
     int entry_size = s->pix_fmt == AV_PIX_FMT_RGB24 ? 6 : 4;
 
@@ -500,7 +500,7 @@ static void decode_v1_vector(CinepakEncContext *s, uint8_t *data[4],
 
 // decodes the V4 vectors in mb into the 4x4 MB pointed to by data
 static void decode_v4_vector(CinepakEncContext *s, uint8_t *data[4],
-                             int linesize[4], int *v4_vector, strip_info *info)
+                             av_stride linesize[4], int *v4_vector, strip_info *info)
 {
     int i, x, y, entry_size = s->pix_fmt == AV_PIX_FMT_RGB24 ? 6 : 4;
 
@@ -520,8 +520,8 @@ static void decode_v4_vector(CinepakEncContext *s, uint8_t *data[4],
 }
 
 static void copy_mb(CinepakEncContext *s,
-                    uint8_t *a_data[4], int a_linesize[4],
-                    uint8_t *b_data[4], int b_linesize[4])
+                    uint8_t *a_data[4], av_stride a_linesize[4],
+                    uint8_t *b_data[4], av_stride b_linesize[4])
 {
     int y, p;
 
@@ -539,8 +539,8 @@ static void copy_mb(CinepakEncContext *s,
 }
 
 static int encode_mode(CinepakEncContext *s, int h,
-                       uint8_t *scratch_data[4], int scratch_linesize[4],
-                       uint8_t *last_data[4], int last_linesize[4],
+                       uint8_t *scratch_data[4], av_stride scratch_linesize[4],
+                       uint8_t *last_data[4], av_stride last_linesize[4],
                        strip_info *info, unsigned char *buf)
 {
     int x, y, z, flags, bits, temp_size, header_ofs, ret = 0, mb_count = s->w * h / MB_AREA;
@@ -548,7 +548,7 @@ static int encode_mode(CinepakEncContext *s, int h,
     unsigned char temp[64]; // 32/2 = 16 V4 blocks at 4 B each -> 64 B
     mb_info *mb;
     uint8_t *sub_scratch_data[4] = { 0 }, *sub_last_data[4] = { 0 };
-    int sub_scratch_linesize[4] = { 0 }, sub_last_linesize[4] = { 0 };
+    av_stride sub_scratch_linesize[4] = { 0 }, sub_last_linesize[4] = { 0 };
 
     // encode codebooks
     ////// MacOS vintage decoder compatibility dictates the presence of
@@ -684,8 +684,8 @@ static int encode_mode(CinepakEncContext *s, int h,
 
 // computes distortion of 4x4 MB in b compared to a
 static int compute_mb_distortion(CinepakEncContext *s,
-                                 uint8_t *a_data[4], int a_linesize[4],
-                                 uint8_t *b_data[4], int b_linesize[4])
+                                 uint8_t *a_data[4], av_stride a_linesize[4],
+                                 uint8_t *b_data[4], av_stride b_linesize[4])
 {
     int x, y, p, d, ret = 0;
 
@@ -711,7 +711,7 @@ static int compute_mb_distortion(CinepakEncContext *s,
 // return the possibly adjusted size of the codebook
 #define CERTAIN(x) ((x) != ENC_UNCERTAIN)
 static int quantize(CinepakEncContext *s, int h, uint8_t *data[4],
-                    int linesize[4], int v1mode, strip_info *info,
+                    av_stride linesize[4], int v1mode, strip_info *info,
                     mb_encoding encoding)
 {
     int x, y, i, j, k, x2, y2, x3, y3, plane, shift, mbn;
@@ -721,7 +721,7 @@ static int quantize(CinepakEncContext *s, int h, uint8_t *data[4],
     int64_t total_error = 0;
     uint8_t vq_pict_buf[(MB_AREA * 3) / 2];
     uint8_t     *sub_data[4],     *vq_data[4];
-    int      sub_linesize[4],  vq_linesize[4];
+    av_stride sub_linesize[4], vq_linesize[4];
 
     for (mbn = i = y = 0; y < h; y += MB_SIZE) {
         for (x = 0; x < s->w; x += MB_SIZE, ++mbn) {
@@ -826,13 +826,13 @@ static int quantize(CinepakEncContext *s, int h, uint8_t *data[4],
 }
 
 static void calculate_skip_errors(CinepakEncContext *s, int h,
-                                  uint8_t *last_data[4], int last_linesize[4],
-                                  uint8_t *data[4], int linesize[4],
+                                  uint8_t *last_data[4], av_stride last_linesize[4],
+                                  uint8_t *data[4], av_stride linesize[4],
                                   strip_info *info)
 {
     int x, y, i;
     uint8_t *sub_last_data    [4], *sub_pict_data    [4];
-    int      sub_last_linesize[4],  sub_pict_linesize[4];
+    av_stride sub_last_linesize[4], sub_pict_linesize[4];
 
     for (i = y = 0; y < h; y += MB_SIZE)
         for (x = 0; x < s->w; x += MB_SIZE, i++) {
@@ -867,9 +867,9 @@ static void write_strip_header(CinepakEncContext *s, int y, int h, int keyframe,
 }
 
 static int rd_strip(CinepakEncContext *s, int y, int h, int keyframe,
-                    uint8_t *last_data[4], int last_linesize[4],
-                    uint8_t *data[4], int linesize[4],
-                    uint8_t *scratch_data[4], int scratch_linesize[4],
+                    uint8_t *last_data[4], av_stride last_linesize[4],
+                    uint8_t *data[4], av_stride linesize[4],
+                    uint8_t *scratch_data[4], av_stride scratch_linesize[4],
                     unsigned char *buf, int64_t *best_score)
 {
     int64_t score = 0;
@@ -1003,7 +1003,7 @@ static int rd_frame(CinepakEncContext *s, const AVFrame *frame,
 {
     int num_strips, strip, i, y, nexty, size, temp_size, best_size;
     uint8_t *last_data    [4], *data    [4], *scratch_data    [4];
-    int      last_linesize[4],  linesize[4],  scratch_linesize[4];
+    av_stride last_linesize[4], linesize[4], scratch_linesize[4];
     int64_t best_score = 0, score, score_temp;
     int best_nstrips;
 
@@ -1087,7 +1087,7 @@ static int rd_frame(CinepakEncContext *s, const AVFrame *frame,
                                 data, linesize);
             else
                 get_sub_picture(s, 0, y,
-                                (uint8_t **)frame->data, (int *)frame->linesize,
+                                (uint8_t **)frame->data, (av_stride *)frame->linesize,
                                 data, linesize);
             get_sub_picture(s, 0, y,
                             s->last_frame->data, s->last_frame->linesize,

@@ -49,7 +49,7 @@ void av_image_fill_max_pixsteps(int max_pixsteps[4], int max_pixstep_comps[4],
     }
 }
 
-int av_image_get_linesize(enum AVPixelFormat pix_fmt, int width, int plane)
+av_stride av_image_get_linesize(enum AVPixelFormat pix_fmt, int width, int plane)
 {
     const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(pix_fmt);
     int max_step     [4];       /* max pixel step for each plane */
@@ -67,7 +67,7 @@ int av_image_get_linesize(enum AVPixelFormat pix_fmt, int width, int plane)
     return max_step[plane] * (((width + (1 << s) - 1)) >> s);
 }
 
-int av_image_fill_linesizes(int linesizes[4], enum AVPixelFormat pix_fmt, int width)
+int av_image_fill_linesizes(av_stride linesizes[4], enum AVPixelFormat pix_fmt, int width)
 {
     int i;
     const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(pix_fmt);
@@ -99,7 +99,7 @@ int av_image_fill_linesizes(int linesizes[4], enum AVPixelFormat pix_fmt, int wi
 }
 
 int av_image_fill_pointers(uint8_t *data[4], enum AVPixelFormat pix_fmt, int height,
-                           uint8_t *ptr, const int linesizes[4])
+                           uint8_t *ptr, const av_stride linesizes[4])
 {
     int i, total_size, size[4] = { 0 }, has_plane[4] = { 0 };
 
@@ -180,7 +180,7 @@ int avpriv_set_systematic_pal2(uint32_t pal[256], enum AVPixelFormat pix_fmt)
     return 0;
 }
 
-int av_image_alloc(uint8_t *pointers[4], int linesizes[4],
+int av_image_alloc(uint8_t *pointers[4], av_stride linesizes[4],
                    int w, int h, enum AVPixelFormat pix_fmt, int align)
 {
     const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(pix_fmt);
@@ -288,8 +288,8 @@ static void image_copy_plane_uc_from(uint8_t       *dst, ptrdiff_t dst_linesize,
         image_copy_plane(dst, dst_linesize, src, src_linesize, bytewidth, height);
 }
 
-void av_image_copy_plane(uint8_t       *dst, int dst_linesize,
-                         const uint8_t *src, int src_linesize,
+void av_image_copy_plane(uint8_t       *dst, av_stride dst_linesize,
+                         const uint8_t *src, av_stride src_linesize,
                          int bytewidth, int height)
 {
     image_copy_plane(dst, dst_linesize, src, src_linesize, bytewidth, height);
@@ -332,8 +332,8 @@ static void image_copy(uint8_t *dst_data[4], const ptrdiff_t dst_linesizes[4],
     }
 }
 
-void av_image_copy(uint8_t *dst_data[4], int dst_linesizes[4],
-                   const uint8_t *src_data[4], const int src_linesizes[4],
+void av_image_copy(uint8_t *dst_data[4], av_stride dst_linesizes[4],
+                   const uint8_t *src_data[4], const av_stride src_linesizes[4],
                    enum AVPixelFormat pix_fmt, int width, int height)
 {
     ptrdiff_t dst_linesizes1[4], src_linesizes1[4];
@@ -356,7 +356,7 @@ void av_image_copy_uc_from(uint8_t *dst_data[4], const ptrdiff_t dst_linesizes[4
                width, height, image_copy_plane_uc_from);
 }
 
-int av_image_fill_arrays(uint8_t *dst_data[4], int dst_linesize[4],
+int av_image_fill_arrays(uint8_t *dst_data[4], av_stride dst_linesize[4],
                          const uint8_t *src, enum AVPixelFormat pix_fmt,
                          int width, int height, int align)
 {
@@ -380,7 +380,7 @@ int av_image_get_buffer_size(enum AVPixelFormat pix_fmt,
                              int width, int height, int align)
 {
     uint8_t *data[4];
-    int linesize[4];
+    av_stride linesize[4];
     int ret;
     const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(pix_fmt);
     if (!desc)
@@ -400,11 +400,12 @@ int av_image_get_buffer_size(enum AVPixelFormat pix_fmt,
 
 int av_image_copy_to_buffer(uint8_t *dst, int dst_size,
                             const uint8_t * const src_data[4],
-                            const int src_linesize[4],
+                            const av_stride src_linesize[4],
                             enum AVPixelFormat pix_fmt,
                             int width, int height, int align)
 {
-    int i, j, nb_planes = 0, linesize[4];
+    int i, j, nb_planes = 0;
+    av_stride linesize[4];
     int size = av_image_get_buffer_size(pix_fmt, width, height, align);
     const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(pix_fmt);
 
@@ -549,7 +550,7 @@ int av_image_fill_black(uint8_t *dst_data[4], const ptrdiff_t dst_linesize[4],
         // (Multiple pixels happen e.g. with AV_PIX_FMT_UYVY422.)
         int w = clear_block_size[comp.plane] / comp.step;
         uint8_t *c_data[4];
-        const int c_linesize[4] = {0};
+        const av_stride c_linesize[4] = {0};
         uint16_t src_array[MAX_BLOCK_SIZE];
         uint16_t src = 0;
         int x;

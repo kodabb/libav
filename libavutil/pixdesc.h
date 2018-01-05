@@ -25,6 +25,7 @@
 #include <inttypes.h>
 
 #include "attributes.h"
+#include "avutil.h"
 #include "pixfmt.h"
 
 typedef struct AVComponentDescriptor {
@@ -176,7 +177,7 @@ typedef struct AVPixFmtDescriptor {
  * data[0]. The behavior is undefined if the format is not paletted.
  */
 void av_read_image_line(uint16_t *dst, const uint8_t *data[4],
-                        const int linesize[4], const AVPixFmtDescriptor *desc,
+                        const av_stride linesize[4], const AVPixFmtDescriptor *desc,
                         int x, int y, int c, int w, int read_pal_component);
 
 /**
@@ -194,7 +195,7 @@ void av_read_image_line(uint16_t *dst, const uint8_t *data[4],
  * values to write to the image line
  */
 void av_write_image_line(const uint16_t *src, uint8_t *data[4],
-                         const int linesize[4], const AVPixFmtDescriptor *desc,
+                         const av_stride linesize[4], const AVPixFmtDescriptor *desc,
                          int x, int y, int c, int w);
 
 /**

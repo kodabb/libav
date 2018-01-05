@@ -621,7 +621,7 @@ static int ffmal_copy_frame(AVCodecContext *avctx,  AVFrame *frame,
         int w = FFALIGN(avctx->width, 32);
         int h = FFALIGN(avctx->height, 16);
         uint8_t *src[4];
-        int linesize[4];
+        av_stride linesize[4];
 
         if ((ret = ff_get_buffer(avctx, frame, 0)) < 0)
             goto done;

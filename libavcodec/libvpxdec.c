@@ -66,7 +66,7 @@ static int vp8_decode(AVCodecContext *avctx,
     AVFrame *picture = data;
     const void *iter = NULL;
     struct vpx_image *img;
-    int ret;
+    int i, ret;
 
     if (vpx_codec_decode(&ctx->decoder, avpkt->data, avpkt->size, NULL, 0) !=
         VPX_CODEC_OK) {
@@ -81,6 +81,7 @@ static int vp8_decode(AVCodecContext *avctx,
     }
 
     if ((img = vpx_codec_get_frame(&ctx->decoder, &iter))) {
+        av_stride strides[4];
         avctx->pix_fmt = ff_vpx_imgfmt_to_pixfmt(img->fmt);
         if (avctx->pix_fmt == AV_PIX_FMT_NONE) {
             av_log(avctx, AV_LOG_ERROR, "Unsupported output colorspace (%d)\n",
@@ -98,7 +99,9 @@ static int vp8_decode(AVCodecContext *avctx,
         if ((ret = ff_get_buffer(avctx, picture, 0)) < 0)
             return ret;
         av_image_copy(picture->data, picture->linesize, (const uint8_t **) img->planes,
-                      img->stride, avctx->pix_fmt, img->d_w, img->d_h);
+                      strides, avctx->pix_fmt, img->d_w, img->d_h);
+        for (i = 0; i < 4; i++)
+            img->stride[i] = strides[i];
 #if VPX_IMAGE_ABI_VERSION >= 4
         switch (img->range) {
         case VPX_CR_STUDIO_RANGE:

@@ -142,8 +142,8 @@ static void draw_edges_8_c(uint8_t *buf, int wrap, int width, int height,
 }
 
 /* 2x2 -> 1x1 */
-static void shrink22(uint8_t *dst, int dst_wrap,
-                     const uint8_t *src, int src_wrap,
+static void shrink22(uint8_t *dst, av_stride dst_wrap,
+                     const uint8_t *src, av_stride src_wrap,
                      int width, int height)
 {
     int w;
@@ -175,8 +175,8 @@ static void shrink22(uint8_t *dst, int dst_wrap,
 }
 
 /* 4x4 -> 1x1 */
-static void shrink44(uint8_t *dst, int dst_wrap,
-                     const uint8_t *src, int src_wrap,
+static void shrink44(uint8_t *dst, av_stride dst_wrap,
+                     const uint8_t *src, av_stride src_wrap,
                      int width, int height)
 {
     int w;
@@ -206,8 +206,8 @@ static void shrink44(uint8_t *dst, int dst_wrap,
 }
 
 /* 8x8 -> 1x1 */
-static void shrink88(uint8_t *dst, int dst_wrap,
-                     const uint8_t *src, int src_wrap,
+static void shrink88(uint8_t *dst, av_stride dst_wrap,
+                     const uint8_t *src, av_stride src_wrap,
                      int width, int height)
 {
     int w, i;

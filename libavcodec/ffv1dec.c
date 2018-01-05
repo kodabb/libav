@@ -206,7 +206,7 @@ static void decode_plane(FFV1Context *s, uint8_t *src,
 }
 
 static void decode_rgb_frame(FFV1Context *s, uint8_t *src[3], int w, int h,
-                             int stride[3])
+                             av_stride stride[3])
 {
     int x, y, p;
     int16_t *sample[4][2];

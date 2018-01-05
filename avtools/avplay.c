@@ -1312,7 +1312,7 @@ static int queue_picture(PlayerState *is, AVFrame *src_frame, double pts, int64_
     /* if the frame is not skipped, then display it */
     if (vp->bmp) {
         uint8_t *data[4];
-        int linesize[4];
+        av_stride linesize[4];
 
         /* get a pointer on the bitmap */
         SDL_LockYUVOverlay (vp->bmp);
