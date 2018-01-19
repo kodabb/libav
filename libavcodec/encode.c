@@ -60,8 +60,17 @@ static int pad_last_frame(AVCodecContext *s, AVFrame **dst, const AVFrame *src)
         return AVERROR(ENOMEM);
 
     frame->format         = src->format;
+#if FF_API_OLD_CHANNEL_LAYOUT
+FF_DISABLE_DEPRECATION_WARNINGS
     frame->channel_layout = src->channel_layout;
+FF_ENABLE_DEPRECATION_WARNINGS
+#endif
     frame->nb_samples     = s->frame_size;
+
+    ret = av_channel_layout_copy(&frame->ch_layout, &src->ch_layout);
+    if (ret < 0)
+        goto fail;
+
     ret = av_frame_get_buffer(frame, 32);
     if (ret < 0)
         goto fail;
